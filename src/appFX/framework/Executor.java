@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.Spliterator;
 import java.util.stream.Stream;
 
@@ -296,10 +297,9 @@ public class Executor {
         }
         Iterator<ExportedGate> itr = gateStream.iterator();
 
-
-        System.out.println("Matrices:");
-        printArray(itr.next().getInputMatrixes());
-        System.out.println("End Matrices");
+        //System.out.println("Matrices:");
+        //printArray(itr.next().getInputMatrixes());
+        //System.out.println("End Matrices");
 
         ArrayList<ExportedGate> currentColumn = new ArrayList<>();
         //Loop to grab one column of gate
@@ -314,12 +314,12 @@ public class Executor {
 
             printColumn(currentColumn);
 
-            Matrix<Complex> columnMatrix = buildColumnDensityMatrix(currentColumn, colHeight);
-            columns.add(columnMatrix);
+            ArrayList<Matrix<Complex>> columnMatrix = buildColumnDensityMatrix(currentColumn, colHeight);
+            input = applyKrausDontLook(columnMatrix,input);
             currentColumn = new ArrayList<>();
         }
 
-        return "";
+        return input.toString();
     }
 
     private static <T> void printArray(T[] a) {
@@ -342,13 +342,104 @@ public class Executor {
         System.out.println(toPrint);
     }
 
-    private static Matrix<Complex> buildColumnDensityMatrix(ArrayList<ExportedGate> eg, int columnHeight) {
+
+
+    /**
+     * Takes a list of gates in a column, allowing any to be POVMs, and returns the list of kraus matrices defining the action of this column on the state
+     * Iff none of the gates are POVMs, the function will return one matrix representing the linear map on density matrices
+     * @param egs The exported gates in the column
+     * @param columnHeight The size of the column in registers
+     * @return The kraus matrices defining the action of this column on the state
+     */
+    private static ArrayList<Matrix<Complex>> buildColumnDensityMatrix(ArrayList<ExportedGate> egs, int columnHeight) {
 
         //Tensor Product of two Operators
         //O1 = {A1,A2,...,Ar}
         //O2 = {B1,B2,...,Br}
         //O1 tensor O2 = {Ai tensor Bj | i,j < r}
 
-        return null;
+        //For now, assume all multiqubit structures are contiguous and in order
+
+        egs = removeIdentityUnderGates(egs);
+
+        ArrayList<Matrix<Complex>> kraus = new ArrayList<>();
+        Matrix<Complex> column = Matrix.identity(Complex.ZERO(),1);
+        kraus.add(column);
+        while(!egs.isEmpty()) {
+            ExportedGate gate = egs.remove(0);
+            switch(gate.getGateType()) {
+                case UNIVERSAL:
+                    for(int i = 0; i < kraus.size(); ++i) {
+                        kraus.set(i,kraus.get(i).kronecker(gate.getInputMatrixes()[0]));
+                    }
+                    break;
+                case POVM:
+                    ArrayList<Matrix<Complex>> newChannel = new ArrayList<>();
+                    for(int i = 0; i < kraus.size(); ++i) {
+                        Matrix<Complex> k = kraus.get(i);
+                        for(Matrix<Complex> kprime : gate.getInputMatrixes()) {
+                            newChannel.add(k.kronecker(kprime));
+                        }
+                        //Rip garbage collector
+                    }
+                    kraus = newChannel;
+                    break;
+            }
+        }
+        return kraus;
     }
+
+    private static Matrix<Complex> applyKrausDontLook(ArrayList<Matrix<Complex>> kraus, Matrix<Complex> density) {
+        Matrix<Complex> newDensity = null;
+        System.out.println("Density matrix in applyKrausDontLook");
+        System.out.println(density);
+        for(Matrix<Complex> k : kraus) {
+            System.out.println("Kraus matrix");
+            System.out.println(k);
+            if(newDensity == null) {
+                newDensity = k.mult(density).mult(Matrix.map(Complex.ZERO(),k,Complex::conjugate).transpose());
+            } else {
+                newDensity = newDensity.add(k.mult(density).mult(Matrix.map(Complex.ZERO(),k,Complex::conjugate).transpose()));
+            }
+        }
+        return newDensity;
+    }
+
+    private static Matrix<Complex> applyKrausLook(ArrayList<Matrix<Complex>> kraus, Matrix<Complex> density) {
+        double rand = (new Random()).nextDouble();
+        Matrix<Complex> state = null;
+        int i = 0;
+        while(rand > 0) {
+            Matrix<Complex> k = kraus.get(i++);
+            state = k.mult(density).mult(Matrix.map(Complex.ZERO(),k,Complex::conjugate).transpose());
+            rand -= state.trace().abs();
+        }
+        return state;
+    }
+
+    private static ArrayList<ExportedGate> removeIdentityUnderGates(ArrayList<ExportedGate> gates) {
+        ArrayList<Integer> regsCovered = new ArrayList<>();
+        for(ExportedGate g : gates) {
+            if(g.getGateRegister().length > 1) {
+                for(int i = 0; i < g.getGateRegister().length; ++i) {
+                    regsCovered.add(g.getGateRegister()[i]);
+                }
+            }
+        }
+        ArrayList<ExportedGate> newGates = new ArrayList<>();
+        for(ExportedGate g : gates) {
+            boolean redundant = false;
+            for(Integer i : regsCovered) {
+                if(g.getGateModel().getName().equalsIgnoreCase("Identity") && (g.getGateRegister()[0]==i)) {
+                    redundant = true;
+                    break;
+                }
+            }
+            if(!redundant) {
+                newGates.add(g);
+            }
+        }
+        return newGates;
+    }
+
 }
