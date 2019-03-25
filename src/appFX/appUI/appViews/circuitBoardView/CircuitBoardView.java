@@ -150,6 +150,8 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 		symbol.setText(circuitBoard.getSymbol());
 		symbol.setEditable(false);
 		
+		grid.setSelected(true);
+		
 		description.setContent(new LatexNode(circuitBoard.getDescription()));
 		
 		ImmutableArray<String> args = circuitBoard.getArguments();
@@ -158,7 +160,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 			for(int i = 1; i < args.size(); i++)
 				parametersLatex += ", \\(" + args.get(i) + "\\)";
 			
-			parameters.getChildren().add(new LatexNode(parametersLatex, .7f));
+			parameters.getChildren().add(new LatexNode(parametersLatex, 20));
 		}
 		
 		circuitBoardPane.setOnMouseExited((e) -> {
@@ -217,10 +219,10 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 		topNodes = new Node[circuitBoard.getColumns()];
 		
 		for(int i = 0; i < circuitBoard.getRows(); i++) {
-			LatexNode ln = new LatexNode("\\( \\lvert \\psi_{" + i +  "}\\rangle \\)");
-			ln.setPadding(new Insets(0, 5, 0, 5));
+			LatexNode ln = new LatexNode("\\( \\vert \\psi_{" + i +  "}\\rangle \\)", 20);
 			BorderPane bp = new BorderPane();
 			bp.setCenter(ln);
+			bp.setPadding(new Insets(0, 5, 0, 5));
 			GridPane.setConstraints(bp, 0, i, 1, 1, HPos.CENTER, VPos.CENTER);
 			circuitBoardPane.getChildren().add(bp);			
 			
@@ -431,7 +433,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 				paramString += " , " + paramLatex.get(i);
 			
 			paramString += " ) \\)";
-			LatexNode lv = new LatexNode(paramString, 1f, "#00000000", "#000000");
+			LatexNode lv = new LatexNode(paramString, 20, "#00000000", "#000000");
 			box.getChildren().add(lv);
 		}
 		
