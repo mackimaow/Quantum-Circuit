@@ -107,6 +107,7 @@ public class Main extends Application implements AppPreferences {
     	mainScene.loadNewScene(primaryStage, 1000, 600);
     	primaryStage.setTitle(APP_NAME);
     	primaryStage.getIcons().add(ResourceLoaderFX.getIcon("appIcon.png"));
+    	primaryStage.setMaximized(true);
     	primaryStage.show();
     	
     	loadProject();
