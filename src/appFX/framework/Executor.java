@@ -397,7 +397,9 @@ public class Executor {
             System.out.println("Kraus matrix");
             System.out.println(k);
             if(newDensity == null) {
-                newDensity = k.mult(density).mult(Matrix.map(Complex.ZERO(),k,Complex::conjugate).transpose());
+                newDensity = k.mult(density);
+                Matrix<Complex> kdagger = Matrix.map(Complex.ZERO(),k,Complex::conjugate).transpose();
+                newDensity = newDensity.mult(kdagger);
             } else {
                 newDensity = newDensity.add(k.mult(density).mult(Matrix.map(Complex.ZERO(),k,Complex::conjugate).transpose()));
             }
