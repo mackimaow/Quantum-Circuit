@@ -27,20 +27,34 @@
 	-fx-background-radius : 10;
 }
 
+*.tab-header-background {
+	-fx-background-color: #607D8B;
+}
+
+.tabStyle {
+	-fx-background-color: #607D8B;
+	-fx-border-radius: 5 5 0 0;
+	-fx-border-width: 1 1 0 1;
+	-fx-border-color: #FFFFFF;
+}
+.tab-label {
+	-fx-text-fill: #FFFFFF;
+}
+
+.tab-content-area {
+	-fx-border-radius: 0;
+}
+
 .propertiesTab1{
-	-fx-background-radius :  10 0 0 10;
+	/*-fx-background-radius :  10 0 0 10;*/
 	-fx-background-color: #607D8B;
 }
 
 .propertiesTab2{
-	-fx-background-radius :  0 10 10 0;
+	/*-fx-background-radius :  0 10 10 0;*/
 	-fx-background-color: #607D8B;
 }
 
-.propertiesLabel {
-	-fx-text-fill: #FFFFFF;
-	
-}
 
 SplitPane {
 	-fx-background-color: #607D8B;

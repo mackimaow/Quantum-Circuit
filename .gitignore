@@ -15,6 +15,10 @@ local.properties
 .loadpath
 .recommenders
 
+# JavaFx Ant Build files
+/build/*
+build.fxbuild
+
 # External tool builders
 .externalToolBuilders/
 
