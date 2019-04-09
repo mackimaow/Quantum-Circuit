@@ -32,22 +32,12 @@ public class ResourceLoaderFX {
 	}
 	
 	public static Image getIcon(String iconName) throws IOException{
-		URL url = ResourceLoader.class.getResource("/icons/" + iconName);
-		try {
-			File file = new File(url.toURI()); 
-			try(
-					InputStream is = new FileInputStream(file);
-					) {
-				return new Image(is);
-			}
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-		}
-		return null;
+		InputStream stream = ResourceLoader.class.getClassLoader().getResourceAsStream("icons/" + iconName);
+		return new Image(stream);
  	}
 	
 	public static String getHTMLString (String filename) throws IOException, URISyntaxException {
-		URL url = ResourceLoader.class.getResource("/html/" + filename);
+		URL url = ResourceLoader.class.getClassLoader().getResource("html/" + filename);
 		byte[] encoded = Files.readAllBytes(Paths.get(url.toURI()));
 		Charset ascii = Charset.forName("US-ASCII");
 		return new String(encoded, ascii);
@@ -58,29 +48,11 @@ public class ResourceLoaderFX {
 	}
 		
 	public static FXMLLoader loadFXMLLoader(String filename) {
-		return new FXMLLoader(ResourceLoader.class.getResource("/fxml/" + filename));
+		return new FXMLLoader(ResourceLoader.class.getClassLoader().getResource("fxml/" + filename));
 	}
 	
 	private static void loadFont(String fileName, int size) {
-		URL url = ResourceLoader.class.getResource("/fonts/" + fileName);
-		
-		File f = null;
-		try {
-			f = new File(url.toURI());
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
-		
-		FileInputStream stream = null;
-		try {
-			stream = new FileInputStream(f);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
+		InputStream stream = ResourceLoader.class.getClassLoader().getResourceAsStream("fonts/" + fileName);
 		Font.loadFont(stream, size);
 	}
 	

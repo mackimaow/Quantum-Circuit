@@ -1,0 +1,84 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.7'
+}
+
+applicationDefaultJvmArgs = ["--module-path \"/home/jsh/bin/javafx-sdk-11.0.2/lib\"","--add-modules=javafx.controls,javafx.fxml,javafx.swing"]
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile name: 'jlatexmath-1.0.8-SNAPSHOT'
+    compile name: 'jlatexmath-1.0.8-SNAPSHOT-sources'
+    compile name: 'jlatexmath-font-cyrillic-1.0.8-SNAPSHOT'
+    compile name: 'jlatexmath-font-greek-1.0.8-SNAPSHOT'
+    compile name: 'jlatexmath-fop-1.0.8-SNAPSHOT'
+
+
+    compile name: 'javafx.base'
+    compile name: 'javafx.controls'
+    compile name: 'javafx.fxml'
+    compile name: 'javafx.fxml'
+    compile name: 'javafx.graphics'
+    compile name: 'javafx.media'
+    compile name: 'javafx.web'
+    compile name: 'javafx-swt'
+
+    //compile group: 'org.openjfx', name: 'javafx', version: '11', ext: 'pom'
+}
+
+javafx {
+    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.swing' ]
+}
+
+repositories {
+    flatDir {
+        dir '../dependencies/jLatexMath'
+    }
+    flatDir {
+        dir '../dependencies/javafx'
+    }
+
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs '../src'
+        }
+        resources {
+            srcDirs '../res'
+        }
+    }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'main.Main'
+    }
+
+    baseName = project.name + '-all'
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    with jar
+}
+
+
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'main.Main'
+
+    }
+}
+
+run {
+    if (javafx.platform.classifier == 'win') {
+        // Temporal fix for Eclipse with JDK 1.8 and Windows
+        systemProperty "java.library.path", "C:\tmp"
+    }
+}
+

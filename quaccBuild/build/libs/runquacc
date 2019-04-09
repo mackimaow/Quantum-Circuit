@@ -1,0 +1,2 @@
+#!/bin/bash
+java -jar --module-path "/home/jsh/bin/javafx-sdk-11.0.2/lib" --add-modules=javafx.controls,javafx.fxml,javafx.swing quacc-all.jar
