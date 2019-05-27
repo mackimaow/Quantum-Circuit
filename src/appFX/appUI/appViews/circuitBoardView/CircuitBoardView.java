@@ -1,9 +1,7 @@
 package appFX.appUI.appViews.circuitBoardView;
 
-import java.net.URL;
 import java.util.Hashtable;
 import java.util.LinkedList;
-import java.util.ResourceBundle;
 import java.util.Set;
 
 import appFX.appUI.GateIcon;
@@ -23,7 +21,6 @@ import appFX.framework.solderedGates.SolderedGate;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -63,7 +60,6 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	
 	private final CircuitBoardModel circuitBoard;
 	private final Project project;
-	private boolean initialized = false;
 	private final SelectCursor cursor;
 	private Node[] topNodes;
 	
@@ -72,6 +68,8 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		if(!status.getMainScene().getViewManager().containsView(circuitBoardName, Layout.CENTER)) {
 			CircuitBoardView circuitBoardView = new CircuitBoardView(status.getFocusedProject(), circuitBoardName);
 			status.getMainScene().getViewManager().addView(circuitBoardView);
+		} else {
+			status.getMainScene().getViewManager().setCenteredFocusedView(circuitBoardName);
 		}
 	}
 	
@@ -88,7 +86,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	@Override
 	public void receive(Object source, String methodName, Object... args) {
 		Project p = AppStatus.get().getFocusedProject();
-		if(initialized && p.getCircuitBoardModels() == source) {
+		if(p.getCircuitBoardModels() == source) {
 			if(methodName.equals("put")) {
 				if(((GateModel)args[0]).getFormalName().equals(getName())) {
 					closeView();
@@ -135,7 +133,6 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	
 	
 	private void initialize() {
-		initialized = true;
 		
 		name.setText(circuitBoard.getName());
 		name.setEditable(false);

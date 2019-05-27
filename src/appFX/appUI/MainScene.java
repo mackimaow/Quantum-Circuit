@@ -4,6 +4,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 import appFX.appPreferences.AppPreferences;
+import appFX.appUI.appViews.AppViewManager;
 import appFX.appUI.appViews.ConcreteView;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;

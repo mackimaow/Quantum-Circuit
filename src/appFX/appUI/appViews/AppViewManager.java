@@ -1,12 +1,11 @@
-package appFX.appUI;
+package appFX.appUI.appViews;
 
 import java.util.Iterator;
 
 import appFX.appPreferences.AppPreferences.Doubles;
-import appFX.appUI.appViews.AppView;
+import appFX.appUI.AppTab;
 import appFX.appUI.appViews.AppView.AppViewOnOpenCloseListener;
 import appFX.appUI.appViews.AppView.Layout;
-import appFX.appUI.appViews.ConcreteView;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.framework.AppStatus;
 import javafx.collections.ListChangeListener;
@@ -158,6 +157,10 @@ public class AppViewManager implements ReceivedEvent {
 		}
 	}
 	
+	public void setCenteredFocusedView(String tabName) {
+		AppTab toFocus = getTabByName(tabName, centerTabPane);
+		centerTabPane.getSelectionModel().select(toFocus);
+	}
 	
 	public AppTab getCenterFocusedView() {
 		AppTab t = (AppTab) centerTabPane.getSelectionModel().getSelectedItem();
