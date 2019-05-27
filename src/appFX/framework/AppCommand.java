@@ -295,7 +295,7 @@ public enum AppCommand {
 				CircuitBoardView.openCircuitBoard(newGate);
 			} else if (gmOld instanceof BasicModel) {
 				currentProject.getCustomGates().replace(oldGate, replacement);
-				ms.addView(new BasicModelView((BasicModel)replacement));
+				ms.getViewManager().addView(new BasicModelView((BasicModel)replacement));
 			} else if (gmOld instanceof OracleModel) {
 				currentProject.getCustomOracles().replace(oldGate, replacement);
 			} else {
@@ -403,7 +403,7 @@ public enum AppCommand {
 					continue;
 				
 				if(gm instanceof BasicModel) {
-					ms.addView(new BasicModelView((BasicModel) gm));
+					ms.getViewManager().addView(new BasicModelView((BasicModel) gm));
 				} else if (gm instanceof CircuitBoardModel) {
 					CircuitBoardView.openCircuitBoard(gm.getFormalName());
 				}
@@ -627,7 +627,7 @@ public enum AppCommand {
 	}
 	
 	private static CircuitBoardView getFocusedCircuitBoardView(MainScene ms, PrintStream commandResponse) {
-		AppTab t = ms.getCenterFocusedTab();
+		AppTab t = ms.getViewManager().getCenterFocusedView();
 		if(t == null) {
 			commandResponse.printErrln("No circuit board is opened and focused");
 			return null;

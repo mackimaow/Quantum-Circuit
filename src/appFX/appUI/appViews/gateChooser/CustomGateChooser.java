@@ -9,7 +9,6 @@ import appFX.framework.Project;
 import appFX.framework.gateModels.GateModel;
 
 public class CustomGateChooser extends AbstractGateChooser {
-	private boolean initialized = false;
 	
 	public CustomGateChooser() {
 		super("Custom Gates");
@@ -28,14 +27,13 @@ public class CustomGateChooser extends AbstractGateChooser {
 		button.setVisible(true);
 		button.setText("Create Custom Gate");
 		initializeGates();
-		initialized = true;
 	}
 	
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		AppStatus status = AppStatus.get();
 		
-		if(source == status && methodName.equals("setFocusedProject") && initialized) {
+		if(source == status && methodName.equals("setFocusedProject")) {
 			removeAllGateModels();
 			Project p = (Project) args[0];
 			for(GateModel s : p.getCustomGates().getGateModelIterable())
@@ -43,7 +41,7 @@ public class CustomGateChooser extends AbstractGateChooser {
 		}
 		
 		Project p = status.getFocusedProject();
-		if(p != null && source == p.getCustomGates() && initialized) {
+		if(p != null && source == p.getCustomGates()) {
 			if(methodName.equals("put")) {
 				GateModel replacement = (GateModel) args[0];
 				removeGateModelByName(replacement.getFormalName());
@@ -62,7 +60,6 @@ public class CustomGateChooser extends AbstractGateChooser {
 				removeGateModelByName(name);
 			}
 		}
-		return false;
 	}
 
 	@Override

@@ -1,7 +1,7 @@
 package appFX.appUI;
 
 import appFX.appPreferences.AppPreferences;
-import appFX.appUI.appViews.ConcreteTabView;
+import appFX.appUI.appViews.ConcreteView;
 import appFX.framework.AppCommand;
 import javafx.collections.ObservableList;
 import javafx.scene.control.CheckMenuItem;
@@ -46,7 +46,7 @@ public class AppMenuBar implements AppPreferences{
 			addItemToMenu(menu, mkItem("Run QASM", AppCommand.RUN_QASM, KeyShortCuts.RUN_QASM));
 		menus.add(menu);
 		menu = new Menu("View");
-			for( ConcreteTabView ctv : ConcreteTabView.values())
+			for( ConcreteView ctv : ConcreteView.values())
 				addItemToMenu(menu, mkViewItem("Show " + ctv.getView().getName(), mainScene, ctv));
 		menus.add(menu);
 		menu = new Menu("Help");
@@ -80,16 +80,15 @@ public class AppMenuBar implements AppPreferences{
 		return item;
 	}
 	
-	private static CheckMenuItem mkViewItem(String label, MainScene mainScene, ConcreteTabView view) {
+	private static CheckMenuItem mkViewItem(String label, MainScene mainScene, ConcreteView view) {
 		CheckMenuItem item = new CheckMenuItem(label);
 		item.setOnAction(event -> {
-			if(item.isSelected()) {
-				mainScene.addView(view);
-			}else {
-				mainScene.removeView(view);
-			}
+			if(item.isSelected())
+				mainScene.getViewManager().addView(view);
+			else
+				mainScene.getViewManager().removeView(view);
 		});
-		view.setViewListener((wasAdded) -> {
+		view.getView().setOnOpenCloseListener((wasAdded) -> {
 			item.setSelected(wasAdded);
 		});
 		return item;

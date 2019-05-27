@@ -29,7 +29,7 @@ public abstract class AbstractGateChooser extends AppView implements Initializab
 	private static ToggleGroup tg = new ToggleGroup();
 	
 	public AbstractGateChooser(String viewName) {
-		super("GateChooser.fxml", viewName, Layout.RIGHT);
+		super("GateChooser.fxml", viewName, Layout.RIGHT, true);
 	}
 	
 	public abstract void buttonAction();

@@ -41,7 +41,7 @@ public class Console extends AppView implements PrintStream, Initializable, Chan
 	private int lastIndex = -2;
 	
 	public Console() {
-		super("Console.fxml", "Console", Layout.BOTTOM);
+		super("Console.fxml", "Console", Layout.BOTTOM, true);
 	}
 	
 	public void clearConsole() {
@@ -127,7 +127,7 @@ public class Console extends AppView implements PrintStream, Initializable, Chan
 	}
 	
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		commandLine.setOnKeyPressed((event) -> {
 			if(commandLine.isFocused()) {
 				if(event.getCode() == KeyCode.UP) {
@@ -155,7 +155,6 @@ public class Console extends AppView implements PrintStream, Initializable, Chan
 				}
 			}
 		});
-		return false;
 	}
 
 	@Override

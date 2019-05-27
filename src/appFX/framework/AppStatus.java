@@ -1,7 +1,6 @@
 package appFX.framework;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -9,13 +8,14 @@ import appFX.appPreferences.AppPreferences;
 import appFX.appUI.AppAlerts;
 import appFX.appUI.AppFileIO;
 import appFX.appUI.MainScene;
-import appFX.appUI.appViews.ConcreteTabView;
+import appFX.appUI.appViews.ConcreteView;
 import appFX.appUI.appViews.Console;
 import javafx.event.EventHandler;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import utils.customCollections.LagArrayList;
 import utils.customCollections.eventTracableCollections.Notifier;
 import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
@@ -38,7 +38,7 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 	private final Stage primaryStage;
 	private final MainScene mainscene;
 	private Project project = null;
-	private ArrayList<ReceivedEvent> changeListeners;
+	private LagArrayList<ReceivedEvent> changeHandlers;
 	private final Notifier notifierFan;
 	private final Notifier notifier;
 	private boolean isProjectModifed;
@@ -76,24 +76,19 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 	private AppStatus(Stage primaryStage, MainScene mainScene) {
 		this.primaryStage = primaryStage;
 		this.mainscene = mainScene;
-		this.changeListeners = new ArrayList<>();
+		this.changeHandlers = new LagArrayList<>();
 		this.isProjectModifed = false;
 		this.notifierFan = new Notifier();
 		this.notifier = new Notifier(notifierFan);
 		this.notifier.setReceivedEvent((source, method, args) -> {
 			isProjectModifed = true;
-			return false;
 		});
 		this.notifierFan.setReceivedEvent((source, method, args) -> {
-			Iterator<ReceivedEvent> iter = changeListeners.iterator();
-			while(iter.hasNext()) 
-				if(iter.next().receive(source, method, args))
-					iter.remove();
-			return false;
+			changeHandlers.setLagged(true);
+			for(ReceivedEvent re : changeHandlers)
+				re.receive(source, method, args);
+			changeHandlers.setLagged(false);
 		});
-		
-		for(ConcreteTabView tv : ConcreteTabView.values())
-			addAppChangedListener(tv.getView());
 		
 		addAppChangedListener(mainScene);
 	}
@@ -108,7 +103,7 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 	 * @return the console controller of this application
 	 */
 	public Console getConsole() {
-		return (Console) ConcreteTabView.CONSOLE.getView();
+		return (Console) ConcreteView.CONSOLE.getView();
 	}
 	
 	
@@ -186,11 +181,11 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 	 * @param changeListener
 	 */
 	public void addAppChangedListener(ReceivedEvent changeListener) {
-		changeListeners.add(changeListener);
+		changeHandlers.add(changeListener);
 	}
 	
 	public void removeAppChangedListener(ReceivedEvent changeListener) {
-		changeListeners.remove(changeListener);
+		changeHandlers.remove(changeListener);
 	}
 	
 	

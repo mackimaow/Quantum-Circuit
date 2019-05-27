@@ -1,18 +1,13 @@
 package appFX.appUI.appViews;
 
-import java.net.URL;
-import java.util.ResourceBundle;
-
 import appFX.appUI.GateIcon;
 import appFX.appUI.LatexNode;
-import appFX.appUI.appViews.AppView.ViewListener;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.BasicModel;
 import appFX.framework.gateModels.GateModel;
 import javafx.event.ActionEvent;
-import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -22,7 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import utils.customCollections.ImmutableArray;
 
-public class BasicModelView extends AppView implements Initializable, ViewListener {
+public class BasicModelView extends AppView {
 	
 	public TextField name, symbol, registers, modelType;
 	public ScrollPane description;
@@ -38,6 +33,7 @@ public class BasicModelView extends AppView implements Initializable, ViewListen
 	public BasicModelView(BasicModel gm) {
 		super("GateModelView.fxml", gm.getFormalName(), Layout.CENTER);
 		this.gm = gm;
+		initialize();
 	}
 
 	public void onButtonPress(ActionEvent e) {
@@ -49,31 +45,22 @@ public class BasicModelView extends AppView implements Initializable, ViewListen
 	}
 	
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		Project p = AppStatus.get().getFocusedProject();
 		if(initialized && p.getCustomGates() == source) {
 
 			if(methodName.equals("put")) {
-				if(((GateModel)args[0]).getFormalName().equals(getName())) {
-					setViewListener(null);
+				if(((GateModel)args[0]).getFormalName().equals(getName()))
 					closeView();
-					return true;
-				}
 			} else if (methodName.equals("replace") || methodName.equals("remove")){
-				if(args[0].equals(getName())) {
-					setViewListener(null);
+				if(args[0].equals(getName()))
 					closeView();
-					return true;
-				}
 			}
 		}
-		return false;
 	}
 
-	@Override
-	public void initialize(URL arg0, ResourceBundle arg1) {
-		setViewListener(this);
-		addToReceiveEventListener();
+	
+	private void initialize() {
 		initialized = true;
 		updateDefinitionUI();
 	}
@@ -161,12 +148,6 @@ public class BasicModelView extends AppView implements Initializable, ViewListen
 		editButton.setDisable(gm.isPreset());
 		editButton.setVisible(!gm.isPreset());
 		editButton.setManaged(!gm.isPreset());
-	}
-
-	@Override
-	public void viewChanged(boolean wasAdded) {
-		if(!wasAdded)
-			removeEventListener();
 	}
 
 }

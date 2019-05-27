@@ -12,57 +12,73 @@ public abstract class AppView extends AppFXMLComponent implements ReceivedEvent 
 	}
 	
 	private final Layout layout;
-	private final String viewName;
-	private ViewListener viewListener = null;
+	private final AppTab appTab;
+	private final boolean updateInBackground;
+	private AppViewOnOpenCloseListener openCloseListener;
+	
 	
 	public AppView(String fxmlFilename, String viewName, Layout layout) {
+		this(fxmlFilename, viewName, layout, false);
+	}
+	
+	public AppView(String fxmlFilename, String viewName, Layout layout, boolean updateInBackground) {
 		super(fxmlFilename);
 		this.layout = layout;
-		this.viewName = viewName;
+		this.updateInBackground = updateInBackground;
+		this.appTab = new AppTab(viewName, this);
+		appTab.setContent(loadAsNode());
+		appTab.setOnCloseRequest((event) -> {
+			if(!onCloseRequest())
+				event.consume();
+			else
+				if(!updateInBackground)
+					AppStatus.get().removeAppChangedListener(this);
+		});
+		if(updateInBackground)
+			AppStatus.get().addAppChangedListener(this);
 	}
 	
-	public void setViewListener(ViewListener listener) {
-		viewListener = listener;
+	// overridable
+	public boolean onCloseRequest() {
+		return true;
 	}
 	
-	public ViewListener getViewListener() {
-		return viewListener;
+	// overridable
+	public boolean onOpenRequest() { return true; }
+	
+	public void setOnOpenCloseListener(AppViewOnOpenCloseListener openCloseListener) {
+		this.openCloseListener = openCloseListener;
+		appTab.setOnClosed((event) -> {openCloseListener.appTabOpenClose(false);});
 	}
+	
+	public AppViewOnOpenCloseListener getOnOpenCloseListener() {
+		return openCloseListener;
+	}
+	
+	
+	public static interface AppViewOnOpenCloseListener {
+		public void appTabOpenClose(boolean isOpening);
+	}
+	
 	
 	public Layout getLayout() {
 		return layout;
 	}
 	
 	public AppTab getTab() {
-		AppTab tab = new AppTab(viewName, this);
-		tab.setContent(loadAsNode());
-		return tab;
+		return appTab;
 	}
 	
 	public String getName() {
-		return viewName;
+		return appTab.getText();
+	}
+	
+	public boolean isUpdatedInBackground() {
+		return updateInBackground;
 	}
 	
 	public void closeView() {
-		AppStatus.get().getMainScene().removeView(this);
-	}
-	
-	public void addToReceiveEventListener() {
-		AppStatus.get().addAppChangedListener(this);
-	}
-	
-	public void removeEventListener() {
-		AppStatus.get().removeAppChangedListener(this);
-	}
-	
-	
-	public static interface ViewListener {
-		
-		/**
-		 * Called when this view was removed or added to the display
-		 * @param wasRemoved true when view was added, false when view was removed
-		 */
-		public void viewChanged(boolean wasAdded);
+		AppStatus.get().getMainScene().getViewManager().removeView(this);
 	}
 	
 }

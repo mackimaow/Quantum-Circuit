@@ -51,7 +51,7 @@ public class Notifier implements Serializable {
 	}
 	
 	public static interface ReceivedEvent {
-		public boolean receive(Object source, String methodName, Object ... args);
+		public void receive(Object source, String methodName, Object ... args);
 	}
 	
 }

@@ -31,7 +31,7 @@ public class SelectCursor implements EventHandler<MouseEvent> {
 		this.cbv = cbv;
 		this.cursorDisp = new Region();
 		MainScene ms = AppStatus.get().getMainScene();
-		this.currentToolAction = getToolAction(ms.getSelectedTool());
+		this.currentToolAction = getToolAction(ms.getToolManager().getSelectedTool());
 		currentToolAction.initToolCursorRender(cursorDisp);
 		setPosition(0, 0);
 		

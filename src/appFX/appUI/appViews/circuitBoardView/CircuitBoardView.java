@@ -9,7 +9,7 @@ import java.util.Set;
 import appFX.appUI.GateIcon;
 import appFX.appUI.LatexNode;
 import appFX.appUI.appViews.AppView;
-import appFX.appUI.appViews.AppView.ViewListener;
+import appFX.appUI.appViews.AppView.AppViewOnOpenCloseListener;
 import appFX.appUI.appViews.gateChooser.AbstractGateChooser;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
@@ -51,7 +51,7 @@ import utils.customCollections.ImmutableArray;
 import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
 
-public class CircuitBoardView extends AppView implements Initializable, ViewListener, EventHandler<MouseEvent> {
+public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener, EventHandler<MouseEvent> {
 	
 	private static final int GRID_SIZE = 50;
 	
@@ -69,9 +69,9 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 	
 	public static void openCircuitBoard(String circuitBoardName) {
 		AppStatus status = AppStatus.get();
-		if(!status.getMainScene().containsView(circuitBoardName, Layout.CENTER)) {
+		if(!status.getMainScene().getViewManager().containsView(circuitBoardName, Layout.CENTER)) {
 			CircuitBoardView circuitBoardView = new CircuitBoardView(status.getFocusedProject(), circuitBoardName);
-			status.getMainScene().addView(circuitBoardView);
+			status.getMainScene().getViewManager().addView(circuitBoardView);
 		}
 	}
 	
@@ -81,27 +81,24 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 		this.project = project;
 		this.circuitBoard.setRenderEventHandler(new CircuitBoardEventHandler());
 		this.cursor = new SelectCursor(this);
+		setOnOpenCloseListener(this);
+		initialize();
 	}
 	
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		Project p = AppStatus.get().getFocusedProject();
 		if(initialized && p.getCircuitBoardModels() == source) {
 			if(methodName.equals("put")) {
 				if(((GateModel)args[0]).getFormalName().equals(getName())) {
-					setViewListener(null);
 					closeView();
-					return true;
 				}
 			} else if (methodName.equals("replace") || methodName.equals("remove")){
 				if(args[0].equals(getName())) {
-					setViewListener(null);
 					closeView();
-					return true;
 				}
 			}
 		}
-		return false;
 	}
 	
 	public void toggleGrid(ActionEvent ae) {
@@ -109,7 +106,6 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 			showGrid();
 		else
 			hideGrid();
-		
 	}
 	
 	private void showGrid() {
@@ -138,11 +134,8 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 	}
 	
 	
-	@Override
-	public void initialize(URL location, ResourceBundle resources) {
+	private void initialize() {
 		initialized = true;
-		setViewListener(this);
-		addToReceiveEventListener();
 		
 		name.setText(circuitBoard.getName());
 		name.setEditable(false);
@@ -174,7 +167,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 		
 		circuitBoardPane.addEventFilter(MouseEvent.MOUSE_MOVED, this);
 
-		AppStatus.get().getMainScene().addToolButtonListener(cursor.getToolChangedListener());
+		AppStatus.get().getMainScene().getToolManager().addToolButtonListener(cursor.getToolChangedListener());
 		AbstractGateChooser.addToggleListener(cursor.getModelChangedListener());
 		
 		rerenderCircuitBoard();
@@ -186,21 +179,18 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 	
 	
 	@Override
-	public void viewChanged(boolean wasAdded) {
-		if(!wasAdded) {
-			AppStatus.get().getMainScene().removeToolButtonListener(cursor.getToolChangedListener());
+	public void appTabOpenClose(boolean isOpening) {
+		if(!isOpening) {
+			AppStatus.get().getMainScene().getToolManager().removeToolButtonListener(cursor.getToolChangedListener());
 			AbstractGateChooser.removeToggleListener(cursor.getModelChangedListener());
-			removeEventListener();
 		}
 	}
 	
 	private class CircuitBoardEventHandler implements ReceivedEvent {
-		
 		@Override
-		public boolean receive(Object source, String methodName, Object... args) {
+		public void receive(Object source, String methodName, Object... args) {
 			cursor.getCurrentTool().reset();
 			rerenderCircuitBoard();
-			return false;
 		}
 	}
 	
@@ -280,7 +270,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 			String symbol;
 			if(gm == null) {
 				symbol = sg.getGateModelFormalName();
-				drawBehindIdentiyGates(nodes, column, start, startBody, endBody, end);
+				drawBehindIdentityGates(nodes, column, start, startBody, endBody, end);
 				addRegularGateBody(nodes, data, symbol);
 			} else if(gm.isPreset()) {
 				symbol = gm.getName();
@@ -348,7 +338,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 					topNodes[column] = nodes.get(nodes.size() - 1);
 					break;
 				default:
-					drawBehindIdentiyGates(nodes, column, start, startBody, endBody, end);
+					drawBehindIdentityGates(nodes, column, start, startBody, endBody, end);
 					addRegularGateBody(nodes, data, gm.getSymbol());
 					break;
 				}
@@ -356,7 +346,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 				
 			} else {
 				symbol = gm.getSymbol();
-				drawBehindIdentiyGates(nodes, column, start, startBody, endBody, end);
+				drawBehindIdentityGates(nodes, column, start, startBody, endBody, end);
 				addRegularGateBody(nodes, data, symbol);
 			}
 			
@@ -382,7 +372,7 @@ public class CircuitBoardView extends AppView implements Initializable, ViewList
 	}
 	
 	
-	private void drawBehindIdentiyGates(ObservableList<Node> nodes, int column, int start, int startBody, int endBody, int end) {
+	private void drawBehindIdentityGates(ObservableList<Node> nodes, int column, int start, int startBody, int endBody, int end) {
 		int controlTop = startBody - start > 0 ? -1 : 0;
 		int controlBot = end - endBody > 0 ? 1 : 0;
 		if(endBody - startBody == 0) {

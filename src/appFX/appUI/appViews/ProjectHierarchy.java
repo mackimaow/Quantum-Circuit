@@ -35,7 +35,7 @@ public class ProjectHierarchy extends AppView implements Initializable, EventHan
 	private ContextMenu cm = new ContextMenu();
 	
 	public ProjectHierarchy() {
-		super("ProjectHierarchy.fxml", "Project Hierarchy", Layout.LEFT);
+		super("ProjectHierarchy.fxml", "Project Hierarchy", Layout.LEFT, true);
 	}
 	
 	public void setFocusedProject(Project project) {
@@ -110,7 +110,7 @@ public class ProjectHierarchy extends AppView implements Initializable, EventHan
 	}
 
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		AppStatus status = AppStatus.get();
 		Project p = status.getFocusedProject();
 		
@@ -163,8 +163,6 @@ public class ProjectHierarchy extends AppView implements Initializable, EventHan
 			}
 			cm.hide();
 		}
-		
-		return false;
 	}
 	
 	private Pair<TreeItem<String>, String> getListFromSource(Project p, Object source) {

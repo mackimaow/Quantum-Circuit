@@ -28,9 +28,8 @@ public class PresetGatesChooser extends AbstractGateChooser {
 
 
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		
-		return false;
 	}
 	
 }

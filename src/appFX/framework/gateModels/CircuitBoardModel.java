@@ -337,18 +337,9 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	
 	
 	
-	
-	
-	
-	
 	public int getRows() {
 		return elements.getFirst().size();
 	}
-	
-	
-	
-	
-	
 	
 	
 	
@@ -356,15 +347,6 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		return elements.size();
 	}
 
-	
-	
-	
-	
-    
-    
-	
-	
-	
 	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

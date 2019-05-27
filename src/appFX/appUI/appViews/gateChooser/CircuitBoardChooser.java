@@ -9,7 +9,6 @@ import appFX.framework.Project;
 import appFX.framework.gateModels.GateModel;
 
 public class CircuitBoardChooser extends AbstractGateChooser {
-	private boolean initialized = false;
 	
 	public CircuitBoardChooser() {
 		super("Circuit Boards");
@@ -28,22 +27,21 @@ public class CircuitBoardChooser extends AbstractGateChooser {
 		button.setVisible(true);
 		button.setText("Create Circuit Board");
 		initializeGates();
-		initialized = true;
 	}
 	
 	@Override
-	public boolean receive(Object source, String methodName, Object... args) {
+	public void receive(Object source, String methodName, Object... args) {
 		AppStatus status = AppStatus.get();
 		
-		if(source == status && methodName == "setFocusedProject" && initialized) {
+		if(source == status && methodName == "setFocusedProject") {
 			removeAllGateModels();
 			Project p = (Project) args[0];
 			for(GateModel s : p.getCircuitBoardModels().getGateModelIterable())
 				addGateModel(s);
 		}
-		
+
 		Project p = status.getFocusedProject();
-		if(p != null && source == p.getCircuitBoardModels() && initialized) {
+		if(p != null && source == p.getCircuitBoardModels()) {
 			if(methodName.equals("put")) {
 				GateModel replacement = (GateModel) args[0];
 				removeGateModelByName(replacement.getFormalName());
@@ -62,7 +60,6 @@ public class CircuitBoardChooser extends AbstractGateChooser {
 				removeGateModelByName(name);
 			}
 		}
-		return false;
 	}
 
 	@Override
