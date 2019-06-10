@@ -16,6 +16,7 @@ public class SelectCursor implements EventHandler<MouseEvent> {
 		
 		public void reset() {}
 		public void buttonPressed(int row, int column) {}
+		public void mouseMoved(Region cursor, double x, double y, double boundX, double boundY) {}
 		public boolean isCursorDisplayed() {
 			return false;
 		}
@@ -30,6 +31,7 @@ public class SelectCursor implements EventHandler<MouseEvent> {
 	public SelectCursor(CircuitBoardView cbv) {
 		this.cbv = cbv;
 		this.cursorDisp = new Region();
+		cursorDisp.setOnMouseMoved(this);
 		MainScene ms = AppStatus.get().getMainScene();
 		this.currentToolAction = getToolAction(ms.getToolManager().getSelectedTool());
 		currentToolAction.initToolCursorRender(cursorDisp);
@@ -61,13 +63,13 @@ public class SelectCursor implements EventHandler<MouseEvent> {
 		} else if(toggle == ms.controlNotTool) {
 			return new ControlToolAction(cbv, Control.CONTROL_FALSE);
 		} else if(toggle == ms.addColumnTool) {
-			return new RowColumnToolAction(cbv, true, false);
+			return new RowColumnToolAction(cbv, RowColumnToolAction.ADD, RowColumnToolAction.COLUMN);
 		} else if(toggle == ms.removeColumnTool) {
-			return new RowColumnToolAction(cbv, false, false);
+			return new RowColumnToolAction(cbv, RowColumnToolAction.REMOVE, RowColumnToolAction.COLUMN);
 		} else if(toggle == ms.addRowTool) {
-			return new RowColumnToolAction(cbv, true, true);
+			return new RowColumnToolAction(cbv, RowColumnToolAction.ADD, RowColumnToolAction.ROW);
 		} else if(toggle == ms.removeRowTool) {
-			return new RowColumnToolAction(cbv, false, true);
+			return new RowColumnToolAction(cbv, RowColumnToolAction.REMOVE, RowColumnToolAction.ROW);
 		}
 		hideCursor();
 		return DO_NOTHING;
@@ -123,7 +125,11 @@ public class SelectCursor implements EventHandler<MouseEvent> {
 
 	@Override
 	public void handle(MouseEvent event) {
-		currentToolAction.buttonPressed(getRow(), getColumn());
+		if (event.getEventType() == MouseEvent.MOUSE_CLICKED) {
+			currentToolAction.buttonPressed(getRow(), getColumn());
+		} else if (event.getEventType() == MouseEvent.MOUSE_MOVED) {
+			currentToolAction.mouseMoved(cursorDisp, event.getX(), event.getY(), cursorDisp.getWidth(), cursorDisp.getHeight());
+		}
 	}
 	
 	public ToolAction getCurrentTool() {

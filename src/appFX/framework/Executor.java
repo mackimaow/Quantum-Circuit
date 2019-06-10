@@ -1,27 +1,20 @@
 package appFX.framework;
 
-import Simulator.Qubit;
-import appFX.framework.exportGates.Control;
-import appFX.framework.exportGates.ExportedGate;
-import appFX.framework.exportGates.GateManager.Exportable;
-import appFX.framework.exportGates.GateManager;
-import appFX.framework.gateModels.BasicModel;
-import appFX.framework.gateModels.CircuitBoardModel;
-import appFX.framework.gateModels.GateModel;
-import appFX.framework.gateModels.PresetGateType;
-import appSW.framework.AbstractGate;
-import mathLib.Complex;
-import mathLib.Matrix;
-import mathLib.Vector;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
-import java.util.Spliterator;
 import java.util.stream.Stream;
+
+import appFX.framework.exportGates.ExportedGate;
+import appFX.framework.exportGates.GateManager;
+import appFX.framework.gateModels.BasicModel;
+import appFX.framework.gateModels.CircuitBoardModel;
+import mathLib.Complex;
+import mathLib.Matrix;
+import mathLib.Vector;
 
 public class Executor {
 

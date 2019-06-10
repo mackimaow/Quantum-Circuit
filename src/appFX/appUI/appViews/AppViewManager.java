@@ -5,7 +5,7 @@ import java.util.Iterator;
 import appFX.appPreferences.AppPreferences.Doubles;
 import appFX.appUI.AppTab;
 import appFX.appUI.appViews.AppView.AppViewOnOpenCloseListener;
-import appFX.appUI.appViews.AppView.Layout;
+import appFX.appUI.appViews.AppView.ViewLayout;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.framework.AppStatus;
 import javafx.collections.ListChangeListener;
@@ -37,22 +37,26 @@ public class AppViewManager implements ReceivedEvent {
 	}
 	
 	
-	public void addView(ConcreteView tabView) {
-		addView(tabView.getView());
+	public void addView(ConcreteView concreteView) {
+		addView(concreteView.getView());
+	}
+	
+	public boolean containtsView(ConcreteView concreteView) {
+		return containsView(concreteView.getView().getName(), concreteView.getView().getLayout());
 	}
 	
 	
-	public boolean containsView(String tabName, Layout tabLayout) {
-		switch(tabLayout) {
+	public boolean containsView(String viewName, ViewLayout viewLayout) {
+		switch(viewLayout) {
 		case LEFT:
-			return containsTab(tabName, leftTabPane);
+			return containsTab(viewName, leftTabPane);
 		case CENTER:
-			return containsTab(tabName, centerTabPane);
+			return containsTab(viewName, centerTabPane);
 		case RIGHT:
-			return containsTab(tabName, rightTabPane);
+			return containsTab(viewName, rightTabPane);
 		case BOTTOM:
 		default:
-			return containsTab(tabName, bottomTabPane);
+			return containsTab(viewName, bottomTabPane);
 		}
 	}
 	

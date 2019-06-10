@@ -7,21 +7,21 @@ import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
 public abstract class AppView extends AppFXMLComponent implements ReceivedEvent {
 	
-	public static enum Layout {
+	public static enum ViewLayout {
 		CENTER, LEFT, RIGHT, BOTTOM;
 	}
 	
-	private final Layout layout;
+	private final ViewLayout layout;
 	private final AppTab appTab;
 	private final boolean updateInBackground;
 	private AppViewOnOpenCloseListener openCloseListener;
 	
 	
-	public AppView(String fxmlFilename, String viewName, Layout layout) {
+	public AppView(String fxmlFilename, String viewName, ViewLayout layout) {
 		this(fxmlFilename, viewName, layout, false);
 	}
 	
-	public AppView(String fxmlFilename, String viewName, Layout layout, boolean updateInBackground) {
+	public AppView(String fxmlFilename, String viewName, ViewLayout layout, boolean updateInBackground) {
 		super(fxmlFilename);
 		this.layout = layout;
 		this.updateInBackground = updateInBackground;
@@ -61,7 +61,7 @@ public abstract class AppView extends AppFXMLComponent implements ReceivedEvent 
 	}
 	
 	
-	public Layout getLayout() {
+	public ViewLayout getLayout() {
 		return layout;
 	}
 	

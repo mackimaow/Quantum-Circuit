@@ -11,6 +11,7 @@ public abstract class ToolAction {
 	}
 	
 	public abstract void buttonPressed(int row, int column);
+	public abstract void mouseMoved(Region cursor, double x, double y, double boundX, double boundY);
 	public abstract void reset();
 	public abstract boolean isCursorDisplayed();
 	

@@ -156,7 +156,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
     
     
-    public void addRows(int index, int amt) {
+    public synchronized void addRows(int index, int amt) {
     	if(amt < 0) throw new IllegalArgumentException("Amount must be positive");
     	if(index < 0 || index > getRows())
 			throw new IllegalArgumentException("Index must be a postive and less than or equal the size");
@@ -210,7 +210,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-	public void removeRows(int firstIndex, int lastIndex) {
+	public synchronized void removeRows(int firstIndex, int lastIndex) {
     	if(firstIndex < 0 || firstIndex > getRows())
 			throw new IllegalArgumentException("First arg must be a postive and less than or equal the size");
 		if(lastIndex < firstIndex || lastIndex > getRows())
@@ -253,8 +253,9 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 				}
 				iterator.remove();
 			}
-			if(!firstP.isWithinBody() || hitFirstReg || hitLastReg) {
-				ListIterator<SolderedPin> copy = column.iterator((CustomListIterator)iterator);
+			
+			ListIterator<SolderedPin> copy = column.iterator((CustomListIterator)iterator);
+			if(!isSectionSimplyRemovable(firstG, iterator, copy) || hitFirstReg || hitLastReg) {
 				removeBoundaryGates(firstG, lastG, hitFirstReg, hitLastReg, iterator, copy);
 			}
 		}
@@ -263,6 +264,31 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		renderNotifier.sendChange(this, "removeRows", firstIndex, lastIndex);
 	}
     
+    private boolean isSectionSimplyRemovable(SolderedGate solderedGate, 
+    		ListIterator<SolderedPin> solderedRegRowIteratorFirst, ListIterator<SolderedPin> solderedRegRowIteratorLast) {
+    	return isAbovePartOfSolderedGate(solderedGate, solderedRegRowIteratorFirst)  &&
+    			isBelowPartOfSolderedGate(solderedGate, solderedRegRowIteratorLast);
+    }
+    
+    private boolean isAbovePartOfSolderedGate(SolderedGate solderedGate, ListIterator<SolderedPin> solderedRegRowIterator) {
+    	if (!solderedRegRowIterator.hasPrevious())
+    		return false;
+    	SolderedPin solderedPin = solderedRegRowIterator.previous();
+    	SolderedGate solderedGatePrevious = solderedPin.getSolderedGate();
+    	boolean isTheSameGate = solderedGatePrevious == solderedGate;
+    	solderedRegRowIterator.next();
+    	return isTheSameGate;
+    }
+    
+    private boolean isBelowPartOfSolderedGate(SolderedGate solderedGate, ListIterator<SolderedPin> solderedRegRowIterator) {
+    	if (!solderedRegRowIterator.hasNext())
+    		return false;
+    	SolderedPin solderedPin = solderedRegRowIterator.next();
+    	SolderedGate solderedGateNext = solderedPin.getSolderedGate();
+    	boolean isTheSameGate = solderedGateNext == solderedGate;
+    	solderedRegRowIterator.previous();
+    	return isTheSameGate;
+    }
     
     
     
@@ -270,8 +296,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
     
     
-    
-	public void addColumns(int index, int amt) {
+	public synchronized void addColumns(int index, int amt) {
 		if(amt < 0) throw new IllegalArgumentException("Amount must be positive");
 		if(index < 0 || index > getColumns())
 			throw new IllegalArgumentException("Index must be a postive and less than or equal the size");
@@ -289,7 +314,6 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 				column.add(mkIdent());
 			iterator.add(column);
 		}
-
     	renderNotifier.sendChange(this, "addColumns", index, amt);
 	}
 	
@@ -300,7 +324,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	
 	
 	
-	public void removeColumns(int firstIndex, int lastIndex) {
+	public synchronized void removeColumns(int firstIndex, int lastIndex) {
 		if(firstIndex < 0 || firstIndex > getColumns())
 			throw new IllegalArgumentException("First arg must be a postive and less than or equal the size");
 		if(lastIndex < firstIndex || lastIndex > getColumns())
@@ -350,7 +374,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public void placeGate(String gateModelFormalName, int column, Integer[] registers, String ... parameters) throws DefinitionEvaluatorException {
+	public synchronized void placeGate(String gateModelFormalName, int column, Integer[] registers, String ... parameters) throws DefinitionEvaluatorException {
 		if(column < 0 || column > getColumns())
 			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
 		for(int reg : registers)
@@ -435,7 +459,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	
 	
 	
-	public void removeGate(int row, int column) {
+	public synchronized void removeGate(int row, int column) {
 		if(row < 0 || row >= getRows())
 			throw new IllegalArgumentException("first arg must be a postive and less than the size");
 		if(column < 0|| column >= getColumns())
@@ -472,7 +496,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	
 	
 	
-	public void placeControl(int rowControl, int rowGate, int column, boolean controlStatus) {
+	public synchronized void placeControl(int rowControl, int rowGate, int column, boolean controlStatus) {
 		if(rowControl < 0 || rowControl >= getRows())
 			throw new IllegalArgumentException("row must be a postive and less than the size");
 		if(rowGate < 0 || rowGate >= getRows())
@@ -559,7 +583,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	
 	
 	
-	public void removeControl(int row, int column) {
+	public synchronized void removeControl(int row, int column) {
 		if(row < 0 || row >= getRows())
 			throw new IllegalArgumentException("row must be a postive and less than the size");
 		if(column < 0|| column >= getColumns())

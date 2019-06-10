@@ -81,4 +81,7 @@ public class ControlToolAction extends ToolAction {
 	public boolean isCursorDisplayed() {
 		return true;
 	}
+
+	@Override
+	public void mouseMoved(Region cursor, double x, double y, double boundX, double boundY) {}
 }

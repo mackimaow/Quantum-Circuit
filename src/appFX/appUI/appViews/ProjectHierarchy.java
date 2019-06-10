@@ -35,7 +35,7 @@ public class ProjectHierarchy extends AppView implements Initializable, EventHan
 	private ContextMenu cm = new ContextMenu();
 	
 	public ProjectHierarchy() {
-		super("ProjectHierarchy.fxml", "Project Hierarchy", Layout.LEFT, true);
+		super("ProjectHierarchy.fxml", "Project Hierarchy", ViewLayout.LEFT, true);
 	}
 	
 	public void setFocusedProject(Project project) {

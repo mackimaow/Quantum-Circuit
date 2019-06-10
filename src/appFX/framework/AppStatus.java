@@ -1,13 +1,13 @@
 package appFX.framework;
 
 import java.net.URI;
-import java.util.Iterator;
 import java.util.Optional;
 
 import appFX.appPreferences.AppPreferences;
 import appFX.appUI.AppAlerts;
 import appFX.appUI.AppFileIO;
 import appFX.appUI.MainScene;
+import appFX.appUI.appViews.AppViewManager;
 import appFX.appUI.appViews.ConcreteView;
 import appFX.appUI.appViews.Console;
 import javafx.event.EventHandler;
@@ -224,6 +224,14 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 				return;
 			}
 		}
+		
+		AppViewManager viewManager = AppStatus.get().getMainScene().getViewManager();
+		AppPreferences.Booleans.CONSOLE_OPEN.set(viewManager.containtsView(ConcreteView.CONSOLE));
+		AppPreferences.Booleans.CUSTOM_GATES_OPEN.set(viewManager.containtsView(ConcreteView.CUSTOM_GATES_VIEW));
+		AppPreferences.Booleans.CUSTOM_ORACLES_OPEN.set(viewManager.containtsView(ConcreteView.CUSTOM_ORACLES_VIEW));
+		AppPreferences.Booleans.PRESET_GATES_OPEN.set(viewManager.containtsView(ConcreteView.PRESET_GATES_VIEW));
+		AppPreferences.Booleans.CIRCUITBOARDS_OPEN.set(viewManager.containtsView(ConcreteView.CIRCUITBOARD_VIEW));
+		AppPreferences.Booleans.PROJECT_HIERARCHY_OPEN.set(viewManager.containtsView(ConcreteView.PROJECT_HIERARCHY));
 		
 		URI location = project.getProjectFileLocation();
 		if(location != null)

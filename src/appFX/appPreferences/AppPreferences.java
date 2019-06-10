@@ -40,10 +40,6 @@ public interface AppPreferences {
 		
 		
 		
-		
-		
-		
-		
 		private final String defaultValue;
 		
 		Strings(String defaultValue){
@@ -83,7 +79,6 @@ public interface AppPreferences {
 		// GUI Variables
 		WINDOW_WIDTH(700),
 		WINDOW_HEIGHT(600),
-		
 		;
 		
 		
@@ -131,7 +126,7 @@ public interface AppPreferences {
 	 */
 	static enum Booleans{
 		// Opened Views
-		PROJECT_HEIRARCHY_OPEN(true),
+		PROJECT_HIERARCHY_OPEN(true),
 		CONSOLE_OPEN(true),
 		PRESET_GATES_OPEN(true),
 		CUSTOM_GATES_OPEN(true),

@@ -13,6 +13,7 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
 import utils.customCollections.ImmutableArray;
 
 public class SolderRegionToolAction  extends ToolAction {
@@ -131,5 +132,8 @@ public class SolderRegionToolAction  extends ToolAction {
 	public boolean isCursorDisplayed() {
 		return true;
 	}
+
+	@Override
+	public void mouseMoved(Region cursor, double x, double y, double boundX, double boundY) {}
 
 }

@@ -41,7 +41,7 @@ public class Console extends AppView implements PrintStream, Initializable, Chan
 	private int lastIndex = -2;
 	
 	public Console() {
-		super("Console.fxml", "Console", Layout.BOTTOM, true);
+		super("Console.fxml", "Console", ViewLayout.BOTTOM, true);
 	}
 	
 	public void clearConsole() {

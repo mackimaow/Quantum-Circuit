@@ -65,7 +65,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	
 	public static void openCircuitBoard(String circuitBoardName) {
 		AppStatus status = AppStatus.get();
-		if(!status.getMainScene().getViewManager().containsView(circuitBoardName, Layout.CENTER)) {
+		if(!status.getMainScene().getViewManager().containsView(circuitBoardName, ViewLayout.CENTER)) {
 			CircuitBoardView circuitBoardView = new CircuitBoardView(status.getFocusedProject(), circuitBoardName);
 			status.getMainScene().getViewManager().addView(circuitBoardView);
 		} else {
@@ -74,7 +74,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	}
 	
 	private CircuitBoardView(Project project, String circuitBoard) {
-		super("CircuitBoardView.fxml", circuitBoard, Layout.CENTER);
+		super("CircuitBoardView.fxml", circuitBoard, ViewLayout.CENTER);
 		this.circuitBoard = (CircuitBoardModel) project.getCircuitBoardModels().get(circuitBoard);
 		this.project = project;
 		this.circuitBoard.setRenderEventHandler(new CircuitBoardEventHandler());

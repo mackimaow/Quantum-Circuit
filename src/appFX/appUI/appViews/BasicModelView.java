@@ -31,7 +31,7 @@ public class BasicModelView extends AppView {
 	private BasicModel gm;
 	
 	public BasicModelView(BasicModel gm) {
-		super("GateModelView.fxml", gm.getFormalName(), Layout.CENTER);
+		super("GateModelView.fxml", gm.getFormalName(), ViewLayout.CENTER);
 		this.gm = gm;
 		initialize();
 	}
