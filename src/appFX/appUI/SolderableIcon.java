@@ -4,6 +4,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 import appFX.framework.gateModels.GateModel;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -12,9 +13,11 @@ import utils.customCollections.ImmutableArray;
 
 public class SolderableIcon extends AppFXMLComponent implements Initializable {
 
+	@FXML
+	private HBox gate;
+	@FXML
+	private Label symbol;
 	
-	public HBox gate;
-	public Label symbol;
 	private GateModel s;
 	
 	public static Node mkIcon(GateModel s) {

@@ -10,6 +10,7 @@ import appFX.framework.AppCommand;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -32,9 +33,12 @@ public class Console extends AppView implements PrintStream, Initializable, Chan
 	
 	public static final int PREVIOUS_COMMAND_LIMIT = 20;
 	
-	public TextFlow consoleArea;
-	public TextField commandLine;
-	public ScrollPane scroll;
+	@FXML
+	private TextFlow consoleArea;
+	@FXML
+	private TextField commandLine;
+	@FXML
+	private ScrollPane scroll;
 	
 	private LinkedList<String> previousCommands = new LinkedList<>();
 	private ListIterator<String> commandsIterator = null;

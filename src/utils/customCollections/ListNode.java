@@ -1,7 +1,6 @@
 package utils.customCollections;
 
-
-final class ListNode <T> {
+class ListNode <T> {
 	T element;
 	ListNode<T> next;
 	

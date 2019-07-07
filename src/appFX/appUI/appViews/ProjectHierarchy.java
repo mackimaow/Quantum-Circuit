@@ -18,6 +18,7 @@ import appFX.framework.gateModels.OracleModel;
 import appFX.framework.gateModels.PresetGateType;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -29,7 +30,8 @@ import utils.customCollections.Pair;
 
 public class ProjectHierarchy extends AppView implements Initializable, EventHandler<MouseEvent> {
 	
-	public TreeView<String> projectView;
+	@FXML 
+	private TreeView<String> projectView;
 	private TreeItem<String> root, topLevel, subCircuits, customGates, customOracles, presetGates;
 	private boolean initialized = false;
 	private ContextMenu cm = new ContextMenu();

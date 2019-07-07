@@ -1,4 +1,4 @@
-package appFX.appUI.appViews.circuitBoardView;
+package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;

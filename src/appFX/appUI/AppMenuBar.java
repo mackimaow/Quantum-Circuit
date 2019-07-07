@@ -3,6 +3,7 @@ package appFX.appUI;
 import appFX.appPreferences.AppPreferences;
 import appFX.appUI.appViews.ConcreteView;
 import appFX.framework.AppCommand;
+import appFX.framework.AppStatus;
 import javafx.collections.ObservableList;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Menu;
@@ -12,7 +13,7 @@ import javafx.scene.control.SeparatorMenuItem;
 public class AppMenuBar implements AppPreferences{
 	
 	public static void initializeMenuBar(MainScene mainScene) {
-		ObservableList<Menu> menus = mainScene.menuBar.getMenus();
+		ObservableList<Menu> menus = mainScene.getMenuBar().getMenus();
 		Menu menu, subMenu;
 		menu = new Menu("File");
 			addItemToMenu(menu, mkItem("New Project", AppCommand.OPEN_NEW_PROJECT, null));
@@ -95,8 +96,9 @@ public class AppMenuBar implements AppPreferences{
 	}
 	
 	
-	public static void applyShortCutChanges(MainScene mainScene) {
-		ObservableList<Menu> menus = mainScene.menuBar.getMenus();
+	public static void refreshMenuShortCuts() {
+		AppStatus status = AppStatus.get();
+		ObservableList<Menu> menus = status.getMainScene().getMenuBar().getMenus();
 		
 		for(int i = 0; i < menus.size(); i++)
 			applyShortCutChanges(menus.get(i));

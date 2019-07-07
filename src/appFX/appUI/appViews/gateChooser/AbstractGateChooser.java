@@ -9,6 +9,7 @@ import appFX.framework.AppCommand;
 import appFX.framework.gateModels.GateModel;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -22,9 +23,12 @@ import javafx.scene.layout.TilePane;
 
 public abstract class AbstractGateChooser extends AppView implements Initializable {
 	
-	public Button button;
-	public HBox buttonBox;
-	public TilePane list;
+	@FXML
+	protected Button button;
+	@FXML
+	private HBox buttonBox;
+	@FXML
+	private TilePane list;
 	
 	private static ToggleGroup tg = new ToggleGroup();
 	

@@ -18,6 +18,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -38,12 +39,18 @@ import utils.customCollections.ImmutableArray;
 
 public class BasicModelEditableView extends AppFXMLComponent implements Initializable, ChangeListener<BasicModelType> {
 	
-	public TextField name, symbol;
-	public ComboBox<BasicModelType> modelType;
-	public TextArea description;
-	public HBox definitionStatement;
-	public VBox definition, parameters;
-	public Button addKrausButton, createButton;
+	@FXML
+	private TextField name, symbol;
+	@FXML
+	private ComboBox<BasicModelType> modelType;
+	@FXML
+	private TextArea description;
+	@FXML
+	private HBox definitionStatement;
+	@FXML
+	private VBox definition, parameters;
+	@FXML
+	private Button addKrausButton, createButton;
 	
 	private BasicModel gm;
 	private String tempName = "";

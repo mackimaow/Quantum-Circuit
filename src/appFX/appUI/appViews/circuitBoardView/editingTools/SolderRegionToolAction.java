@@ -1,9 +1,10 @@
-package appFX.appUI.appViews.circuitBoardView;
+package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import java.util.ArrayList;
 
 import appFX.appUI.AppAlerts;
 import appFX.appUI.ParameterPrompt;
+import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.gateChooser.AbstractGateChooser;
 import appFX.framework.AppStatus;
 import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
@@ -60,7 +61,7 @@ public class SolderRegionToolAction  extends ToolAction {
 			
 			NumberRegion numberRegion = new NumberRegion(row, column); 
 			regDisps.add(numberRegion);
-			view.circuitBoardPane.getChildren().add(numberRegion);
+			view.getCircuitBoardUIPane().getChildren().add(numberRegion);
 			
 			regs[currentReg] = row;
 			currentReg = lastReg;
@@ -95,7 +96,7 @@ public class SolderRegionToolAction  extends ToolAction {
 		
 		if(regDisps != null) {
 			for(NumberRegion nr : regDisps)
-				view.circuitBoardPane.getChildren().remove(nr);
+				view.getCircuitBoardUIPane().getChildren().remove(nr);
 		}
 		
 		regDisps = null;

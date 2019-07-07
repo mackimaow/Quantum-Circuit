@@ -1,6 +1,9 @@
-package appFX.appUI.appViews.circuitBoardView;
+package appFX.appUI.appViews.circuitBoardView.editingTools;
 
+import appFX.appUI.AppToolManager;
 import appFX.appUI.MainScene;
+import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
+import appFX.appUI.appViews.circuitBoardView.copyPasteTools.ControlToolAction;
 import appFX.framework.AppStatus;
 import appFX.framework.exportGates.Control;
 import javafx.beans.value.ChangeListener;
@@ -53,22 +56,24 @@ public class SelectCursor implements EventHandler<MouseEvent> {
 	
 	private ToolAction getToolAction(Toggle toggle) {
 		MainScene ms = AppStatus.get().getMainScene();
+		AppToolManager toolManager = ms.getToolManager();
 		
-		if(toggle == ms.selectTool) {
-		} else if(toggle == ms.solderTool) {
+		if(toggle == toolManager.getToolButton(AppToolManager.SELECT_TOOL_BUTTON)) {
+			return new SelectToolAction(cbv);
+		} else if(toggle == toolManager.getToolButton(AppToolManager.SOLDER_TOOL_BUTTON)) {
 			return new SolderRegionToolAction(cbv);
-		} else if(toggle == ms.editTool) {
-		} else if(toggle == ms.controlTool) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.EDIT_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.CONTROL_TOOL_BUTTON)) {
 			return new ControlToolAction(cbv, Control.CONTROL_TRUE);
-		} else if(toggle == ms.controlNotTool) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.CONTROL_NOT_TOOL_BUTTON)) {
 			return new ControlToolAction(cbv, Control.CONTROL_FALSE);
-		} else if(toggle == ms.addColumnTool) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.ADD_COLUMN_TOOL_BUTTON)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.ADD, RowColumnToolAction.COLUMN);
-		} else if(toggle == ms.removeColumnTool) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.REMOVE_COLUMN_TOOL_BUTTON)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.REMOVE, RowColumnToolAction.COLUMN);
-		} else if(toggle == ms.addRowTool) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.ADD_ROW_TOOL_BUTTON)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.ADD, RowColumnToolAction.ROW);
-		} else if(toggle == ms.removeRowTool) {
+		} else if(toggle == toolManager.getToolButton(AppToolManager.REMOVE_ROW_TOOL_BUTTON)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.REMOVE, RowColumnToolAction.ROW);
 		}
 		hideCursor();

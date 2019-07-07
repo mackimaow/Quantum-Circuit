@@ -21,14 +21,18 @@ public class ResourceLoaderFX {
 		
 	private static final Hashtable<String, File> TEMP_FILES = new Hashtable<>();
 	
+	public static Font MPLUS;
+	public static Font VAST_SHADOW;
+	public static Font KOSUGI_MARU;
+	
 	public static void loadFXResources() {
 		loadAllJavaFXFonts();
 	}
 	
 	private static void loadAllJavaFXFonts() {
-		loadFont("mplus-2m-bold.ttf", 12);
-		loadFont("VastShadow-Regular.ttf", 12);
-		loadFont("KosugiMaru-Regular.ttf", 12);
+		MPLUS = loadFont("mplus-2m-bold.ttf", 12);
+		VAST_SHADOW = loadFont("VastShadow-Regular.ttf", 12);
+		KOSUGI_MARU = loadFont("KosugiMaru-Regular.ttf", 12);
 	}
 	
 	public static Image getIcon(String iconName) throws IOException{
@@ -51,9 +55,9 @@ public class ResourceLoaderFX {
 		return new FXMLLoader(ResourceLoader.class.getClassLoader().getResource("fxml/" + filename));
 	}
 	
-	private static void loadFont(String fileName, int size) {
+	private static Font loadFont(String fileName, int size) {
 		InputStream stream = ResourceLoader.class.getClassLoader().getResourceAsStream("fonts/" + fileName);
-		Font.loadFont(stream, size);
+		return Font.loadFont(stream, size);
 	}
 	
 	/**

@@ -6,8 +6,10 @@ import java.util.Set;
 
 import appFX.appUI.GateIcon;
 import appFX.appUI.LatexNode;
+import appFX.appUI.SolderableIcon;
 import appFX.appUI.appViews.AppView;
 import appFX.appUI.appViews.AppView.AppViewOnOpenCloseListener;
+import appFX.appUI.appViews.circuitBoardView.editingTools.SelectCursor;
 import appFX.appUI.appViews.gateChooser.AbstractGateChooser;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
@@ -21,6 +23,7 @@ import appFX.framework.solderedGates.SolderedGate;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.fxml.FXML;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -52,11 +55,18 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	
 	private static final int GRID_SIZE = 50;
 	
-	public ScrollPane description, container;
-	public GridPane circuitBoardPane;
-	public TextField name, symbol;
-	public HBox parameters;
-	public CheckBox grid;
+	@FXML
+	private ScrollPane description, container;
+	@FXML
+	private GridPane circuitBoardPane;
+	@FXML
+	private TextField name, symbol;
+	@FXML
+	private HBox parameters;
+	@FXML
+	private CheckBox grid;
+	@FXML
+	private BorderPane circuitBoardIcon;
 	
 	private final CircuitBoardModel circuitBoard;
 	private final Project project;
@@ -139,6 +149,9 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		
 		symbol.setText(circuitBoard.getSymbol());
 		symbol.setEditable(false);
+		
+		Node solderableIcon = SolderableIcon.mkIcon(circuitBoard);
+		circuitBoardIcon.setLeft(solderableIcon);
 		
 		grid.setSelected(true);
 		
@@ -765,6 +778,9 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		return r;
 	}
 	
+	public GridPane getCircuitBoardUIPane() {
+		return circuitBoardPane;
+	}
 
 	public Project getProject() {
 		return project;

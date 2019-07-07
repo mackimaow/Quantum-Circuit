@@ -8,6 +8,7 @@ import appFX.framework.Project;
 import appFX.framework.gateModels.BasicModel;
 import appFX.framework.gateModels.GateModel;
 import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -19,12 +20,19 @@ import utils.customCollections.ImmutableArray;
 
 public class BasicModelView extends AppView {
 	
-	public TextField name, symbol, registers, modelType;
-	public ScrollPane description;
-	public BorderPane iconSpace;
-	public HBox parameters, definitionStatement, editBar;
-	public VBox definition;
-	public Button editButton, editNewButton;
+	@FXML
+	private TextField name, symbol, registers, modelType;
+	@FXML
+	private ScrollPane description;
+	@FXML
+	private BorderPane iconSpace;
+	@FXML
+	private HBox parameters, definitionStatement, editBar;
+	@FXML
+	private VBox definition;
+	@FXML
+	private Button editButton, editNewButton;
+	
 	private boolean initialized = false;
 	
 	

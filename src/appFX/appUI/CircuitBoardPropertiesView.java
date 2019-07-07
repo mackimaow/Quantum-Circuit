@@ -13,6 +13,7 @@ import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.GateModel.NameTakenException;
 import appFX.framework.gateModels.PresetGateType;
 import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -29,10 +30,14 @@ import javafx.stage.Stage;
 
 public class CircuitBoardPropertiesView extends AppFXMLComponent implements Initializable {
 	
-	public TextField name, symbol;
-	public TextArea description;
-	public VBox parameters;
-	public Button createButton;
+	@FXML 
+	private TextField name, symbol;
+	@FXML 
+	private TextArea description;
+	@FXML 
+	private VBox parameters;
+	@FXML 
+	private Button createButton;
 	
 	private ParameterList parameterList;
 	

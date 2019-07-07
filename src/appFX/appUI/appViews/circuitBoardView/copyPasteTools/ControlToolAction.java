@@ -1,5 +1,8 @@
-package appFX.appUI.appViews.circuitBoardView;
+package appFX.appUI.appViews.circuitBoardView.copyPasteTools;
 
+import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
+import appFX.appUI.appViews.circuitBoardView.editingTools.SelectGateRegion;
+import appFX.appUI.appViews.circuitBoardView.editingTools.ToolAction;
 import appFX.framework.gateModels.PresetGateType;
 import appFX.framework.solderedGates.SolderedGate;
 import appFX.framework.solderedGates.SolderedPin;
@@ -8,13 +11,12 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
-import utils.customCollections.Pair;
 
 public class ControlToolAction extends ToolAction {
 	private final boolean controlType;
 	private final CircuitBoardView cbv;
 	private int rowSel, colSel;
-	private ControlSelectRegion region = null;
+	private SelectGateRegion region = null;
 	private SolderedGate currSG;
 	
 	public ControlToolAction(CircuitBoardView cbv, boolean controlType) {
@@ -35,10 +37,12 @@ public class ControlToolAction extends ToolAction {
 			rowSel = row;
 			colSel = column;
 			
-			Pair<Integer, Integer> bounds = cbv.getCircuitBoardModel().getSolderedGateBodyBounds(row, column);
+			region = new SelectGateRegion (cbv, row, column);
+			region.setStyle("-fx-border-color: blue;\n"
+	                + "-fx-border-width: 2;\n"
+	                + "-fx-border-style: dashed;\n");
 			
-			region = new ControlSelectRegion(bounds.first(), column, bounds.second() - bounds.first());
-			ObservableList<Node> nodes = cbv.circuitBoardPane.getChildren();
+			ObservableList<Node> nodes = cbv.getCircuitBoardUIPane().getChildren();
 			nodes.add(nodes.size() - 1, region);
 		} else {
 			if(colSel != column) {
@@ -59,22 +63,9 @@ public class ControlToolAction extends ToolAction {
 		rowSel = -1;
 		colSel = -1;
 		if(region != null)
-			cbv.circuitBoardPane.getChildren().remove(region);
+			cbv.getCircuitBoardUIPane().getChildren().remove(region);
 		region = null;
 		currSG = null;
-	}
-	
-	private class ControlSelectRegion extends Region {
-		
-		public ControlSelectRegion (int row, int column, int height) {
-			setStyle("-fx-border-color: blue;\n"
-	                + "-fx-border-width: 2;\n"
-	                + "-fx-border-style: dashed;\n");
-			
-			GridPane.setConstraints(this, column + 1, row, 1, height);
-		}
-		
-		
 	}
 
 	@Override

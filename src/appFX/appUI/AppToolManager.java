@@ -8,14 +8,14 @@ import javafx.scene.control.ToggleGroup;
 public class AppToolManager {
 	public static final int 
 		SELECT_TOOL_BUTTON = 0,
-		SOLDER_TOOL_BUTTON = 0,
-		EDIT_TOOL_BUTTON = 0,
-		CONTROL_TOOL_BUTTON = 0,
-		CONTROL_NOT_TOOL_BUTTON = 0,
-		ADD_COLUMN_TOOL_BUTTON = 0,
-		REMOVE_COLUMN_TOOL_BUTTON = 0,
-		ADD_ROW_TOOL_BUTTON = 0,
-		REMOVE_ROW_TOOL_BUTTON = 0;
+		SOLDER_TOOL_BUTTON = 1,
+		EDIT_TOOL_BUTTON = 2,
+		CONTROL_TOOL_BUTTON = 3,
+		CONTROL_NOT_TOOL_BUTTON = 4,
+		ADD_COLUMN_TOOL_BUTTON = 5,
+		REMOVE_COLUMN_TOOL_BUTTON = 6,
+		ADD_ROW_TOOL_BUTTON = 7,
+		REMOVE_ROW_TOOL_BUTTON = 8;
 	
 	private ToggleButton[] toolToggleButtons;
 	private ToggleGroup tools;
@@ -43,10 +43,7 @@ public class AppToolManager {
 	}
 	
 	public boolean doesSelectedToolMatch(int buttonName) {
-		int i = 0;
-		for(ToggleButton toggleButton : toolToggleButtons)
-			if (toggleButton == toolToggleButtons[i++]) return true;
-		return false;
+		return getSelectedTool() == toolToggleButtons[buttonName];
 	}
 		
 	public void addToolButtonListener(ChangeListener<? super Toggle> listener) {

@@ -1,6 +1,7 @@
-package appFX.appUI.appViews.circuitBoardView;
+package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import appFX.appUI.AppAlerts;
+import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.framework.AppStatus;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.GridPane;

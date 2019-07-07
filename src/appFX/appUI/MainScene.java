@@ -6,6 +6,7 @@ import java.util.ResourceBundle;
 import appFX.appPreferences.AppPreferences;
 import appFX.appUI.appViews.AppViewManager;
 import appFX.appUI.appViews.ConcreteView;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
@@ -17,19 +18,29 @@ import main.Main;
 import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
 public class MainScene extends AppFXMLComponent implements Initializable, AppPreferences, ReceivedEvent {
-
-	public SplitPane verticalSplitPane, horizontalSplitPane;
-	public BorderPane leftBorderPane, bottomBorderPane, rightBorderPane;
-	public TabPane leftTabPane, centerTabPane, rightTabPane, bottomTabPane;
-	public ToggleButton selectTool, solderTool, editTool, controlTool, controlNotTool, addColumnTool, removeColumnTool, addRowTool, removeRowTool;
-	public MenuBar menuBar;
-	public Label appNameLabel;
+	
+	@FXML
+	private SplitPane verticalSplitPane, horizontalSplitPane;
+	@FXML
+	private BorderPane leftBorderPane, bottomBorderPane, rightBorderPane;
+	@FXML
+	private TabPane leftTabPane, centerTabPane, rightTabPane, bottomTabPane;
+	@FXML
+	private ToggleButton selectTool, solderTool, editTool, controlTool, controlNotTool, addColumnTool, removeColumnTool, addRowTool, removeRowTool;
+	@FXML
+	private MenuBar menuBar;
+	@FXML
+	private Label appNameLabel;
 	
 	private AppViewManager viewManager;
 	private AppToolManager toolManager;
 	
 	public MainScene() {
 		super("MainScene.fxml");
+	}
+	
+	public MenuBar getMenuBar() {
+		return menuBar;
 	}
 	
 	@Override
