@@ -62,7 +62,9 @@ public class RowColumnToolAction extends ToolAction {
 	}
 
 	@Override
-	public void reset() {}
+	public void reset() {
+		mouseGrid = -1;
+	}
 
 	@Override
 	public void mouseMoved(double column, double offGridX, double row, double offGridY) {

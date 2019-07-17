@@ -27,9 +27,7 @@ public abstract class ToolAction {
 	}
 	
 	public void calculateAndRenderLayer() {
-		ToolActionRenderLayer layer = getToolActionRenderLayer();
-		layer.calculateBounds();
-		layer.render();
+		circuitBoardView.renderToolActionLayerWhenSelected();
 	}
 	
 	public CircuitBoardView getCircuitBoardView() {

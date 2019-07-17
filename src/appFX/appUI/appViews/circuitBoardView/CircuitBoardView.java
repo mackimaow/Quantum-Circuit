@@ -2,9 +2,11 @@ package appFX.appUI.appViews.circuitBoardView;
 
 import appFX.appUI.appViews.AppView;
 import appFX.appUI.appViews.AppView.AppViewOnOpenCloseListener;
+import appFX.appUI.appViews.AppView.AppViewOnSelectedListener;
 import appFX.appUI.appViews.circuitBoardView.editingTools.ToolActionManager;
 //import appFX.appUI.appViews.circuitBoardView.editingTools.SelectCursor;
 import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
+import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.ToolActionRenderLayer;
 import appFX.appUI.appViews.gateChooser.AbstractGateChooser;
 import appFX.appUI.utils.LatexNode;
 import appFX.appUI.utils.SolderableIcon;
@@ -27,7 +29,7 @@ import javafx.scene.layout.Pane;
 import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 import utils.customCollections.immutableLists.ImmutableArray;
 
-public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener {
+public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener, AppViewOnSelectedListener {
 	
 	@FXML
 	private ScrollPane description;
@@ -46,6 +48,9 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	private final Project project;
 	private final CircuitBoardRenderer renderer;
 	private final ToolActionManager toolActionManager;
+	private boolean isSelected = false;
+	private boolean mustRender = false;
+	private boolean mustRenderToolActionLayer = false;
 	
 	private double mouseXDragStart = 0;
 	private double mouseYDragStart = 0;
@@ -68,6 +73,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		this.renderer = new CircuitBoardRenderer(this);
 		this.toolActionManager = new ToolActionManager(this);
 		setOnOpenCloseListener(this);
+		setOnTabSelectedListener(this);
 		initialize();
 	}
 	
@@ -188,12 +194,49 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		}
 	}
 	
+	public void renderWhenSelected() {
+		if(isSelected)
+			renderAll();
+		else
+			mustRender = true;
+	}
+	
+	private void renderAll() {
+		renderer.calculateBounds();
+		renderer.render();
+	}
+	
+	public void renderToolActionLayerWhenSelected() {
+		if(isSelected)
+			renderToolActionLayer();
+		else
+			mustRenderToolActionLayer = true;
+	}
+	
+	private void renderToolActionLayer() {
+		ToolActionRenderLayer rl = (ToolActionRenderLayer) renderer.getLayer(CircuitBoardRenderer.TOOL_RENDER_LAYER_INDEX);
+		rl.calculateBounds();
+		rl.render();
+	}
+	
+	@Override
+	public void appTabSelect(boolean isSelected) {
+		this.isSelected = isSelected;
+		if(isSelected) { 
+			if(mustRender)
+				renderAll();
+			else if (mustRenderToolActionLayer)
+				renderToolActionLayer();
+			mustRender = false;
+			mustRenderToolActionLayer = false;
+		}
+	}
+	
 	private class CircuitBoardEventHandler implements ReceivedEvent {
 		@Override
 		public void receive(Object source, String methodName, Object... args) {
 			toolActionManager.getCurrentTool().reset();
-			renderer.calculateBounds();
-			renderer.render();
+			renderWhenSelected();
 		}
 	}
 	

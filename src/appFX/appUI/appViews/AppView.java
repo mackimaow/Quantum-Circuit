@@ -15,6 +15,7 @@ public abstract class AppView extends AppFXMLComponent implements ReceivedEvent 
 	private final AppTab appTab;
 	private final boolean updateInBackground;
 	private AppViewOnOpenCloseListener openCloseListener;
+	private AppViewOnSelectedListener tabOnSelectedListener;
 	
 	
 	public AppView(String fxmlFilename, String viewName, ViewLayout layout) {
@@ -51,6 +52,17 @@ public abstract class AppView extends AppFXMLComponent implements ReceivedEvent 
 		appTab.setOnClosed((event) -> {openCloseListener.appTabOpenClose(false);});
 	}
 	
+	public void setOnTabSelectedListener(AppViewOnSelectedListener selectedListener) {
+		this.tabOnSelectedListener = selectedListener;
+		appTab.setOnSelectionChanged((event) -> {
+			selectedListener.appTabSelect(appTab.isSelected());;
+		});
+	}
+	
+	public AppViewOnSelectedListener getOnTabOpenCloseSelectionListener(AppViewOnOpenCloseListener openCloseListener) {
+		return tabOnSelectedListener;
+	}
+	
 	public AppViewOnOpenCloseListener getOnOpenCloseListener() {
 		return openCloseListener;
 	}
@@ -58,6 +70,10 @@ public abstract class AppView extends AppFXMLComponent implements ReceivedEvent 
 	
 	public static interface AppViewOnOpenCloseListener {
 		public void appTabOpenClose(boolean isOpening);
+	}
+	
+	public static interface AppViewOnSelectedListener {
+		public void appTabSelect(boolean isSelected);
 	}
 	
 	
