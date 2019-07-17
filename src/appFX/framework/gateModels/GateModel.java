@@ -2,7 +2,7 @@ package appFX.framework.gateModels;
 
 import java.io.Serializable;
 
-import utils.customCollections.ImmutableArray;
+import utils.customCollections.immutableLists.ImmutableArray;
 
 public abstract class GateModel implements Serializable {
 	private static final long serialVersionUID = 3195910933230664750L;

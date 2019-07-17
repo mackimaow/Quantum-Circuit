@@ -5,9 +5,9 @@ import java.net.URL;
 import java.util.Iterator;
 import java.util.ResourceBundle;
 
-import appFX.appUI.AppFileIO;
-import appFX.appUI.GateModelContextMenu;
 import appFX.appUI.MainScene;
+import appFX.appUI.utils.AppFileIO;
+import appFX.appUI.utils.GateModelContextMenu;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;

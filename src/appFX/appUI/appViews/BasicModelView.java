@@ -1,7 +1,7 @@
 package appFX.appUI.appViews;
 
-import appFX.appUI.GateIcon;
-import appFX.appUI.LatexNode;
+import appFX.appUI.utils.GateIcon;
+import appFX.appUI.utils.LatexNode;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
@@ -16,7 +16,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import utils.customCollections.ImmutableArray;
+import utils.customCollections.immutableLists.ImmutableArray;
 
 public class BasicModelView extends AppView {
 	

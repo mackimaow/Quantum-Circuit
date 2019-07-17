@@ -23,8 +23,9 @@
 	-fx-background-radius : 10;
 }
 
-#container {
+#contentPane {
 	-fx-background-radius : 10;
+	-fx-background-color : #FFFFFF;
 }
 
 *.tab-header-background {

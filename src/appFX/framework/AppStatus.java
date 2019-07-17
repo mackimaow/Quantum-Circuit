@@ -4,12 +4,12 @@ import java.net.URI;
 import java.util.Optional;
 
 import appFX.appPreferences.AppPreferences;
-import appFX.appUI.AppAlerts;
-import appFX.appUI.AppFileIO;
 import appFX.appUI.MainScene;
 import appFX.appUI.appViews.AppViewManager;
 import appFX.appUI.appViews.ConcreteView;
 import appFX.appUI.appViews.Console;
+import appFX.appUI.utils.AppAlerts;
+import appFX.appUI.utils.AppFileIO;
 import javafx.event.EventHandler;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;

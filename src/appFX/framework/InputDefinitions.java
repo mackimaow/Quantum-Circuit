@@ -22,7 +22,7 @@ import mathLib.expression.Function.LatexFormat;
 import mathLib.expression.MathSet;
 import mathLib.expression.Variable;
 import mathLib.expression.Variable.ConcreteVariable;
-import utils.customCollections.ImmutableArray;
+import utils.customCollections.immutableLists.ImmutableArray;
 
 public class InputDefinitions implements Serializable {
 	private static final long serialVersionUID = 5627225884389883084L;

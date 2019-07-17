@@ -1,30 +1,52 @@
 package appFX.appUI.appViews.circuitBoardView.editingTools;
 
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Region;
+import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
+import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
+import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.ToolActionRenderLayer;
+import graphicsWrapper.FocusData;
+import graphicsWrapper.Graphics;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 
 public abstract class ToolAction {
-	private final boolean showCursor;
+	private CircuitBoardView circuitBoardView;
 	
-	public ToolAction (boolean showCursor) {
-		this.showCursor = showCursor;
+	public ToolAction (CircuitBoardView circuitBoardView) {
+		this.circuitBoardView = circuitBoardView;
 	}
 	
-	public abstract void buttonPressed(int row, int column);
-	public abstract void mouseMoved(Region cursor, double x, double y, double boundX, double boundY);
+	public abstract void onToolStart(double column, double offGridX, double row, double offGridY);
+	public abstract void buttonPressed(double column, double offGridX, double row, double offGridY);
+	public abstract void mouseMoved(double column, double offGridX, double row, double offGridY);
+	public abstract void renderOnLayer(Graphics<Image, Font, Color> graphics, FocusData gridData);
 	public abstract void reset();
-	public abstract boolean isCursorDisplayed();
 	
-	public void initToolCursorRender(Region cursor) {
-		cursor.setStyle("-fx-background-color: #BDBDBD66");
+	public ToolActionRenderLayer getToolActionRenderLayer() {
+		return (ToolActionRenderLayer) circuitBoardView.getRenderer().getLayer(CircuitBoardRenderer.TOOL_RENDER_LAYER_INDEX);
 	}
 	
-	public void updateCursorPosition(Region cursor, int row, int column) {
-		GridPane.setConstraints(cursor, column + 1, row, 1, 1);		
+	public void calculateAndRenderLayer() {
+		ToolActionRenderLayer layer = getToolActionRenderLayer();
+		layer.calculateBounds();
+		layer.render();
 	}
 	
+	public CircuitBoardView getCircuitBoardView() {
+		return circuitBoardView;
+	}
 	
-	public boolean shouldShowTool() {
-		return showCursor;
+	public static boolean isMouseGridChanged(double oldMouseGrid, double newMouseGrid) {
+		int preMouseInt = (int) Math.floor(oldMouseGrid);
+		int newMouseInt = (int) Math.floor(newMouseGrid);
+		
+		if(preMouseInt == newMouseInt) {
+			int preMouseRound = (int) Math.round(oldMouseGrid);
+			int newMouseRound = (int) Math.round(newMouseGrid);
+			if(preMouseRound == newMouseRound)
+				return false;
+		}
+		
+		return true;
 	}
 }

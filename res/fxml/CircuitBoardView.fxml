@@ -13,6 +13,7 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
@@ -44,25 +45,11 @@
                            <children>
                               <BorderPane VBox.vgrow="ALWAYS">
                                  <center>
-                                    <ScrollPane fx:id="container" fitToHeight="true" fitToWidth="true">
-                                       <content>
-                                          <BorderPane minHeight="-Infinity" minWidth="-Infinity">
-                                             <center>
-                                                <GridPane fx:id="circuitBoardPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" BorderPane.alignment="CENTER">
-                                                   <padding>
-                                                      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                                                   </padding>
-                                                </GridPane>
-                                             </center>
-                                          </BorderPane>
-                                       </content>
+                                    <Pane fx:id="contentPane">
                                        <BorderPane.margin>
-                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                       </BorderPane.margin>
-                                       <padding>
                                           <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                                       </padding>
-                                    </ScrollPane>
+                                       </BorderPane.margin>
+                                    </Pane>
                                  </center>
                                  <top>
                                     <HBox BorderPane.alignment="CENTER">

@@ -1,11 +1,15 @@
 package appFX.appUI.appViews.circuitBoardView.editingTools;
 
-import appFX.appUI.AppAlerts;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
+import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
+import appFX.appUI.utils.AppAlerts;
 import appFX.framework.AppStatus;
+import graphicsWrapper.FocusData;
+import graphicsWrapper.Graphics;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Region;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 
 public class RowColumnToolAction extends ToolAction {
 	
@@ -13,62 +17,42 @@ public class RowColumnToolAction extends ToolAction {
 	public static final boolean REMOVE = false;
 	public static final boolean ROW = true;
 	public static final boolean COLUMN = false;
-	private static final boolean TOP_OR_LEFT = true;
-	private static final boolean BOTTOM_OR_RIGHT = false;
 	
-	private static final String formatString = "-fx-background-color: #%s;-fx-border-color: #%s;-fx-border-width: %d %d %d %d;";
+	private static final Color COLOR_ADD_FILL = new Color(0, .7d, 0, .4d);
+	private static final Color COLOR_REMOVE_FILL = new Color(.7d, 0, 0, .4d);
+	private static final Color COLOR_ADD_BORDER = new Color(0, .5d, 0, .7d);
+	private static final Color COLOR_REMOVE_BORDER = new Color(.5d, 0, 0, .7d);
 	
-	
-	private CircuitBoardView cbv;
 	private final boolean addRemove;
 	private final boolean rowColumn;
-	private Boolean cursorSide = null;
+	private double mouseGrid = -1;
 	
 	public RowColumnToolAction(CircuitBoardView cbv, boolean addRemove, boolean rowColumn) {
-		super(true);
-		this.cbv = cbv;
+		super(cbv);
 		this.addRemove = addRemove;
 		this.rowColumn = rowColumn;
 	}
 	
 	@Override
-	public void initToolCursorRender(Region cursor) {
-		if (addRemove == ADD)
-			setStyle(cursor, 0, 0, 0, 0);
-		else
-			setStyle(cursor, 3, 3, 3, 3);
-	}
-	
-	@Override
-	public void updateCursorPosition(Region cursor, int row, int column) {
-		if (addRemove == ADD)
-			setStyle(cursor, 0, 0, 0, 0);
+	public void buttonPressed(double column, double offGridX, double row, double offGridY) {
+		if(column < 0 || row < 0)
+			return;
 		
-		if(rowColumn == ROW)
-			GridPane.setConstraints(cursor, 1, row, GridPane.REMAINING, 1);
-		else
-			GridPane.setConstraints(cursor, column + 1, 0, 1, GridPane.REMAINING);
-	}
-	
-	@Override
-	public void buttonPressed(int row, int column) {
+		int rowInt = (int) Math.floor(row);
+		int columnInt = (int) Math.floor(column);
+		
 		try {
+			CircuitBoardView cbv = getCircuitBoardView();
 			if(rowColumn == ROW) {
-				if(addRemove == ADD) {
-					if (cursorSide != null) {
-						cbv.getCircuitBoardModel().addRows(row + (cursorSide == BOTTOM_OR_RIGHT? 1 : 0) , 1);
-					}
-				} else {
-					cbv.getCircuitBoardModel().removeRows(row, row + 1);
-				}
+				if(addRemove == ADD)
+					cbv.getCircuitBoardModel().addRows(rowInt + (row - rowInt < .5d? 0 : 1) , 1);
+				else
+					cbv.getCircuitBoardModel().removeRows(rowInt, rowInt + 1);
 			} else {
-				if(addRemove == ADD) {
-					if (cursorSide != null) {
-						cbv.getCircuitBoardModel().addColumns(column + (cursorSide == BOTTOM_OR_RIGHT? 1: 0), 1);
-					}
-				} else {
-					cbv.getCircuitBoardModel().removeColumns(column, column + 1);
-				}
+				if(addRemove == ADD)
+					cbv.getCircuitBoardModel().addColumns(columnInt + (column - columnInt < .5d? 0 : 1), 1);
+				else
+					cbv.getCircuitBoardModel().removeColumns(columnInt, columnInt + 1);
 			}
 		} catch(IllegalArgumentException iae) {
 			AppAlerts.showMessage(AppStatus.get().getPrimaryStage(), 
@@ -78,42 +62,65 @@ public class RowColumnToolAction extends ToolAction {
 	}
 
 	@Override
-	public void reset() {
+	public void reset() {}
+
+	@Override
+	public void mouseMoved(double column, double offGridX, double row, double offGridY) {
+		double oldMouseGrid = mouseGrid;
+		if(rowColumn == ROW)
+			mouseGrid = column < 0 ? -1d : row;
+		else
+			mouseGrid = row < 0 ? -1d : column;
+		if(isMouseGridChanged(oldMouseGrid, mouseGrid))
+			calculateAndRenderLayer();
+	}
+
+	@Override
+	public void onToolStart(double column, double offGridX, double row, double offGridY) {
+		mouseMoved(column, offGridX, row, offGridY);
+		calculateAndRenderLayer();
+	}
+
+	@Override
+	public void renderOnLayer(Graphics<Image, Font, Color> graphics, FocusData gridData) {
+		if(mouseGrid < 0d)
+			return;
 		
-	}
-
-	@Override
-	public boolean isCursorDisplayed() {
-		return true;
-	}
-
-	@Override
-	public void mouseMoved(Region cursor, double x, double y, double boundX, double boundY) {
-		if(addRemove == ADD) {
-			if (rowColumn == ROW) {
-				if (y < boundY / 2) {
-					cursorSide = TOP_OR_LEFT;
-					setStyle(cursor, 0, 3, 0, 0);
+		graphics.setLineWidth(3);
+		if(rowColumn == ROW) {
+			int row = (int) Math.floor(mouseGrid);
+			RenderLayer.setFocus(graphics, gridData, row, row + 1, 0, gridData.getColumnCount()); {
+				if(addRemove == ADD) {
+					graphics.setColor(COLOR_ADD_FILL);
+					graphics.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+					graphics.setVerticalyLayout(mouseGrid - row < .5d ? Graphics.TOP_ALIGN : Graphics.BOTTOM_ALIGN);
+					graphics.setColor(COLOR_ADD_BORDER);
+					graphics.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
 				} else {
-					cursorSide = BOTTOM_OR_RIGHT;
-					setStyle(cursor, 0, 0, 0, 3);
+					graphics.setColor(COLOR_REMOVE_FILL);
+					graphics.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+					graphics.setColor(COLOR_REMOVE_BORDER);
+					graphics.drawRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
 				}
-			} else {
-				if (x < boundX / 2) {
-					cursorSide = TOP_OR_LEFT;
-					setStyle(cursor, 3, 0, 0, 0);
+			} graphics.escapeFocus();
+		} else {
+			int column = (int) Math.floor(mouseGrid);
+			RenderLayer.setFocus(graphics, gridData, 0, gridData.getRowCount(), column, column + 1); {
+				if(addRemove == ADD) {
+					graphics.setColor(COLOR_ADD_FILL);
+					graphics.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+					graphics.setHorizontalLayout(mouseGrid - column < .5d ? Graphics.LEFT_ALIGN : Graphics.RIGHT_ALIGN);
+					graphics.setColor(COLOR_ADD_BORDER);
+					graphics.drawLine(0, 0, 0, Graphics.FOCUS_HEIGHT, true);
 				} else {
-					cursorSide = BOTTOM_OR_RIGHT;
-					setStyle(cursor, 0, 0, 3, 0);
+					graphics.setColor(COLOR_REMOVE_FILL);
+					graphics.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+					graphics.setColor(COLOR_REMOVE_BORDER);
+					graphics.drawRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
 				}
-			}
+			} graphics.escapeFocus();
 		}
 	}
-	private void setStyle(Region cursor, int leftBorder, int topBorder, int rightBorder, int bottomBorder) {
-		String bkColor = addRemove == ADD? "00FF0011" : "FF000077";
-		String bdColor = addRemove == ADD? "00FF00" : "FF0000";
-		String style = String.format(formatString, bkColor, bdColor, topBorder, rightBorder, bottomBorder, leftBorder);
-		cursor.setStyle(style);
-	}
+	
 
 }

@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.ResourceBundle;
 
-import appFX.appUI.LatexNode;
+import appFX.appUI.utils.LatexNode;
 import appFX.framework.AppCommand;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;

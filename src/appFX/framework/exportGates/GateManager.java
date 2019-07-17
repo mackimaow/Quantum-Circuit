@@ -23,9 +23,9 @@ import mathLib.Matrix;
 import mathLib.expression.Expression.EvaluateExpressionException;
 import mathLib.expression.MathSet;
 import mathLib.expression.Variable.ConcreteVariable;
-import utils.customCollections.ImmutableArray;
 import utils.customCollections.Queue;
 import utils.customCollections.Stack;
+import utils.customCollections.immutableLists.ImmutableArray;
 
 public class GateManager {
 	

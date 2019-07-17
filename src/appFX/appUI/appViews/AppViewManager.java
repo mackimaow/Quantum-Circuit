@@ -3,10 +3,10 @@ package appFX.appUI.appViews;
 import java.util.Iterator;
 
 import appFX.appPreferences.AppPreferences.Doubles;
-import appFX.appUI.AppTab;
 import appFX.appUI.appViews.AppView.AppViewOnOpenCloseListener;
 import appFX.appUI.appViews.AppView.ViewLayout;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
+import appFX.appUI.utils.AppTab;
 import appFX.framework.AppStatus;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;

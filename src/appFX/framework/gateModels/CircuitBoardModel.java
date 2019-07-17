@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
-import appFX.appUI.AppAlerts;
+import appFX.appUI.utils.AppAlerts;
 import appFX.framework.AppStatus;
 import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
 import appFX.framework.Project;
@@ -263,6 +263,9 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 
 		renderNotifier.sendChange(this, "removeRows", firstIndex, lastIndex);
 	}
+    
+    
+    
     
     private boolean isSectionSimplyRemovable(SolderedGate solderedGate, 
     		ListIterator<SolderedPin> solderedRegRowIteratorFirst, ListIterator<SolderedPin> solderedRegRowIteratorLast) {

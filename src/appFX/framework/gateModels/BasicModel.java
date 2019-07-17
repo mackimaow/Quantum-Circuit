@@ -10,7 +10,7 @@ import appFX.framework.InputDefinitions.MatrixDefinition;
 import appFX.framework.InputDefinitions.ScalarDefinition;
 import mathLib.Complex;
 import mathLib.Matrix;
-import utils.customCollections.ImmutableArray;
+import utils.customCollections.immutableLists.ImmutableArray;
 
 public class BasicModel extends GateModel {
 	private static final long serialVersionUID = -3974442774420594973L;

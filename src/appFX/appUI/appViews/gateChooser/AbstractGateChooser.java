@@ -2,9 +2,9 @@ package appFX.appUI.appViews.gateChooser;
 
 import java.util.Iterator;
 
-import appFX.appUI.GateIcon;
-import appFX.appUI.GateModelContextMenu;
 import appFX.appUI.appViews.AppView;
+import appFX.appUI.utils.GateIcon;
+import appFX.appUI.utils.GateModelContextMenu;
 import appFX.framework.AppCommand;
 import appFX.framework.gateModels.GateModel;
 import javafx.beans.value.ChangeListener;

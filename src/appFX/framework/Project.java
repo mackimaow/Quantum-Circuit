@@ -6,7 +6,7 @@ import java.net.URI;
 import java.util.Hashtable;
 import java.util.Iterator;
 
-import appFX.appUI.AppFileIO;
+import appFX.appUI.utils.AppFileIO;
 import appFX.framework.exportGates.RawExportableGateData;
 import appFX.framework.gateModels.BasicModel;
 import appFX.framework.gateModels.CircuitBoardModel;
