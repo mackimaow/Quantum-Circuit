@@ -74,9 +74,9 @@ public final class GateRenderLayer extends RenderLayer {
 		ListIterator<Control> controlsIterator = controls.listIterator(controls.size());
 		
 		if(bodyEnd != spaceEnd) {
-			drawVerticalLine(graphics, spaceEnd, bodyEnd, column);
-			while(controlsIterator.hasNext()) {
-				Control currentControl = controlsIterator.next();
+			drawVerticalLine(graphics, bodyEnd, spaceEnd, column);
+			while(controlsIterator.hasPrevious()) {
+				Control currentControl = controlsIterator.previous();
 				int reg = currentControl.getRegister();
 				if(reg > bodyEnd)
 					renderControl(graphics, reg, column, currentControl.getControlStatus());
@@ -120,7 +120,7 @@ public final class GateRenderLayer extends RenderLayer {
 				int bodyColumnGrid = 0;
 				
 				if(checkIfControlIsInBody(controlsIterator, rowStart, rowEnd)) {
-					graphics.setFocus(new GridBound(bodyColumnGrid++), new RimBound(0, 0, true, true)); {
+					graphics.setFocus(new GridBound(0), new RimBound(0, 0, true, true)); {
 						RimBound horizontalRimBound = new RimBound(10, 0, false, false);
 						while(controlsIterator.hasNext()) {
 							Control control = controlsIterator.next();
@@ -135,6 +135,7 @@ public final class GateRenderLayer extends RenderLayer {
 							}
 						}
 					} graphics.escapeFocus();
+					bodyColumnGrid = 1;
 				}
 				graphics.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
 				graphics.setColor(Color.BLACK);
@@ -142,7 +143,7 @@ public final class GateRenderLayer extends RenderLayer {
 				Hashtable<Integer, Integer> regs = rawData.getRegisters();
 				if(regs.size() > 1) {
 					graphics.setFontHeight(7);
-					graphics.setFocus(new GridBound(bodyColumnGrid++), new RimBound(0, 0, true, true)); {
+					graphics.setFocus(new GridBound(0), new RimBound(0, 0, true, true)); {
 						RimBound horizontalRimBound = new RimBound(10, 0, false, false);
 						for(int i = 0; i < regs.size(); i++) {
 							int reg = regs.get(i);
@@ -152,8 +153,9 @@ public final class GateRenderLayer extends RenderLayer {
 							} graphics.escapeFocus();
 						}
 					} graphics.escapeFocus();
+					bodyColumnGrid = 1;
 				}
-				graphics.setFocus(new GridBound(bodyColumnGrid++), new RimBound(0, 0, true, true)); {
+				graphics.setFocus(new GridBound(bodyColumnGrid), new RimBound(0, 0, true, true)); {
 					graphics.setFontHeight(15);
 					graphics.setFocus(new RimBound(10, 10, true, true), new RimBound(3, 3, true, true)); {
 						SolderedGate sg = rawData.getSolderedGate();
