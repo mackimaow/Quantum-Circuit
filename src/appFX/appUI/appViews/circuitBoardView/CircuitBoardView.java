@@ -6,8 +6,9 @@ import appFX.appUI.appViews.AppView.AppViewOnSelectedListener;
 import appFX.appUI.appViews.circuitBoardView.editingTools.ToolActionManager;
 //import appFX.appUI.appViews.circuitBoardView.editingTools.SelectCursor;
 import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
+import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.NotificationRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.ToolActionRenderLayer;
-import appFX.appUI.appViews.gateChooser.AbstractGateChooser;
+import appFX.appUI.appViews.gateChooser.AbstractGateChooserView;
 import appFX.appUI.utils.LatexNode;
 import appFX.appUI.utils.SolderableIcon;
 import appFX.framework.AppCommand;
@@ -55,18 +56,19 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	private double mouseXDragStart = 0;
 	private double mouseYDragStart = 0;
 	
-	public static void openCircuitBoard(String circuitBoardName) {
+	public static CircuitBoardView openCircuitBoard(String circuitBoardName) {
 		AppStatus status = AppStatus.get();
 		if(!status.getMainScene().getViewManager().containsView(circuitBoardName, ViewLayout.CENTER)) {
 			CircuitBoardView circuitBoardView = new CircuitBoardView(status.getFocusedProject(), circuitBoardName);
 			status.getMainScene().getViewManager().addView(circuitBoardView);
+			return circuitBoardView;
 		} else {
-			status.getMainScene().getViewManager().setCenteredFocusedView(circuitBoardName);
+			return (CircuitBoardView) status.getMainScene().getViewManager().setCenteredFocusedView(circuitBoardName);
 		}
 	}
 	
 	private CircuitBoardView(Project project, String circuitBoard) {
-		super("CircuitBoardView.fxml", circuitBoard, ViewLayout.CENTER);
+		super("views/CircuitBoardView.fxml", circuitBoard, ViewLayout.CENTER);
 		this.circuitBoard = (CircuitBoardModel) project.getCircuitBoardModels().get(circuitBoard);
 		this.project = project;
 		this.circuitBoard.setRenderEventHandler(new CircuitBoardEventHandler());
@@ -177,7 +179,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	private void setUpToolManager() {
 		toolActionManager.startManager();
 		AppStatus.get().getMainScene().getToolManager().addToolButtonListener(toolActionManager.getToolChangedListener());
-		AbstractGateChooser.addToggleListener(toolActionManager.getModelChangedListener());
+		AbstractGateChooserView.addToggleListener(toolActionManager.getModelChangedListener());
 		contentPane.setOnMouseClicked(toolActionManager::handle);
 		contentPane.setOnMouseMoved(toolActionManager::handle);
 	}
@@ -190,7 +192,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	public void appTabOpenClose(boolean isOpening) {
 		if(!isOpening) {
 			AppStatus.get().getMainScene().getToolManager().removeToolButtonListener(toolActionManager.getToolChangedListener());
-			AbstractGateChooser.removeToggleListener(toolActionManager.getModelChangedListener());
+			AbstractGateChooserView.removeToggleListener(toolActionManager.getModelChangedListener());
 		}
 	}
 	
@@ -217,6 +219,15 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		ToolActionRenderLayer rl = (ToolActionRenderLayer) renderer.getLayer(CircuitBoardRenderer.TOOL_RENDER_LAYER_INDEX);
 		rl.calculateBounds();
 		rl.render();
+	}
+	
+	public void renderErrorAt(int rowStart, int rowEnd, int column) {
+		int notificationLayerIndex = CircuitBoardRenderer.NOTIFICATION_RENDER_LAYER_INDEX;
+		NotificationRenderLayer rl = (NotificationRenderLayer) renderer.getLayer(notificationLayerIndex);
+		rl.calculateDrawErrorBounds(rowStart, rowEnd, column, renderer.getGridData());
+		double moveX = column + .5d;
+		double moveY = rowStart + (rowEnd - rowStart) / 2d + .5d;
+		renderer.scrollToGrid(moveY, moveX);
 	}
 	
 	@Override

@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 
 import appFX.framework.exportGates.ExportedGate;
 import appFX.framework.exportGates.GateManager;
-import appFX.framework.gateModels.BasicModel;
+import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import mathLib.Complex;
 import mathLib.Matrix;
@@ -57,8 +57,7 @@ public class Executor {
             exps = GateManager.exportGates(p);
             System.out.println("Gate stream created");
         } catch (GateManager.ExportException e) {
-            System.err.println("Could not create gate stream");
-            e.printStackTrace();
+        	e.showExportErrorSource();
             return "";
         }
         CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitName());
@@ -72,7 +71,7 @@ public class Executor {
                   break addCols;
                 }
                 ExportedGate eg = itr.next();
-                if(eg.getGateType().equals(BasicModel.BasicModelType.POVM))
+                if(eg.getGateType().equals(BasicGateModel.BasicGateModelType.POVM))
                     return executeMixedState(p);
                 i += eg.getGateRegister().length;
                 column.add(eg);
@@ -285,7 +284,7 @@ public class Executor {
         try {
             gateStream = GateManager.exportGates(p);
         } catch (GateManager.ExportException e) {
-            e.printStackTrace();
+            e.showExportErrorSource();
             return "";
         }
         Iterator<ExportedGate> itr = gateStream.iterator();
@@ -328,7 +327,7 @@ public class Executor {
                 toPrint += "Identity\n";
             } else {
                 toPrint += eg.getGateType().toString() + "\n";
-                if(eg.getGateType().equals(BasicModel.BasicModelType.POVM))
+                if(eg.getGateType().equals(BasicGateModel.BasicGateModelType.POVM))
                     printArray(eg.getInputMatrixes());
             }
         }

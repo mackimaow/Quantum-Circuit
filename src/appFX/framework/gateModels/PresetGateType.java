@@ -2,52 +2,52 @@ package appFX.framework.gateModels;
 
 import appFX.appUI.utils.AppAlerts;
 import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
-import appFX.framework.gateModels.BasicModel.BasicModelType;
+import appFX.framework.gateModels.BasicGateModel.BasicGateModelType;
 import appFX.framework.gateModels.GateModel.NameTakenException;
 
 public enum PresetGateType {
 	
-	IDENTITY ("Identity", "I", BasicModelType.UNIVERSAL ,
+	IDENTITY ("Identity", "I", BasicGateModelType.UNIVERSAL ,
 			 "[1, 0; "
 			+ "0, 1] "),
 	
-	HADAMARD ("Hadamard", "H", BasicModelType.UNIVERSAL ,
+	HADAMARD ("Hadamard", "H", BasicGateModelType.UNIVERSAL ,
 			"1/sqrt(2) * [1,  1; "
 			+ 			" 1, -1] "),
 	
-	PAULI_X ("Pauli_x", "X", BasicModelType.UNIVERSAL ,
+	PAULI_X ("Pauli_x", "X", BasicGateModelType.UNIVERSAL ,
 			  "[0, 1; "
 			+ " 1, 0] "),
 	
-	PAULI_Y ("Pauli_y", "Y", BasicModelType.UNIVERSAL ,
+	PAULI_Y ("Pauli_y", "Y", BasicGateModelType.UNIVERSAL ,
 			" [0, -i; "
 			+ "i,  0] "),
 	
-	PAULI_Z ("Pauli_z", "Z", BasicModelType.UNIVERSAL ,
+	PAULI_Z ("Pauli_z", "Z", BasicGateModelType.UNIVERSAL ,
 			  "[1,  0; "
 			+ " 0, -1] "),
 	
-	PHASE ("Phase", "S", BasicModelType.UNIVERSAL ,
+	PHASE ("Phase", "S", BasicGateModelType.UNIVERSAL ,
 			  "[1, 0; "
 			+ " 0, i] "),
 	
-	PI_ON_8 ("Pi_over_8", "T", BasicModelType.UNIVERSAL ,
+	PI_ON_8 ("Pi_over_8", "T", BasicGateModelType.UNIVERSAL ,
 			  "[1, 0; "
 			+ " 0, (1+i) / sqrt(2)] "),
 	
-	SWAP ("Swap", "Swap", BasicModelType.UNIVERSAL ,
+	SWAP ("Swap", "Swap", BasicGateModelType.UNIVERSAL ,
 			 "[1, 0, 0, 0; "
 			+ "0, 0, 1, 0; "
 			+ "0, 1, 0, 0; "
 			+ "0, 0, 0, 1] "),
 	
-	CNOT ("Cnot", "Cnot", BasicModelType.UNIVERSAL ,
+	CNOT ("Cnot", "Cnot", BasicGateModelType.UNIVERSAL ,
 			 "[1, 0, 0, 0; "
 			+ "0, 1, 0, 0; "
 			+ "0, 0, 0, 1; "
 			+ "0, 0, 1, 0] "),
 	
-	TOFFOLI ("Toffoli", "Toffoli", BasicModelType.UNIVERSAL ,
+	TOFFOLI ("Toffoli", "Toffoli", BasicGateModelType.UNIVERSAL ,
 			 "[1, 0, 0, 0, 0, 0, 0, 0; "
 			+ "0, 1, 0, 0, 0, 0, 0, 0; "
 			+ "0, 0, 1, 0, 0, 0, 0, 0; "
@@ -57,12 +57,12 @@ public enum PresetGateType {
 			+ "0, 0, 0, 0, 0, 0, 0, 1; "
 			+ "0, 0, 0, 0, 0, 0, 1, 0] "),
 	
-	PHASE_SHIFT ("Phase_Shift", "R", new String[]{"\\theta"} , BasicModelType.UNIVERSAL ,
+	PHASE_SHIFT ("Phase_Shift", "R", new String[]{"\\theta"} , BasicGateModelType.UNIVERSAL ,
 			 "[1, 0; "
 			+ "0, exp(i * \\theta)] "),
 	
 	
-	MEASUREMENT ("Measurement", "M", BasicModelType.POVM , 
+	MEASUREMENT ("Measurement", "M", BasicGateModelType.POVM , 
 			 "[1, 0; "
 			+ "0, 0] ",
 			
@@ -102,14 +102,14 @@ public enum PresetGateType {
 	}
 	
 	
-	private final BasicModel gateModel;
+	private final BasicGateModel gateModel;
 	
-	private PresetGateType(String name, String symbol, String description, BasicModelType type, String ... expression) {
+	private PresetGateType(String name, String symbol, String description, BasicGateModelType type, String ... expression) {
 		this(name, symbol, description, new String[0], type, expression);
 	}
 	
-	private PresetGateType(String name, String symbol, String description, String[] parameters, BasicModelType type, String ... expression) {
-		BasicModel gm = null;
+	private PresetGateType(String name, String symbol, String description, String[] parameters, BasicGateModelType type, String ... expression) {
+		BasicGateModel gm = null;
 		try {
 			gm = new PresetGateModel(name, symbol, description, parameters, type, this, expression);
 		} catch (Exception e) {
@@ -121,26 +121,26 @@ public enum PresetGateType {
 		}
 	}
 	
-	private PresetGateType(String name, String symbol, BasicModelType type, String ... expression) {
+	private PresetGateType(String name, String symbol, BasicGateModelType type, String ... expression) {
 		this(name, symbol, "", type, expression);
 	}
 	
-	private PresetGateType(String name, String symbol, String[] parameters, BasicModelType type, String ... expression) {
+	private PresetGateType(String name, String symbol, String[] parameters, BasicGateModelType type, String ... expression) {
 		this(name, symbol, "", parameters, type, expression);
 	}
 	
-	public BasicModel getModel() {
+	public BasicGateModel getModel() {
 		return gateModel;
 	}
 	
 	
 	
-	public static class PresetGateModel extends BasicModel {
+	public static class PresetGateModel extends BasicGateModel {
 		private static final long serialVersionUID = 3655123001545022473L;
 		
 		private final PresetGateType presetModel;
 		
-		PresetGateModel(String name, String symbol, String description, String[] parameters, BasicModelType gateType, PresetGateType presetModel, String ... userDefinitions) 
+		PresetGateModel(String name, String symbol, String description, String[] parameters, BasicGateModelType gateType, PresetGateType presetModel, String ... userDefinitions) 
 				throws DefinitionEvaluatorException {
 			super(name, symbol, description, parameters, gateType, userDefinitions);
 			this.presetModel = presetModel;

@@ -125,7 +125,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
         	notifier.sendChange(this, "changeAllOccurrences", oldGateName, newGateName);
     		if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
     			circuitBoardsUsed.replace(oldGateName, newGateName);
-    		} else if (parts[1].equals(BasicModel.GATE_MODEL_EXTENSION)) {
+    		} else if (parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
     			defaultGatesUsed.replace(oldGateName, newGateName);
     		} else if (parts[1].equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
     			oraclesUsed.replace(oldGateName, newGateName);
@@ -141,7 +141,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	if(parts.length == 2) {
     		if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
     			return circuitBoardsUsed.getOccurrences(gateName);
-    		} else if (parts[1].equals(BasicModel.GATE_MODEL_EXTENSION)) {
+    		} else if (parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
     			if(PresetGateType.containsPresetTypeByFormalName(gateName))
     				return presetGatesUsed.getOccurrences(gateName);
     			else	
@@ -956,7 +956,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			if(((CircuitBoardModel) gm).findRecursion(p, getFormalName()))
 				throw new RecursionException();
 			return circuitBoardsUsed.add(gateModel); 
-		} else if (gm instanceof BasicModel) {
+		} else if (gm instanceof BasicGateModel) {
 			if(gm.isPreset())
 				return presetGatesUsed.add(gm.getFormalName());
 			else
@@ -1004,7 +1004,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		
 		if(gm instanceof CircuitBoardModel) {
 			circuitBoardsUsed.remove(gateModel); 
-		} else if (gm instanceof BasicModel) {
+		} else if (gm instanceof BasicGateModel) {
 			if(gm.isPreset())
 				presetGatesUsed.remove(gm.getFormalName());
 			else

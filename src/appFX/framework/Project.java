@@ -8,7 +8,7 @@ import java.util.Iterator;
 
 import appFX.appUI.utils.AppFileIO;
 import appFX.framework.exportGates.RawExportableGateData;
-import appFX.framework.gateModels.BasicModel;
+import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.OracleModel;
@@ -68,7 +68,7 @@ public class Project implements Serializable {
 			return "Untitled_Project";
 		} else {
 			String fileName = new File(fileLocation).getName();
-			return fileName.substring(0, fileName.length() - AppFileIO.QUANTUM_PROJECT_EXTENSION.length());
+			return fileName.substring(0, fileName.length() - AppFileIO.QUANTUM_PROJECT_EXTENSION.length() - 1);
 		}
 	}
 	
@@ -249,7 +249,7 @@ public class Project implements Serializable {
 		if(parts.length == 2) {
 			if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
 				return subCircuits.get(gateModelFormalName);
-			} else if(parts[1].equals(BasicModel.GATE_MODEL_EXTENSION)) {
+			} else if(parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
 				PresetGateType pgt = PresetGateType.getPresetTypeByFormalName(gateModelFormalName);
 				if(pgt != null) 
 					return pgt.getModel();
@@ -268,7 +268,7 @@ public class Project implements Serializable {
 		if(parts.length == 2) {
 			if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
 				return subCircuits.containsGateModel(gateModelFormalName);
-			} else if(parts[1].equals(BasicModel.GATE_MODEL_EXTENSION)) {
+			} else if(parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
 				if(PresetGateType.containsPresetTypeByFormalName(gateModelFormalName))
 					return true;
 				else

@@ -5,8 +5,8 @@ import java.util.Hashtable;
 import java.util.Set;
 
 import appFX.framework.InputDefinitions.MatrixDefinition;
-import appFX.framework.gateModels.BasicModel;
-import appFX.framework.gateModels.BasicModel.BasicModelType;
+import appFX.framework.gateModels.BasicGateModel;
+import appFX.framework.gateModels.BasicGateModel.BasicGateModelType;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.PresetGateType;
 import appFX.framework.gateModels.PresetGateType.PresetGateModel;
@@ -23,7 +23,7 @@ public class ExportedGate {
 	
 	@SuppressWarnings("unchecked")
 	public static ExportedGate mkIdentAt(int register) {
-		BasicModel gm = PresetGateType.IDENTITY.getModel();
+		BasicGateModel gm = PresetGateType.IDENTITY.getModel();
 		Matrix<Complex> m = ((MatrixDefinition) gm.getDefinitions().get(0)).getMatrix();
 		
 		return new ExportedGate(gm, new Hashtable<>(), new int[] {register}, new Control[0], new Matrix[] { m });
@@ -68,9 +68,9 @@ public class ExportedGate {
 		else return null;
 	}
 	
-	public BasicModelType getGateType() {
-		if(gateModel instanceof BasicModel) {
-			return ((BasicModel)gateModel).getGateModelType();
+	public BasicGateModelType getGateType() {
+		if(gateModel instanceof BasicGateModel) {
+			return ((BasicGateModel)gateModel).getGateModelType();
 		}
 		return null;
 	}

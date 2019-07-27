@@ -12,17 +12,17 @@ import mathLib.Complex;
 import mathLib.Matrix;
 import utils.customCollections.immutableLists.ImmutableArray;
 
-public class BasicModel extends GateModel {
+public class BasicGateModel extends GateModel {
 	private static final long serialVersionUID = -3974442774420594973L;
 	
 	public static final String GATE_MODEL_EXTENSION =  "gm";
 	
-	public static enum BasicModelType {
-		UNIVERSAL("Universal"), POVM("POVM"), HAMILTONIAN("Hamiltonian");
+	public static enum BasicGateModelType {
+		UNIVERSAL("Universal"), POVM("POVM"), HAMILTONIAN("Hamiltonian"), KRAUS_OPERATORS("Kraus Operators");
 		
 		private String name;
 		
-		private BasicModelType(String name) {
+		private BasicGateModelType(String name) {
 			this.name = name;
 		}
 		
@@ -30,20 +30,26 @@ public class BasicModel extends GateModel {
 		public String toString() {
 			return name;
 		}
+		
+		public static BasicGateModelType getByModelName(String s) {
+			for(BasicGateModelType bmt : BasicGateModelType.values())
+				if(bmt.name.equalsIgnoreCase(s)) return bmt;
+			return null;
+		}
 	}
 	
 	private final int numberOfRegisters;
 	private final ImmutableArray<String> latex, userInput;
 	private final ImmutableArray<MathObject> definitions;
-    private final BasicModelType gateType;
+    private final BasicGateModelType gateType;
     
     
     
     
     
-    public BasicModel(String name, String symbol, String description, String[] parameters, BasicModelType gateType, String ... userDefinitions) 
+    public BasicGateModel(String name, String symbol, String description, String[] parameters, BasicGateModelType gateType, String ... userInputMatrixDefinitions) 
     		throws DefinitionEvaluatorException {
-		super(name, symbol, description, getParameters(parameters, userDefinitions, gateType));
+		super(name, symbol, description, getParameters(parameters, userInputMatrixDefinitions, gateType));
 		
 		if(!isPreset())
 			PresetGateType.checkName(name);
@@ -54,7 +60,7 @@ public class BasicModel extends GateModel {
 		
 		
 		RegularGateChecker rgc = new RegularGateChecker();
-		GroupDefinition definitions = InputDefinitions.evaluateInput(rgc, parameters, userDefinitions);
+		GroupDefinition definitions = InputDefinitions.evaluateInput(rgc, parameters, userInputMatrixDefinitions);
 		
 		
 		for(String var : definitions.getArguments()) {
@@ -79,7 +85,7 @@ public class BasicModel extends GateModel {
     
     
     
-    private static String[] getParameters(String[] parameters, String[] definitions, BasicModelType gateType) {
+    private static String[] getParameters(String[] parameters, String[] definitions, BasicGateModelType gateType) {
     	switch(gateType) {
     	case UNIVERSAL:
     		if(definitions.length != 1)
@@ -113,17 +119,17 @@ public class BasicModel extends GateModel {
     }
     
     
-    private BasicModel(String name, String symbol, String description, String[] arguments, BasicModel old) {
+    private BasicGateModel(String name, String symbol, String description, String[] arguments, BasicGateModel old) {
     	super(name, symbol, description, arguments);
     	this.numberOfRegisters = old.numberOfRegisters;
     	this.latex = old.getLatex();
-		this.userInput = old.getUserInput();
+		this.userInput = old.getUserInputMatrixDefinitions();
 		this.definitions = old.getDefinitions();
     	this.gateType = old.gateType;
     }
     
 	
-	public BasicModelType getGateModelType() {
+	public BasicGateModelType getGateModelType() {
 		return gateType;
 	}
 	
@@ -146,7 +152,7 @@ public class BasicModel extends GateModel {
     	return latex;
     }
     
-    public ImmutableArray<String> getUserInput() {
+    public ImmutableArray<String> getUserInputMatrixDefinitions() {
     	return userInput;
     }
     
@@ -168,7 +174,7 @@ public class BasicModel extends GateModel {
 
 	@Override
 	public GateModel shallowCopyToNewName(String name, String symbol, String description, String ... arguments) {
-		return new BasicModel(name, symbol, description, arguments, this);
+		return new BasicGateModel(name, symbol, description, arguments, this);
 	}
 	
 	

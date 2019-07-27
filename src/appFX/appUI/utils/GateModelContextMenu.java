@@ -80,13 +80,13 @@ public class GateModelContextMenu extends ContextMenu {
 						return false;
 					}
 					
-					Optional<ButtonType> options = AppAlerts.showMessage(prompt.getPromptWindow(), "Override Gate Model " + formalName, 
+					ButtonType buttonType = AppAlerts.showMessage(prompt.getPromptWindow(), "Override Gate Model " + formalName, 
 							"A Gate Model with the name \"" + formalName + "\" already exists, "
 									+ "do you want to override this gate model?"
 									+ " All instances of the previous implementation of \""
 									+ formalName + "\" in this project will be removed.", AlertType.WARNING);
 						
-					return options.get() == ButtonType.OK;
+					return buttonType == ButtonType.OK;
 					
 				};
 				

@@ -8,9 +8,9 @@ import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.GateModel;
 
-public class CustomGateChooser extends AbstractGateChooser {
+public class CustomGateChooserView extends AbstractGateChooserView {
 	
-	public CustomGateChooser() {
+	public CustomGateChooserView() {
 		super("Custom Gates");
 	}
 	

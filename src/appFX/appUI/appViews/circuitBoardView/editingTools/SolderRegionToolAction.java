@@ -5,7 +5,7 @@ import java.util.Hashtable;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
-import appFX.appUI.appViews.gateChooser.AbstractGateChooser;
+import appFX.appUI.appViews.gateChooser.AbstractGateChooserView;
 import appFX.appUI.utils.AppAlerts;
 import appFX.appUI.utils.ParameterPrompt;
 import appFX.framework.AppStatus;
@@ -109,7 +109,7 @@ public class SolderRegionToolAction  extends ToolAction {
 	}
 	
 	public GateModel getSelectedModel() {
-		return AbstractGateChooser.getSelected();
+		return AbstractGateChooserView.getSelected();
 	}
 	
 

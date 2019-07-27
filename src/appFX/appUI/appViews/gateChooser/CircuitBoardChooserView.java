@@ -8,9 +8,9 @@ import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.GateModel;
 
-public class CircuitBoardChooser extends AbstractGateChooser {
+public class CircuitBoardChooserView extends AbstractGateChooserView {
 	
-	public CircuitBoardChooser() {
+	public CircuitBoardChooserView() {
 		super("Circuit Boards");
 	}
 	

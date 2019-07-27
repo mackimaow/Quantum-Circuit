@@ -2,6 +2,7 @@ package appFX.appUI.utils;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import javafx.event.EventHandler;
@@ -27,12 +28,23 @@ import javafx.stage.WindowEvent;
 
 public class AppAlerts {
 	
-	public static Optional<ButtonType> showMessage(Window window, String title, String message, AlertType type){
-		return constructBasicAlert(window, title, message, type).showAndWait();
+	public static ButtonType showMessage(Window window, String title, String message, AlertType type){
+		Optional<ButtonType> optional = constructBasicAlert(window, title, message, type).showAndWait();
+		return getButtonTypeFromOptional(optional);
+	}
+	
+	private static ButtonType getButtonTypeFromOptional (Optional<ButtonType> optional) {
+		ButtonType buttonType;
+		try {
+			buttonType = optional.get();
+		} catch(NoSuchElementException e) {
+			buttonType = ButtonType.CANCEL;
+		}
+		return buttonType;
 	}
 	
 	
-	public static Optional<ButtonType> showButtonMessage(Window window, String title, String message, AlertType type, ButtonType ... buttons) {
+	public static ButtonType showButtonMessage(Window window, String title, String message, AlertType type, ButtonType ... buttons) {
 		Alert alert = new Alert(type, message, buttons);
 		alert.initModality(Modality.APPLICATION_MODAL);
 		if(window != null) {
@@ -40,7 +52,8 @@ public class AppAlerts {
 			alert.setTitle(title);
 		}
 		alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
-		return alert.showAndWait();
+		Optional<ButtonType> optional = alert.showAndWait();
+		return getButtonTypeFromOptional(optional);
 	}
 	
 	

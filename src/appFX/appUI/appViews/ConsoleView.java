@@ -29,7 +29,7 @@ import utils.customCollections.CommandParameterList.ParameterOutOfBoundsExceptio
 
 
 
-public class Console extends AppView implements PrintStream, Initializable, ChangeListener<Number> {
+public class ConsoleView extends AppView implements PrintStream, Initializable, ChangeListener<Number> {
 	
 	public static final int PREVIOUS_COMMAND_LIMIT = 20;
 	
@@ -44,8 +44,8 @@ public class Console extends AppView implements PrintStream, Initializable, Chan
 	private ListIterator<String> commandsIterator = null;
 	private int lastIndex = -2;
 	
-	public Console() {
-		super("Console.fxml", "Console", ViewLayout.BOTTOM, true);
+	public ConsoleView() {
+		super("views/ConsoleView.fxml", "Console", ViewLayout.BOTTOM, true);
 	}
 	
 	public void clearConsole() {

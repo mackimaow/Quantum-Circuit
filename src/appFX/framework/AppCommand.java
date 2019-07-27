@@ -1,17 +1,20 @@
 package appFX.framework;
 
-import java.util.Optional;
+import java.awt.image.BufferedImage;
+import java.io.File;
 
 import appFX.appUI.MainScene;
-import appFX.appUI.appViews.BasicModelView;
+import appFX.appUI.appViews.BasicGateModelView;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.utils.AppAlerts;
 import appFX.appUI.utils.AppFXMLComponent;
 import appFX.appUI.utils.AppFileIO;
 import appFX.appUI.utils.AppTab;
-import appFX.appUI.wizards.BasicModelEditWizard;
+import appFX.appUI.wizards.BasicGateModelEditWizard;
 import appFX.appUI.wizards.CircuitBoardPropertiesEditWizard;
-import appFX.framework.gateModels.BasicModel;
+import appFX.appUI.wizards.CircuitBoardToPNGWizard;
+import appFX.appUI.wizards.Wizard;
+import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.OracleModel;
@@ -27,6 +30,7 @@ import javafx.stage.Stage;
 import utils.PrintStream;
 import utils.PrintStream.SystemPrintStream;
 import utils.customCollections.CommandParameterList;
+import utils.customCollections.Pair;
 
 /**
  * All application Commands are listed here.
@@ -70,6 +74,8 @@ public enum AppCommand {
 	CREATE_DEFAULT_GATE,
 	CREATE_ORACLE_GATE,
 	OPEN_GATE,
+	OPEN_CIRCUIT_BOARD_AND_FOCUS,
+	OPEN_CIRCUIT_BOARD_AND_SHOW_ERROR,
 	SET_AS_TOP_LEVEL,
 	REMOVE_TOP_LEVEL,
 	LIST_USER_GATES,
@@ -120,6 +126,12 @@ public enum AppCommand {
 		
 		
 		case EXPORT_TO_PNG_IMAGE:
+			Wizard<Pair<BufferedImage, File>> wizard = new CircuitBoardToPNGWizard();
+			CircuitBoardView  cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			String circuitBoardName = "";
+			if(cbv != null)
+				circuitBoardName = cbv.getCircuitBoardModel().getFormalName();
+			wizard.openWizardAndGetElement(circuitBoardName);
 			break;
 		case EXPORT_TO_QASM:
 			break;
@@ -164,7 +176,7 @@ public enum AppCommand {
 			
 			
 		case REMOVE_COLUMN_FROM_FOCUSED_CB:
-			CircuitBoardView  cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			cbv = getFocusedCircuitBoardView(ms, commandResponse);
 			
 			if(cbv == null)
 				return null;
@@ -269,12 +281,12 @@ public enum AppCommand {
 					return null;
 				}
 				
-				Optional<ButtonType> options = AppAlerts.showMessage(primaryStage, "Override Gate Model " + gmNew.getName(), 
+				ButtonType buttonType = AppAlerts.showMessage(primaryStage, "Override Gate Model " + gmNew.getName(), 
 						"A Gate Model with the name \"" + gmNew.getName() + "\" already exists, "
 								+ "do you want to override this gate model?"
 								+ " All instances of the previous implementation of \""
 								+ gmNew.getName() + "\" in this project will be removed.", AlertType.WARNING);
-				if(options.get() != ButtonType.OK)
+				if(buttonType != ButtonType.OK)
 					return null;
 			}
 			
@@ -293,9 +305,9 @@ public enum AppCommand {
 			if(gmOld instanceof CircuitBoardModel) {
 				currentProject.getCircuitBoardModels().replace(oldGate, replacement);
 				CircuitBoardView.openCircuitBoard(newGate);
-			} else if (gmOld instanceof BasicModel) {
+			} else if (gmOld instanceof BasicGateModel) {
 				currentProject.getCustomGates().replace(oldGate, replacement);
-				ms.getViewManager().addView(new BasicModelView((BasicModel)replacement));
+				ms.getViewManager().addView(new BasicGateModelView((BasicGateModel)replacement));
 			} else if (gmOld instanceof OracleModel) {
 				currentProject.getCustomOracles().replace(oldGate, replacement);
 			} else {
@@ -314,8 +326,8 @@ public enum AppCommand {
 					commandResponse.printErrln("The formal name \"" + param +  "\" is not a valid name. It must have a proper extension.");
 					continue;
 				}
-				if(ext.equals(BasicModel.GATE_MODEL_EXTENSION)) {
-					BasicModelEditWizard.createNewGate(name);
+				if(ext.equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
+					BasicGateModelEditWizard.createNewGate(name);
 				} else if (ext.equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
 					CircuitBoardPropertiesEditWizard.createNewGate(name);
 				} else if (ext.equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
@@ -327,7 +339,7 @@ public enum AppCommand {
 			CircuitBoardPropertiesEditWizard.createNewGate();
 			break;
 		case CREATE_DEFAULT_GATE:
-			BasicModelEditWizard.createNewGate();
+			BasicGateModelEditWizard.createNewGate();
 			break;
 		case CREATE_ORACLE_GATE:
 			
@@ -339,8 +351,8 @@ public enum AppCommand {
 				if(!assertExists(param, gm, commandResponse))
 					continue;
 				
-				if(gm instanceof BasicModel) {
-					BasicModelEditWizard.editAsNewGate(gm.getFormalName());
+				if(gm instanceof BasicGateModel) {
+					BasicGateModelEditWizard.editAsNewGate(gm.getFormalName());
 				} else if (gm instanceof CircuitBoardModel) {
 					CircuitBoardPropertiesEditWizard.editAsNewGate(gm.getFormalName());
 				} else if (gm instanceof OracleModel) {
@@ -359,8 +371,8 @@ public enum AppCommand {
 					continue;
 				}
 				
-				if(gm instanceof BasicModel) {
-					BasicModelEditWizard.editGate(gm.getFormalName());
+				if(gm instanceof BasicGateModel) {
+					BasicGateModelEditWizard.editGate(gm.getFormalName());
 				} else if (gm instanceof CircuitBoardModel) {
 					CircuitBoardPropertiesEditWizard.editGate(gm.getFormalName());
 				} else if (gm instanceof OracleModel) {
@@ -380,13 +392,13 @@ public enum AppCommand {
 					continue;
 				}
 
-				Optional<ButtonType> options = AppAlerts.showMessage(primaryStage, "Remove Gate?", "Are you sure you want to remove this gate? "
+				ButtonType buttonType = AppAlerts.showMessage(primaryStage, "Remove Gate?", "Are you sure you want to remove this gate? "
 						+ "All instances of this gate will be removed.", AlertType.CONFIRMATION);
 				
-				if(options.get() != ButtonType.OK)
+				if(buttonType != ButtonType.OK)
 					return null;
 				
-				if(gm instanceof BasicModel) {
+				if(gm instanceof BasicGateModel) {
 					currentProject.getCustomGates().remove(gm.getFormalName());
 				} else if (gm instanceof CircuitBoardModel) {
 					currentProject.getCircuitBoardModels().remove(gm.getFormalName());
@@ -402,14 +414,28 @@ public enum AppCommand {
 				if(!assertExists(param, gm, commandResponse))
 					continue;
 				
-				if(gm instanceof BasicModel) {
-					ms.getViewManager().addView(new BasicModelView((BasicModel) gm));
+				if(gm instanceof BasicGateModel) {
+					ms.getViewManager().addView(new BasicGateModelView((BasicGateModel) gm));
 				} else if (gm instanceof CircuitBoardModel) {
 					CircuitBoardView.openCircuitBoard(gm.getFormalName());
 				}
 			}
 			break;
-			
+		case OPEN_CIRCUIT_BOARD_AND_FOCUS:
+			String gateName = parameters.getString(0);
+			cbv = CircuitBoardView.openCircuitBoard(gateName);
+			double row = getDoubleFromObject(parameters.get(1));
+			double column = getDoubleFromObject(parameters.get(2));
+			cbv.getRenderer().scrollToGrid(row, column);
+			break;
+		case OPEN_CIRCUIT_BOARD_AND_SHOW_ERROR:
+			gateName = parameters.getString(0);
+			cbv = CircuitBoardView.openCircuitBoard(gateName);
+			int rowStart = getIntFromObject(parameters.get(1));
+			int rowEnd 	=  getIntFromObject(parameters.get(2));
+			int columnInt = getIntFromObject(parameters.get(3));
+			cbv.renderErrorAt(rowStart, rowEnd, columnInt);
+			break;
 		case SET_AS_TOP_LEVEL:
 			GateModel gm = currentProject.getGateModel(parameters.getString(0));
 			
@@ -489,12 +515,12 @@ public enum AppCommand {
 			if(!assertExists(parameters.getString(0), gm, commandResponse))
 				return null;
 			
-			if(!(gm instanceof BasicModel)) {
+			if(!(gm instanceof BasicGateModel)) {
 				commandResponse.printErrln("Gate \"" + parameters.getString(0) +  "\" must be a basic gate");
 				return null;
 			}
 			
-			BasicModel bg = (BasicModel) gm;
+			BasicGateModel bg = (BasicGateModel) gm;
 			
 			if(parameters.size() > 1) {
 				for (int i = 1; i < parameters.size(); i++) {Object value = parameters.get(i);
@@ -529,12 +555,12 @@ public enum AppCommand {
 			if(!assertExists(parameters.getString(0), gm, commandResponse))
 				return null;
 			
-			if(!(gm instanceof BasicModel)) {
+			if(!(gm instanceof BasicGateModel)) {
 				commandResponse.printErrln("Gate \"" + parameters.getString(0) +  "\" must be a basic gate");
 				return null;
 			}
 			
-			bg = (BasicModel) gm;
+			bg = (BasicGateModel) gm;
 			
 			if(parameters.size() > 1) {
 				for (int i = 1; i < parameters.size(); i++) {
@@ -615,6 +641,24 @@ public enum AppCommand {
 		}
 		
 		return null;
+	}
+	
+	private static int getIntFromObject(Object o) {
+		int i;
+		if(o instanceof String)
+			i = Integer.parseInt((String)o);
+		else
+			i = (Integer) o;
+		return i;
+	}
+	
+	private static double getDoubleFromObject(Object o) {
+		double d;
+		if(o instanceof String)
+			d = Double.parseDouble((String)o);
+		else
+			d = (Double) o;
+		return d;
 	}
 	
 	private static boolean assertExists(String gateModel, GateModel gm, PrintStream commandResponse) {

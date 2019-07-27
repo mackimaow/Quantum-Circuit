@@ -11,7 +11,7 @@ import appFX.appUI.utils.GateModelContextMenu;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
-import appFX.framework.gateModels.BasicModel;
+import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.OracleModel;
@@ -37,11 +37,11 @@ public class ProjectHierarchy extends AppView implements Initializable, EventHan
 	private ContextMenu cm = new ContextMenu();
 	
 	public ProjectHierarchy() {
-		super("ProjectHierarchy.fxml", "Project Hierarchy", ViewLayout.LEFT, true);
+		super("views/ProjectHierarchyView.fxml", "Project Hierarchy", ViewLayout.LEFT, true);
 	}
 	
 	public void setFocusedProject(Project project) {
-		root = new TreeItem<>(project.getProjectName() + AppFileIO.QUANTUM_PROJECT_EXTENSION);
+		root = new TreeItem<>(project.getProjectName() + "." + AppFileIO.QUANTUM_PROJECT_EXTENSION);
 		topLevel = new TreeItem<>("Top Level Board");
 		subCircuits = new TreeItem<>("Sub-Circuits");
 		customGates = new TreeItem<>("Custom Gates");
@@ -169,7 +169,7 @@ public class ProjectHierarchy extends AppView implements Initializable, EventHan
 	
 	private Pair<TreeItem<String>, String> getListFromSource(Project p, Object source) {
 		if(source == p.getCustomGates()) {
-			return new Pair<>(customGates, BasicModel.GATE_MODEL_EXTENSION);
+			return new Pair<>(customGates, BasicGateModel.GATE_MODEL_EXTENSION);
 		} else if (source == p.getCircuitBoardModels()) {
 			return new Pair<>(subCircuits, CircuitBoardModel.CIRCUIT_BOARD_EXTENSION);
 		} else if(source == p.getCustomOracles()) {

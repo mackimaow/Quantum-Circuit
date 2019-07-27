@@ -5,7 +5,7 @@ import appFX.appUI.utils.LatexNode;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
-import appFX.framework.gateModels.BasicModel;
+import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.GateModel;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -18,7 +18,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import utils.customCollections.immutableLists.ImmutableArray;
 
-public class BasicModelView extends AppView {
+public class BasicGateModelView extends AppView {
 	
 	@FXML
 	private TextField name, symbol, registers, modelType;
@@ -36,10 +36,10 @@ public class BasicModelView extends AppView {
 	private boolean initialized = false;
 	
 	
-	private BasicModel gm;
+	private BasicGateModel gm;
 	
-	public BasicModelView(BasicModel gm) {
-		super("GateModelView.fxml", gm.getFormalName(), ViewLayout.CENTER);
+	public BasicGateModelView(BasicGateModel gm) {
+		super("views/BasicGateModelView.fxml", gm.getFormalName(), ViewLayout.CENTER);
 		this.gm = gm;
 		initialize();
 	}

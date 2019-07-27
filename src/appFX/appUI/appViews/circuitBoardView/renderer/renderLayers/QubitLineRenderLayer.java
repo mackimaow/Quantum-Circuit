@@ -1,6 +1,7 @@
 package appFX.appUI.appViews.circuitBoardView.renderer.renderLayers;
 
-import graphicsWrapper.AxisBound.RimBound;
+import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
+import appFX.appUI.appViews.circuitBoardView.renderer.GateRenderer;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.Graphics;
 import javafx.scene.image.Image;
@@ -17,26 +18,9 @@ public class QubitLineRenderLayer extends RenderLayer {
 	@Override
 	@SuppressWarnings("unchecked")
 	public void onDraw(Graphics<Image, Font, Color> graphics, Object... userArgs) {
-		graphics.setBoundsManaged(false);
-		graphics.setColor(Color.BLACK);
-		
 		ImmutableTree<FocusData> fd = (ImmutableTree<FocusData>) userArgs[0];
 		FocusData gridData = fd.getElement();
-		
-		for(int i = 0; i < gridData.getRowCount(); i++) {
-			setFocus(graphics, gridData, i); {
-				graphics.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
-				graphics.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
-			} graphics.escapeFocus();
-		}
-	}
-	
-	private static void setFocus(Graphics<Image, Font, Color> graphics, FocusData gridData, int row) {
-		double lowerMargin = row == 0? 0 : gridData.getCummulativeHeight(row - 1);
-		double width = gridData.getWidth();
-		double height = gridData.getRowHeightAt(row);
-		graphics.setLayout(Graphics.LEFT_ALIGN, Graphics.TOP_ALIGN);
-		graphics.setFocus(new RimBound(0, 0, true, true), new RimBound(lowerMargin, 0, false, false), width, height);
+		GateRenderer.renderQubitLines(graphics, CustomFXGraphics.RENDER_PALETTE, gridData);
 	}
 
 }

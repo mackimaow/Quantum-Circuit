@@ -39,7 +39,7 @@ public class ParameterPrompt extends AppFXMLComponent implements Initializable{
 	
 	
 	public ParameterPrompt (Project p, CircuitBoardModel cb, String gateName, Integer[] rows, int column) {
-		super("ParameterPrompt.fxml");
+		super("utils/ParameterPrompt.fxml");
 		this.cb = cb;
 		this.gm = p.getGateModel(gateName);
 		this.rows = rows;

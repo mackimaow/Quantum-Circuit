@@ -2,7 +2,7 @@ package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
-import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GateRenderLayer;
+import appFX.appUI.appViews.circuitBoardView.renderer.GateRenderer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
 import appFX.framework.gateModels.PresetGateType;
 import appFX.framework.solderedGates.SolderedGate;
@@ -118,7 +118,7 @@ public class ControlToolAction extends ToolAction {
 		graphics.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
 		RenderLayer.setFocus(graphics, gridData, row, column); {
 			if(currSG != null && column == colSel)
-				GateRenderLayer.renderControlInFocus(graphics, controlType);
+				GateRenderer.renderControlInFocus(graphics, CustomFXGraphics.RENDER_PALETTE, controlType);
 			else
 				graphics.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
 		} graphics.escapeFocus();

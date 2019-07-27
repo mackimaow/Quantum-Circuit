@@ -6,6 +6,7 @@ import java.util.List;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GateRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GridRenderLayer;
+import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.NotificationRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.QubitLineRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.QubitRegistersRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
@@ -25,9 +26,10 @@ public class CircuitBoardRenderer {
 	
 	private StackPane stackPane;
 	private LinkedList<RenderLayer> layers;
-	public static int GATE_RENDER_LAYER_INDEX = 1;
-	public static int GRID_RENDER_LAYER_INDEX = 2;
-	public static int TOOL_RENDER_LAYER_INDEX = 3;
+	public static final int GATE_RENDER_LAYER_INDEX = 1;
+	public static final int GRID_RENDER_LAYER_INDEX = 2;
+	public static final int TOOL_RENDER_LAYER_INDEX = 3;
+	public static final int NOTIFICATION_RENDER_LAYER_INDEX = 4;
 	
 	private ImmutableTree<FocusData> gridData = null;
 	
@@ -54,6 +56,7 @@ public class CircuitBoardRenderer {
 		addLayer(new GateRenderLayer(viewWidth, viewHeight, circuitBoard));
 		addLayer(new GridRenderLayer(viewWidth, viewHeight));
 		addLayer(new ToolActionRenderLayer(viewWidth, viewHeight, circuitBoardView));
+		addLayer(new NotificationRenderLayer(viewWidth, viewHeight));
 		addLayer(new QubitRegistersRenderLayer(viewWidth, viewHeight));
 	}
 	
@@ -97,6 +100,14 @@ public class CircuitBoardRenderer {
 		
 		for(RenderLayer layer : layers)
 			layer.render(viewLeftOriginX, viewTopOriginY, zoom);
+	}
+	
+	public synchronized void renderLayer(int index) {
+		double[] centeredPosition = getCenteredPosition();
+		
+		viewLeftOriginX = viewWidth / (2d * zoom) - centeredPosition[0];
+		viewTopOriginY = viewHeight / (2d * zoom) - centeredPosition[1];
+		layers.get(index).render(viewLeftOriginX, viewTopOriginY, index);
 	}
 	
 	public void setGridVisible(boolean visible) {

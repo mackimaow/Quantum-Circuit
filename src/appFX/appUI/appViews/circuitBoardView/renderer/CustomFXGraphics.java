@@ -7,6 +7,7 @@ import javax.swing.JLabel;
 
 import org.scilab.forge.jlatexmath.TeXIcon;
 
+import graphicsWrapper.FontWrapper;
 import graphicsWrapper.GraphicalDrawTools;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.canvas.GraphicsContext;
@@ -17,10 +18,40 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
 
-public class CustomFXGraphics implements GraphicalDrawTools<Image, Font, Color> {
+public class CustomFXGraphics implements GraphicalDrawTools<Image, Font, Color>{
 	public static final FXFontWrapper DEFAULT = new FXFontWrapper(Font.getDefault());
 	
 	private GraphicsContext gc;
+	public static final RenderPalette<Image, Font, Color> RENDER_PALETTE;
+	
+	static {
+		RENDER_PALETTE = new RenderPalette<Image, Font, Color>() {
+			@Override
+			public Color getBlack() {
+				return Color.BLACK;
+			}
+			
+			@Override
+			public Color getRed() {
+				return Color.RED;
+			}
+			
+			@Override
+			public Color getWhite() {
+				return Color.WHITE;
+			}
+			
+			@Override
+			public FontWrapper<Font> getDefault() {
+				return CustomFXGraphics.DEFAULT;
+			}
+			
+			@Override
+			public Color getColor(double red, double green, double blue, double alpha) {
+				return new Color(red, green, blue, alpha);
+			}
+		};
+	}
 	
 	public CustomFXGraphics(GraphicsContext gc) {
 		this.gc = gc;

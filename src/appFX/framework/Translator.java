@@ -30,7 +30,8 @@ public class Translator {
       try {
          exps = GateManager.exportGates(p);
       } catch (GateManager.ExportException e) {
-         e.printStackTrace();
+         e.showExportErrorSource();
+         return "";
       }
       List<String> codeSegs = exps.map(Translator::genGateCode).collect(Collectors.toList());
       String code = "";

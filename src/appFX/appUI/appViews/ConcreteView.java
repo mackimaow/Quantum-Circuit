@@ -1,10 +1,10 @@
 package appFX.appUI.appViews;
 
 import appFX.appPreferences.AppPreferences.Booleans;
-import appFX.appUI.appViews.gateChooser.CircuitBoardChooser;
-import appFX.appUI.appViews.gateChooser.CustomGateChooser;
-import appFX.appUI.appViews.gateChooser.CustomOracleChooser;
-import appFX.appUI.appViews.gateChooser.PresetGatesChooser;
+import appFX.appUI.appViews.gateChooser.CircuitBoardChooserView;
+import appFX.appUI.appViews.gateChooser.CustomGateChooserView;
+import appFX.appUI.appViews.gateChooser.CustomOracleChooserView;
+import appFX.appUI.appViews.gateChooser.PresetGatesChooserView;
 
 public enum ConcreteView {
 	CONSOLE(Booleans.CONSOLE_OPEN),
@@ -19,11 +19,11 @@ public enum ConcreteView {
 	private Booleans wasOpen;
 	
 	public static void initializeViews() {
-		CONSOLE.appView 			= new Console();
-		PRESET_GATES_VIEW.appView  	= new PresetGatesChooser();
-		CUSTOM_GATES_VIEW.appView  	= new CustomGateChooser();
-		CUSTOM_ORACLES_VIEW.appView = new CustomOracleChooser();
-		CIRCUITBOARD_VIEW.appView  	= new CircuitBoardChooser();
+		CONSOLE.appView 			= new ConsoleView();
+		PRESET_GATES_VIEW.appView  	= new PresetGatesChooserView();
+		CUSTOM_GATES_VIEW.appView  	= new CustomGateChooserView();
+		CUSTOM_ORACLES_VIEW.appView = new CustomOracleChooserView();
+		CIRCUITBOARD_VIEW.appView  	= new CircuitBoardChooserView();
 		PROJECT_HIERARCHY.appView  	= new ProjectHierarchy();
 	}
 	

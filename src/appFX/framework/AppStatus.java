@@ -1,13 +1,12 @@
 package appFX.framework;
 
 import java.net.URI;
-import java.util.Optional;
 
 import appFX.appPreferences.AppPreferences;
 import appFX.appUI.MainScene;
 import appFX.appUI.appViews.AppViewManager;
 import appFX.appUI.appViews.ConcreteView;
-import appFX.appUI.appViews.Console;
+import appFX.appUI.appViews.ConsoleView;
 import appFX.appUI.utils.AppAlerts;
 import appFX.appUI.utils.AppFileIO;
 import javafx.event.EventHandler;
@@ -102,8 +101,8 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 	/**
 	 * @return the console controller of this application
 	 */
-	public Console getConsole() {
-		return (Console) ConcreteView.CONSOLE.getView();
+	public ConsoleView getConsole() {
+		return (ConsoleView) ConcreteView.CONSOLE.getView();
 	}
 	
 	
@@ -126,18 +125,17 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 			ButtonType type2 = new ButtonType("Continue without saving");
 			ButtonType type3 = new ButtonType("Cancel");
 			
-			Optional<ButtonType> response = AppAlerts.showButtonMessage(primaryStage,
+			ButtonType buttonType = AppAlerts.showButtonMessage(primaryStage,
 					"The current project is not saved",
 					"Do you want to continue without saving?", AlertType.CONFIRMATION, type1, type2, type3);
 			
-			ButtonType sel = response.get();
 			
-			if(sel == type1) {
+			if(buttonType == type1) {
 				Object o = AppCommand.doAction(AppCommand.SAVE_PROJECT);
 				if(o != null && !((Boolean) o))
 					return;
-			} else if(sel == type2) {
-			} else if(sel == type3) {
+			} else if(buttonType == type2) {
+			} else if(buttonType == type3) {
 				return;
 			}
 		}
@@ -209,17 +207,15 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 			ButtonType type2 = new ButtonType("Exit Anyway");
 			ButtonType type3 = new ButtonType("Cancel");
 			
-			Optional<ButtonType> options = AppAlerts.showButtonMessage(primaryStage, "Project is not saved", 
+			ButtonType buttonType = AppAlerts.showButtonMessage(primaryStage, "Project is not saved", 
 					"The current project is not saved, would you like to save before exiting?", AlertType.CONFIRMATION, type1, type2, type3);
 			
-			ButtonType sel = options.get();
-			
-			if(sel == type1) {
+			if(buttonType == type1) {
 				if(AppFileIO.saveProject(project, primaryStage) != AppFileIO.SUCCESSFUL) {
 					event.consume();
 					return;
 				}
-			} else if (sel == type3) {
+			} else if (buttonType == type3) {
 				event.consume();
 				return;
 			}

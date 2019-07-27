@@ -25,7 +25,7 @@ public class SolderableIcon extends AppFXMLComponent implements Initializable {
 	}
 	
 	private SolderableIcon(GateModel s) {
-		super("SolderableIcon.fxml");
+		super("utils/SolderableIcon.fxml");
 		this.s = s;
 	}
 	

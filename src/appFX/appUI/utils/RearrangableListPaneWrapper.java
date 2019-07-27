@@ -15,20 +15,22 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 
-public abstract class ListSelectionPaneWrapper implements Iterable<Node> {
+public abstract class RearrangableListPaneWrapper implements Iterable<Object[]> {
 	private Pane p;
 	private int elementSelected = -1;
 	
-	public ListSelectionPaneWrapper(Pane p) {
+	public RearrangableListPaneWrapper(Pane p) {
 		this.p = p;
 	}
 	
-	public void addElementToEnd(Node n) {
+	public void addElementToEnd(Object ... elementArgs) {
+		Node n = createElement(elementArgs);
 		if(whenElementIsAdded(p.getChildren().size() - 1, n))
 			p.getChildren().add(new ListElement(n));
 	}
 	
-	public void addElement(int index, Node n) {
+	public void addElement(int index, Object ... elementArgs) {
+		Node n = createElement(elementArgs);
 		if(whenElementIsAdded(index, n))
 			p.getChildren().add(index, new ListElement(n));
 	}
@@ -52,6 +54,9 @@ public abstract class ListSelectionPaneWrapper implements Iterable<Node> {
 		return ((ListElement) p.getChildren().get(index)).getContent();
 	}
 	
+	
+	protected abstract Node createElement(Object ... args);
+	protected abstract Object[] getArgs(Node element);
 	protected abstract boolean whenElementIsRemoved(int index, Node n);
 	protected abstract boolean whenElementIsAdded(int index, Node n);
 	protected abstract boolean whenElementMoves(int indexFirst, int indexNext);
@@ -158,11 +163,30 @@ public abstract class ListSelectionPaneWrapper implements Iterable<Node> {
 	}
 	
 	@Override
-	public Iterator<Node> iterator() {
+	public Iterator<Object[]> iterator() {
 		return new ListIterator();
 	}
 	
-	private class ListIterator implements Iterator<Node> {
+	public Iterator<Node> nodeIterator() {
+		return new NodeListIterator();
+	}
+	
+	private class ListIterator implements Iterator<Object[]> {
+		private final Iterator<Node> iter = p.getChildren().iterator();
+		
+		@Override
+		public boolean hasNext() {
+			return iter.hasNext();
+		}
+
+		@Override
+		public Object[] next() {
+			Node n = ((ListElement) iter.next()).getContent();
+			return getArgs(n);
+		}
+	}
+	
+	private class NodeListIterator implements Iterator<Node> {
 		private final Iterator<Node> iter = p.getChildren().iterator();
 		
 		@Override

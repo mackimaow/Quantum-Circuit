@@ -8,9 +8,9 @@ import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.GateModel;
 
-public class CustomOracleChooser extends AbstractGateChooser {
+public class CustomOracleChooserView extends AbstractGateChooserView {
 	
-	public CustomOracleChooser() {
+	public CustomOracleChooserView() {
 		super("Custom Oracles");
 	}
 	

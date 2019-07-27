@@ -6,6 +6,8 @@ import java.util.ListIterator;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import appFX.appUI.utils.AppAlerts;
+import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.InputDefinitions.ArgObject;
 import appFX.framework.InputDefinitions.GroupDefinition;
@@ -14,10 +16,12 @@ import appFX.framework.InputDefinitions.MatrixObject;
 import appFX.framework.InputDefinitions.ScalarObject;
 import appFX.framework.MathDefinitions;
 import appFX.framework.Project;
-import appFX.framework.gateModels.BasicModel;
+import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.solderedGates.SolderedGate;
+import javafx.scene.control.Alert.AlertType;
+import javafx.stage.Window;
 import mathLib.Complex;
 import mathLib.Matrix;
 import mathLib.expression.Expression.EvaluateExpressionException;
@@ -218,7 +222,7 @@ public class GateManager {
 		
 		GateModel gm = leaf.gm;
 		Hashtable<String, Complex> argParamTable = leaf.parameters;
-		BasicModel dg = (BasicModel) gm;
+		BasicGateModel dg = (BasicGateModel) gm;
 		ImmutableArray<MathObject> definitions = dg.getDefinitions();
 		Matrix<Complex>[] matrixes = new Matrix[definitions.size()];
 		
@@ -353,7 +357,7 @@ public class GateManager {
 		Project p = AppStatus.get().getFocusedProject();
 		CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(circuitboardName);
 		
-		if(cb == null) throw new ExportException("Gate \"" + circuitboardName + "\" is not valid or does not exist");
+		if(cb == null) throw new ExportException("Gate \"" + circuitboardName + "\" is not valid or does not exist", null, 0, 0, 0);
 		
 		Hashtable<Integer, Integer> registers = new Hashtable<>();
 		for(int i = 0; i < cb.getRows(); i++)
@@ -378,7 +382,7 @@ public class GateManager {
 			GateModel gm = p.getGateModel(sg.getGateModelFormalName());
 			
 			if(gm == null) throw new ExportException("Gate \"" + sg.getGateModelFormalName() + 
-					"\" is not valid or does not exist in \"" + cb.getFormalName() + "\"");
+					"\" is not valid or does not exist in \"" + cb.getFormalName() + "\"", cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			
 
 			GroupDefinition        parameters = sg.getParameterSet();
@@ -387,12 +391,12 @@ public class GateManager {
 			
 			if(arguments.size() != parameters.getSize()) {
 				throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-											+ cb.getFormalName() + "\" are missing necessary arguments");
+											+ cb.getFormalName() + "\" are missing necessary arguments", cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			}
 			
 			if(rawData.getRegisters().size() != gm.getNumberOfRegisters()) {
 				throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-						+ cb.getFormalName() + "\" is not the appropriate size");
+						+ cb.getFormalName() + "\" is not the appropriate size", cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			}
 			
 			int i = 0;
@@ -406,7 +410,7 @@ public class GateManager {
 					for(MathObject mo : parameters.getMathDefinitions()) {
 						if(mo.isMatrix())
 							throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-									+ cb.getFormalName() + "\" cannot not pass a matrix in parameter " + i);
+									+ cb.getFormalName() + "\" cannot not pass a matrix in parameter " + i, cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 						
 						if(mo.hasArguments())
 							c = (Complex) ((ArgObject) mo).getDefinition().compute(runtimeVariables);
@@ -421,7 +425,7 @@ public class GateManager {
 					for(MathObject mo : parameters.getMathDefinitions()) {
 						if(mo.isMatrix())
 							throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-									+ cb.getFormalName() + "\" cannot not pass a matrix in parameter " + i);
+									+ cb.getFormalName() + "\" cannot not pass a matrix in parameter " + i, cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 						
 						if(mo.hasArguments())
 							c = (Complex) ((ArgObject) mo).getDefinition().compute(runtimeVariables);
@@ -436,7 +440,7 @@ public class GateManager {
 				
 			} catch (EvaluateExpressionException e) {
 				throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-						+ cb.getFormalName() + "\" could not evaluate parameter " + i + " due to: " + e.getMessage());
+						+ cb.getFormalName() + "\" could not evaluate parameter " + i + " due to: " + e.getMessage(), cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			}
 			
 			
@@ -454,9 +458,24 @@ public class GateManager {
 	
 	@SuppressWarnings("serial")
 	public static class ExportException extends Exception {
-		private ExportException (String message) {
+		public final int rowStart, rowEnd, column;
+		public final String circuitBoardName;
+		private ExportException (String message, String circuitBoardName, int rowStart, int rowEnd, int column) {
 			super(message);
+			this.circuitBoardName = circuitBoardName;
+			this.rowStart = rowStart;
+			this.rowEnd = rowEnd;
+			this.column = column;
 		}
+		
+		public void showExportErrorSource() {
+			Window w = AppStatus.get().getPrimaryStage();
+        	AppAlerts.showMessage(w, "Export Failed", getMessage(), AlertType.ERROR);
+        	if(circuitBoardName != null)
+        		AppCommand.doAction(AppCommand.OPEN_CIRCUIT_BOARD_AND_SHOW_ERROR, circuitBoardName, rowStart, rowEnd, column);
+		}
+		
+		
 	}
 	
 	

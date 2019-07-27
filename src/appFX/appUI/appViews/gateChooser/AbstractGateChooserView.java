@@ -21,7 +21,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.TilePane;
 
-public abstract class AbstractGateChooser extends AppView implements Initializable {
+public abstract class AbstractGateChooserView extends AppView implements Initializable {
 	
 	@FXML
 	protected Button button;
@@ -32,8 +32,8 @@ public abstract class AbstractGateChooser extends AppView implements Initializab
 	
 	private static ToggleGroup tg = new ToggleGroup();
 	
-	public AbstractGateChooser(String viewName) {
-		super("GateChooser.fxml", viewName, ViewLayout.RIGHT, true);
+	public AbstractGateChooserView(String viewName) {
+		super("views/GateChooserView.fxml", viewName, ViewLayout.RIGHT, true);
 	}
 	
 	public abstract void buttonAction();

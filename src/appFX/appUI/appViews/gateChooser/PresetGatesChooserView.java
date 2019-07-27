@@ -5,9 +5,9 @@ import java.util.ResourceBundle;
 
 import appFX.framework.gateModels.PresetGateType;
 
-public class PresetGatesChooser extends AbstractGateChooser {
+public class PresetGatesChooserView extends AbstractGateChooserView {
 	
-	public PresetGatesChooser() {
+	public PresetGatesChooserView() {
 		super("Preset Gates");
 	}
 

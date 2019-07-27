@@ -21,8 +21,8 @@ import javafx.stage.Stage;
 public class AppFileIO implements AppPreferences {
 	
 
-	public static final String QUANTUM_PROJECT_EXTENSION = ".qcc";
-	public static final ExtensionFilter QUANTUM_CIRCUIT_FILE = new ExtensionFilter("Quantum Circuit Project", "*" + QUANTUM_PROJECT_EXTENSION);
+	public static final String QUANTUM_PROJECT_EXTENSION = "qcc";
+	public static final ExtensionFilter QUANTUM_CIRCUIT_FILE = new ExtensionFilter("Quantum Circuit Project", "*." + QUANTUM_PROJECT_EXTENSION);
 	public static final int QUIT = -1;
 	public static final int SUCCESSFUL = 0;
 	public static final int ERROR = 1;
@@ -110,7 +110,7 @@ public class AppFileIO implements AppPreferences {
 		if(project.getProjectFileLocation() == null)
 			return saveProjectAs(project, stage);
 		else
-			return writeProject(project, new File(project.getProjectFileLocation()))? 0 : 1;
+			return writeProject(project, new File(project.getProjectFileLocation()))? SUCCESSFUL : ERROR;
 	}
 	
 	
@@ -128,7 +128,7 @@ public class AppFileIO implements AppPreferences {
 		
 		// if user did not choose a file
 		if(file == null)
-			return -1;
+			return QUIT;
 		
 		// adds appropriate extension if user did not specify
 		file  = appendWithExtIfNeeded(file, QUANTUM_PROJECT_EXTENSION);
@@ -140,7 +140,7 @@ public class AppFileIO implements AppPreferences {
 		else
 			AppAlerts.showMessage(stage, "Could not save", "The project could not save. Please try again.", AlertType.ERROR);
 		
-		return succesful? 0 : 1;
+		return succesful? SUCCESSFUL : ERROR;
 	}
 	
 	
@@ -148,8 +148,8 @@ public class AppFileIO implements AppPreferences {
 	private static File appendWithExtIfNeeded(File file, String ext) {
 		String fileName = file.getName();
 		
-		if(fileName.length() <= ext.length() || !fileName.endsWith(ext))
-			return new File(file.getParentFile(), fileName + ext);
+		if(fileName.length() <= ext.length() || !fileName.endsWith("." + ext))
+			return new File(file.getParentFile(), fileName + "." + ext);
 		
 		return file;
 	}
