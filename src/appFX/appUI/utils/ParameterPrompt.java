@@ -5,11 +5,10 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 import appFX.framework.AppStatus;
-import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
 import appFX.framework.Project;
 import appFX.framework.gateModels.CircuitBoardModel;
-import appFX.framework.gateModels.CircuitBoardModel.RecursionException;
 import appFX.framework.gateModels.GateModel;
+import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -27,7 +26,7 @@ import utils.customCollections.immutableLists.ImmutableArray;
 public class ParameterPrompt extends AppFXMLComponent implements Initializable{
 	private final CircuitBoardModel cb;
 	private final GateModel gm;
-	private final Integer[] rows;
+	private final int[] rows;
 	private final int column;
 	private final Stage stage;
 	private boolean addedGateSuccessfully = false;
@@ -38,7 +37,7 @@ public class ParameterPrompt extends AppFXMLComponent implements Initializable{
 	private Button addGateButton;
 	
 	
-	public ParameterPrompt (Project p, CircuitBoardModel cb, String gateName, Integer[] rows, int column) {
+	public ParameterPrompt (Project p, CircuitBoardModel cb, String gateName, int[] rows, int column) {
 		super("utils/ParameterPrompt.fxml");
 		this.cb = cb;
 		this.gm = p.getGateModel(gateName);
@@ -58,12 +57,12 @@ public class ParameterPrompt extends AppFXMLComponent implements Initializable{
 	
 	@FXML
 	private void addGate(ActionEvent ae) {
-		String[] params = new String[gm.getArguments().size()];
+		String[] params = new String[gm.getParameters().size()];
 		for(int i = 0; i < params.length; i++)
 			params[i] = getInput(i);
 		
 		try {
-			cb.placeGate(gm.getFormalName(), column, rows, params);
+			cb.placeGate(gm.getLocationString(), column, rows, params);
 			addedGateSuccessfully = true;
 		} catch (DefinitionEvaluatorException e) {
 			AppAlerts.showMessage(stage, "Inproper Parameter Definition", e.getMessage(), AlertType.ERROR);
@@ -75,8 +74,6 @@ public class ParameterPrompt extends AppFXMLComponent implements Initializable{
 					getTextField(i).setStyle("");
 			}
 			return;
-		} catch (RecursionException e2) {
-			AppAlerts.showMessage(stage, "Recursion detected", e2.getMessage(), AlertType.ERROR);
 		}
 		stage.close();
 	}
@@ -102,7 +99,7 @@ public class ParameterPrompt extends AppFXMLComponent implements Initializable{
 	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
-		ImmutableArray<String> array = gm.getArguments();
+		ImmutableArray<String> array = gm.getParameters();
 		parameters.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 5;");
 		for(String s : array) {
 			HBox box = new HBox();

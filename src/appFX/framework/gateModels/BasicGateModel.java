@@ -1,13 +1,13 @@
 package appFX.framework.gateModels;
 
-import appFX.framework.InputDefinitions;
-import appFX.framework.InputDefinitions.ArgDefinition;
-import appFX.framework.InputDefinitions.CheckDefinitionRunnable;
-import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
-import appFX.framework.InputDefinitions.GroupDefinition;
-import appFX.framework.InputDefinitions.MathObject;
-import appFX.framework.InputDefinitions.MatrixDefinition;
-import appFX.framework.InputDefinitions.ScalarDefinition;
+import appFX.framework.utils.InputDefinitions;
+import appFX.framework.utils.InputDefinitions.ArgDefinition;
+import appFX.framework.utils.InputDefinitions.CheckDefinitionRunnable;
+import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
+import appFX.framework.utils.InputDefinitions.GroupDefinition;
+import appFX.framework.utils.InputDefinitions.MathObject;
+import appFX.framework.utils.InputDefinitions.MatrixDefinition;
+import appFX.framework.utils.InputDefinitions.ScalarDefinition;
 import mathLib.Complex;
 import mathLib.Matrix;
 import utils.customCollections.immutableLists.ImmutableArray;
@@ -44,15 +44,16 @@ public class BasicGateModel extends GateModel {
     private final BasicGateModelType gateType;
     
     
+    public BasicGateModel(String location, String name, String symbol, String description, String[] parameters, BasicGateModelType gateType, String ... userInputMatrixDefinitions) throws DefinitionEvaluatorException {
+    	this(location, name, symbol, description, GateComputingType.QUANTUM, parameters, gateType, userInputMatrixDefinitions);
+    }
     
-    
-    
-    public BasicGateModel(String name, String symbol, String description, String[] parameters, BasicGateModelType gateType, String ... userInputMatrixDefinitions) 
+    protected BasicGateModel(String location, String name, String symbol, String description, GateComputingType computingType, String[] parameters, BasicGateModelType gateType, String ... userInputMatrixDefinitions) 
     		throws DefinitionEvaluatorException {
-		super(name, symbol, description, getParameters(parameters, userInputMatrixDefinitions, gateType));
+		super(location, name, symbol, description, computingType, getParameters(parameters, userInputMatrixDefinitions, gateType));
 		
 		if(!isPreset())
-			PresetGateType.checkName(name);
+			PresetGateType.checkLocationString(location);
 		
 		
 		
@@ -66,7 +67,7 @@ public class BasicGateModel extends GateModel {
 		for(String var : definitions.getArguments()) {
 			boolean foundVar = false;
 			
-			for(String arg : getArguments()) {
+			for(String arg : getParameters()) {
 				if(arg.equals(var)) {
 					foundVar = true;
 					break;
@@ -82,6 +83,15 @@ public class BasicGateModel extends GateModel {
 		
 		this.numberOfRegisters = rgc.getNumberRegisters();
 	}
+    
+    private BasicGateModel(String location, String name, String symbol, String description, String[] arguments, BasicGateModel old) {
+    	super(location, name, symbol, description, old.getComputingType(), arguments);
+    	this.numberOfRegisters = old.numberOfRegisters;
+    	this.latex = old.getLatex();
+		this.userInput = old.getUserInputMatrixDefinitions();
+		this.definitions = old.getDefinitions();
+    	this.gateType = old.gateType;
+    }
     
     
     
@@ -110,23 +120,20 @@ public class BasicGateModel extends GateModel {
     		if(definitions.length < 1)
 				throw new RuntimeException("There should be at least one matrix to define this gate model");
     		for(String arg : parameters)
-				if(arg.matches("k_\\d")) 
+				if(arg.matches("F_\\d")) 
+					throw new RuntimeException("Variable " + arg + " cannot bed used as a parameter");
+    		return parameters;
+    	case KRAUS_OPERATORS:
+    		if(definitions.length < 1)
+				throw new RuntimeException("There should be at least one matrix to define this gate model");
+    		for(String arg : parameters)
+				if(arg.matches("K_\\d")) 
 					throw new RuntimeException("Variable " + arg + " cannot bed used as a parameter");
     		return parameters;
     	}
-    	
     	return null;
     }
     
-    
-    private BasicGateModel(String name, String symbol, String description, String[] arguments, BasicGateModel old) {
-    	super(name, symbol, description, arguments);
-    	this.numberOfRegisters = old.numberOfRegisters;
-    	this.latex = old.getLatex();
-		this.userInput = old.getUserInputMatrixDefinitions();
-		this.definitions = old.getDefinitions();
-    	this.gateType = old.gateType;
-    }
     
 	
 	public BasicGateModelType getGateModelType() {
@@ -173,8 +180,8 @@ public class BasicGateModel extends GateModel {
 	}
 
 	@Override
-	public GateModel shallowCopyToNewName(String name, String symbol, String description, String ... arguments) {
-		return new BasicGateModel(name, symbol, description, arguments, this);
+	public GateModel shallowCopyToNewName(String location, String name, String symbol, String description, GateComputingType computingType, String ... arguments) {
+		return new BasicGateModel(location, name, symbol, description, arguments, this);
 	}
 	
 	

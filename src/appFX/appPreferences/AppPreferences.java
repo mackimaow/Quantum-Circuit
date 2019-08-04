@@ -79,6 +79,8 @@ public interface AppPreferences {
 		// GUI Variables
 		WINDOW_WIDTH(700),
 		WINDOW_HEIGHT(600),
+		// Undo Redo history limit
+		UNDO_REDO_HISTORY_REDO(20),
 		;
 		
 		
@@ -294,10 +296,13 @@ public interface AppPreferences {
 		EXPORT_QUIPPER(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN)),
 		PREFERENCES(new KeyCodeCombination(KeyCode.F1, KeyCombination.CONTROL_DOWN)),
 		MAKE_CUSTOM_GATE(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)),
+		RESET_CURRENT_TOOL(new KeyCodeCombination(KeyCode.ESCAPE)),
 		ADD_ROW(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.CONTROL_DOWN)),
 		ADD_COLUMN(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.CONTROL_DOWN)),
 		REMOVE_LAST_ROW(new KeyCodeCombination(KeyCode.UP, KeyCombination.CONTROL_DOWN)),
 		REMOVE_LAST_COLUMN(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.CONTROL_DOWN)),
+		UNDO(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN)),
+		REDO(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN)),
 		RUN_QUIL(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN)),
 		RUN_QASM(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN)),
 		RUN_SIMULATION(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)),

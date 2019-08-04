@@ -94,13 +94,13 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 			
 			double parentLength = parentAxisData.getTotalLength();
 			
-			int layout = childAxisData.layout;
+			byte layout = childAxisData.layout;
 			if(layout == CENTER_ALIGN) {
 				double totalChildSpace = lowMargin + highMargin + unadjustedLength;
 				double totalUnfilledChildSpace = parentLength - totalChildSpace;
 				if(stretchLow) adjustedLength += totalUnfilledChildSpace / 2d;
 				if(stretchHigh) adjustedLength += totalUnfilledChildSpace / 2d;
-			} else if (layout < 0 && stretchHigh || layout > 0 && stretchLow) {
+			} else if (layout == LOW_ALIGN && stretchHigh || layout == HIGH_ALIGN && stretchLow) {
 				adjustedLength = parentLength - lowMargin - highMargin;
 			}
 			
@@ -126,13 +126,14 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 	public void setFocus(AxisBound horizontalBounds, AxisBound verticalBounds, InternalAxisBound internalWidthBound, InternalAxisBound internalHeightBound) {
 		AxisData widthData, heightData;
 		
-		if(internalWidthBound.uniformGridLengths) {
+		if(internalWidthBound.uniformGridLengths)
 			widthData = new UniformAxisData(horizontalBounds, getHorizontalLayout(), internalWidthBound.minimumLength);
-			heightData = new UniformAxisData(verticalBounds, getVerticalLayout(), internalHeightBound.minimumLength);
-		} else {
+		else
 			widthData = new AxisData(horizontalBounds, getHorizontalLayout(), internalWidthBound.minimumLength);
+		if(internalHeightBound.uniformGridLengths)
+			heightData = new UniformAxisData(verticalBounds, getVerticalLayout(), internalHeightBound.minimumLength);
+		else
 			heightData = new AxisData(verticalBounds, getVerticalLayout(), internalHeightBound.minimumLength);
-		}
 		Tree<RawFocusData> nextContainer = new Tree<>(new RawFocusData(widthData, heightData));
 		focusContainer.add(nextContainer);
 		focusContainer = nextContainer;
@@ -183,7 +184,7 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 			int axisEndExclusize = gridBound.highGrid;
 			
 			parentAxisData.allocateSpace(axisEndExclusize);
-
+			
 			double currentCumulativeLength = parentAxisData.getDistanceFromRange(axisStartInclusize, axisEndExclusize);
 			
 			if(childLength > currentCumulativeLength) {
@@ -198,7 +199,7 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 		return null;
 	}
 
-	private double calcMinLength(double position, double length, double layout) {
+	private double calcMinLength(double position, double length, byte layout) {
 		if(layout == CENTER_ALIGN)
 			return length + 2d * Math.abs(position);
 		return length + (position > 0d ? position : 0d);
@@ -259,14 +260,14 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 	private static class AxisData {
 		final ArrayList<Double> axisLengths;
 		final AxisBound axisBound;
-		final int layout;
+		final byte layout;
 		double childRimSpace;
 		
-		AxisData(AxisBound axisBound, int layout, double childRimSpace) {
+		AxisData(AxisBound axisBound, byte layout, double childRimSpace) {
 			this(new ArrayList<>(), axisBound, layout, childRimSpace);
 		}
 		
-		AxisData(ArrayList<Double> axisLengths, AxisBound axisBound, int layout, double childRimSpace) {
+		AxisData(ArrayList<Double> axisLengths, AxisBound axisBound, byte layout, double childRimSpace) {
 			this.axisLengths = axisLengths;
 			this.axisBound = axisBound;
 			this.layout = layout;
@@ -329,7 +330,7 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 	private static class UniformAxisData extends AxisData {
 		int size;
 		
-		UniformAxisData(AxisBound axisBound, int layout, double childRimSpace) {
+		UniformAxisData(AxisBound axisBound, byte layout, double childRimSpace) {
 			super(new ArrayList<>(), axisBound, layout, childRimSpace);
 		}
 		
@@ -352,6 +353,8 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 		}
 		
 		void allocateSpace(int axisEndExclusize) {
+			if(size == 0 && axisEndExclusize > 0)
+				axisLengths.add(0d);
 			size = axisEndExclusize;
 		}
 		
@@ -389,7 +392,7 @@ class GraphicsCalculator<ImageType, FontType, ColorType> extends Graphics<ImageT
 			if(axisData instanceof UniformAxisData) {
 				if(!axisData.isEmpty()) {
 					double singleLength = axisData.axisLengths.get(0);
-					for(int i = 1; i < axisLengths.size(); i++)
+					for(int i = 1; i < axisData.size(); i++)
 						axisLengths.add(i, singleLength * (i + 1));
 				}
 			} else {

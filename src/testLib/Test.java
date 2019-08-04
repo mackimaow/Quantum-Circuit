@@ -1,5 +1,9 @@
 package testLib;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+
 import javax.swing.JPanel;
 
 @SuppressWarnings("serial")
@@ -9,14 +13,24 @@ public class Test extends JPanel {
 	
 	
 	public static void main(String[] args) {
-		Object[][] objects = new Object[3][4];
-		for(int i = 0; i < objects.length; i++) {
-			int size = objects[0].length;
-			for(int j = 0; j < size; j++)
-				objects[i][j] = j * 10  + i;
+		LinkedList<Integer> integers = new LinkedList<>();
+		for(int i = 0; i < 10; i++) {
+			integers.add(i);
 		}
-		Object[] obj = objects;
-		test(obj);
+
+		printList(integers);
+		ListIterator<Integer> iterator = integers.listIterator(0);
+		for(int i = 0; i < 5; i++) {
+			iterator.add(i);
+		}
+		printList(integers);
+	}
+	
+	public static void printList(List<?> list) {
+		System.out.print("{");
+		for(int i = 0; i < list.size(); i++)
+			System.out.print(" " + list.get(i));
+		System.out.println(" }");
 	}
 	
 	public static void test(Object ... objects) {

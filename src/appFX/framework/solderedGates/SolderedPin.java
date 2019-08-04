@@ -13,6 +13,8 @@ public abstract class SolderedPin implements Serializable {
 		this.isWithinBody = isWithinBody;
 	}
 	
+	public abstract boolean isNotEmptySpace();
+	
 	public SolderedGate getSolderedGate() {
 		return gate;
 	}
@@ -20,4 +22,5 @@ public abstract class SolderedPin implements Serializable {
 	public boolean isWithinBody() {
 		return isWithinBody;
 	}
+	
 }

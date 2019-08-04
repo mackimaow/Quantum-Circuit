@@ -7,20 +7,20 @@ import java.util.Set;
 public class Manifest <T> implements Serializable {
 	private static final long serialVersionUID = -5048176347320317395L;
 	
-	private final Hashtable<T, ManifestObject> elements;
+	private final Hashtable<T, ManifestElementHandle> elements;
 	
 	public Manifest() {
 		this.elements = new Hashtable<>();
 	}
 	
-	private Manifest(Hashtable<T, ManifestObject> elements) {
+	private Manifest(Hashtable<T, ManifestElementHandle> elements) {
 		this.elements = elements;
 	}
 	
-	public ManifestObject add(T element) {
-		ManifestObject mo = elements.get(element);
+	public ManifestElementHandle add(T element) {
+		ManifestElementHandle mo = elements.get(element);
 		if(mo == null) {
-			mo = new ManifestObject(element);
+			mo = new ManifestElementHandle(element);
 			elements.put(element, mo);
 		} else {
 			mo.ocurrances++;
@@ -29,7 +29,7 @@ public class Manifest <T> implements Serializable {
 	}
 	
 	public void replace(T oldValue, T newValue) {
-		ManifestObject mo = elements.remove(oldValue);
+		ManifestElementHandle mo = elements.remove(oldValue);
 		
 		if(mo != null) {
 			mo.element = newValue;
@@ -38,7 +38,7 @@ public class Manifest <T> implements Serializable {
 	}
 	
 	public void remove(T element) {
-		ManifestObject mo = elements.get(element);
+		ManifestElementHandle mo = elements.get(element);
 		
 		if(mo != null) {
 			if(mo.ocurrances == 0)
@@ -49,7 +49,7 @@ public class Manifest <T> implements Serializable {
 	}
 	
 	public int getOccurrences(T element) {
-		ManifestObject mo = elements.get(element);
+		ManifestElementHandle mo = elements.get(element);
 		if(mo != null)
 			return mo.ocurrances + 1;
 		return 0;
@@ -64,37 +64,37 @@ public class Manifest <T> implements Serializable {
 	}
 	
 	public Manifest<T> deepCopy() {
-		Hashtable<T, ManifestObject> temp = new Hashtable<>();
+		Hashtable<T, ManifestElementHandle> temp = new Hashtable<>();
 		
 		for(T key : elements.keySet()) {
-			ManifestObject mo = elements.get(key);
+			ManifestElementHandle mo = elements.get(key);
 			temp.put(key, mo.clone());
 		}
 		
 		return new Manifest<T>(temp);
 	}
 	
-	public class ManifestObject implements Serializable {
+	public class ManifestElementHandle implements Serializable {
 		private static final long serialVersionUID = -4119245424558455962L;
 		
 		private T element;
 		private int ocurrances;
 		
-		private ManifestObject (T element) {
+		private ManifestElementHandle (T element) {
 			this(element, 0);
 		}
 		
-		private ManifestObject(T element, int occurances) {
+		private ManifestElementHandle(T element, int occurances) {
 			this.element = element;
 			this.ocurrances = occurances;
 		}
 		
-		public T getObject () {
+		public T getElement () {
 			return element;
 		}
 		
-		public ManifestObject clone() {
-			return new ManifestObject(element, ocurrances);
+		public ManifestElementHandle clone() {
+			return new ManifestElementHandle(element, ocurrances);
 		}
 	}
 }

@@ -16,6 +16,7 @@ import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
+import appFX.framework.gateModels.GateModel.GateComputingType;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -32,18 +33,12 @@ import utils.customCollections.immutableLists.ImmutableArray;
 
 public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener, AppViewOnSelectedListener {
 	
-	@FXML
-	private ScrollPane description;
-	@FXML
-	private TextField name, symbol;
-	@FXML
-	private HBox parameters;
-	@FXML
-	private CheckBox grid;
-	@FXML
-	private BorderPane circuitBoardIcon;
-	@FXML
-	private Pane contentPane;
+	@FXML private ScrollPane description;
+	@FXML private TextField fileLocation, name, symbol, gateType;
+	@FXML private HBox parameters;
+	@FXML private CheckBox grid;
+	@FXML private BorderPane circuitBoardIcon;
+	@FXML private Pane contentPane;
 	
 	private final CircuitBoardModel circuitBoard;
 	private final Project project;
@@ -84,7 +79,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		Project p = AppStatus.get().getFocusedProject();
 		if(p.getCircuitBoardModels() == source) {
 			if(methodName.equals("put")) {
-				if(((GateModel)args[0]).getFormalName().equals(getName())) {
+				if(((GateModel)args[0]).getLocationString().equals(getName())) {
 					closeView();
 				}
 			} else if (methodName.equals("replace") || methodName.equals("remove")){
@@ -101,11 +96,11 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	}
 	
 	public void editAsNew(ActionEvent ae) {
-		AppCommand.doAction(AppCommand.EDIT_AS_NEW_GATE, circuitBoard.getFormalName());
+		AppCommand.doAction(AppCommand.EDIT_AS_NEW_GATE, circuitBoard.getLocationString());
 	}
 	
 	public void editProperties(ActionEvent ae) {
-		AppCommand.doAction(AppCommand.EDIT_GATE, circuitBoard.getFormalName());
+		AppCommand.doAction(AppCommand.EDIT_GATE, circuitBoard.getLocationString());
 	}
 	
 	
@@ -118,11 +113,17 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	}
 	
 	public void setUpPropertiesUI() {
+		fileLocation.setText(circuitBoard.getLocationString());
+		fileLocation.setEditable(false);
+		
 		name.setText(circuitBoard.getName());
 		name.setEditable(false);
 		
 		symbol.setText(circuitBoard.getSymbol());
 		symbol.setEditable(false);
+		
+		gateType.setText(circuitBoard.getComputingType().toString());
+		gateType.setEditable(false);
 		
 		Node solderableIcon = SolderableIcon.mkIcon(circuitBoard);
 		circuitBoardIcon.setLeft(solderableIcon);
@@ -130,7 +131,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		
 		description.setContent(new LatexNode(circuitBoard.getDescription()));
 		
-		ImmutableArray<String> args = circuitBoard.getArguments();
+		ImmutableArray<String> args = circuitBoard.getParameters();
 		if(!args.isEmpty()) {
 			String parametersLatex = "\\(" + args.get(0) + "\\)";
 			for(int i = 1; i < args.size(); i++)
@@ -224,7 +225,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 	public void renderErrorAt(int rowStart, int rowEnd, int column) {
 		int notificationLayerIndex = CircuitBoardRenderer.NOTIFICATION_RENDER_LAYER_INDEX;
 		NotificationRenderLayer rl = (NotificationRenderLayer) renderer.getLayer(notificationLayerIndex);
-		rl.calculateDrawErrorBounds(rowStart, rowEnd, column, renderer.getGridData());
+		rl.calculateDrawErrorBounds(rowStart, rowEnd, column, renderer.getGridData(), renderer.getRowTypeList());
 		double moveX = column + .5d;
 		double moveY = rowStart + (rowEnd - rowStart) / 2d + .5d;
 		renderer.scrollToGrid(moveY, moveX);

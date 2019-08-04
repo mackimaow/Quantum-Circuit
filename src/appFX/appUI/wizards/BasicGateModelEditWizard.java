@@ -14,13 +14,13 @@ import appFX.appUI.utils.SequencePaneElement.SequencePaneNext;
 import appFX.appUI.utils.SequencePaneElement.SequencePanePrevious;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
-import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
 import appFX.framework.Project;
 import appFX.framework.Project.ProjectHashtable;
 import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.BasicGateModel.BasicGateModelType;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.GateModel.NameTakenException;
+import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
 import appFX.framework.gateModels.PresetGateType;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -111,7 +111,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 	
 	private class FirstSequenceElement extends SequencePaneElement implements SequencePaneNext {
 		
-		@FXML TextField name, symbol;
+		@FXML TextField fileLocation, name, symbol;
 		@FXML TextArea description;
 		@FXML ComboBox<BasicGateModelType> modelType;
 		@FXML VBox parameters;
@@ -126,7 +126,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 		FirstSequenceElement() {
 			super("wizards/gateEditableWizard/GateEditableHeadView.fxml");
 			universalElement = new SingleBodyElementView("\\text{The model is specified by a universal gate } \\( U \\) \\text{ described by the matrix:} ", " $$ U = $$ ");
-			hamiltonianElement = new SingleBodyElementView("\\text{The model is specified by a universal gate } \\( U \\) \\text{ described by the matrix:} ", " $$ H = $$ ");
+			hamiltonianElement = new SingleBodyElementView("\\text{The model is specified by matrix designated by } \\( e ^ {Ht}\\) \\text{ where } \\( H \\) \\text{ is defined by:} ", " $$ H = $$ ");
 			povmElement = new MultiBodyElementView("\\text{The model is specified by a set of Hermitian positive semidefinite operators } \\( (F_1, F_2, F_3, ... F_i) \\) \\text{ where } \\( \\sum_{ i = 1 } ^ { n } F_i  = I \\) \\text{ : }", "$$ F_{%i} = $$", "Add POVM Operator");
 			krausElement = new MultiBodyElementView("\\text{The model is specified by a set of kraus matricies } \\( (K_1, K_2, K_3, ... K_n) \\) \\text{ where } \\( \\sum_{ i = 1 } ^ { n } K_i K_i ^ * = I \\) \\text{ : }", "$$ K_{%i} = $$", "Add Kraus Operator");
 		}
@@ -141,29 +141,31 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 		
 		@Override
 		public void setStartingFieldData(PaneFieldDataList controlData) {
+			String fileLocationString = "";
 			String nameString = "";
 			String symbolString = "";
 			String descriptionString = "";
+			String[] args = {""};
 			BasicGateModelType modelTypeValue = BasicGateModelType.UNIVERSAL;
 			
 			if(referenceGm != null) {
+				if(!referenceGm.isPreset())
+					fileLocationString = referenceGm.getLocationString();
 				nameString = referenceGm.getName();
 				symbolString = referenceGm.getSymbol();
 				descriptionString = referenceGm.getDescription();
 				modelTypeValue = referenceGm.getGateModelType();
+				ImmutableArray<String> argsList = referenceGm.getParameters();
+				args = new String[argsList.size()];
+				argsList.toArray(args);
 			}
 			
+			controlData.add(fileLocation, fileLocationString);
 			controlData.add(name, nameString);
 			controlData.add(symbol, symbolString);
 			controlData.add(description, descriptionString);
 			controlData.add(modelType, modelTypeValue);
-			
-			if(referenceGm != null) {
-				ImmutableArray<String> argsList = referenceGm.getArguments();
-				String[] args = new String[argsList.size()];
-				argsList.toArray(args);
-				controlData.add(parameterSelection, (Object[]) args);
-			}
+			controlData.add(parameterSelection, (Object[]) args);
 		}
 		
 		@Override
@@ -173,16 +175,17 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 
 		@Override
 		public boolean checkNext() {
-			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
-			if(checkTextFieldError(getStage(), name, !name.getText().matches(GateModel.NAME_REGEX), "Inproper name scheme", GateModel.IMPROPER_NAME_SCHEME_MSG)) return false;
 			boolean isPreset = false;
 			try {
-				PresetGateType.checkName(name.getText());
+				PresetGateType.checkLocationString(fileLocation.getText());
 			} catch (NameTakenException e) {
 				isPreset = true;
 			}
-			if(checkTextFieldError(getStage(), name, isPreset, "Cannot used the specified name", "The name chosen is exclusive to a Preset Gate")) return false;
 			
+			if(checkTextFieldError(getStage(), fileLocation, isPreset, "Cannot used the specified file location", "The file location chosen is exclusive to a Preset Gate")) return false;
+			
+			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
+			if(checkTextFieldError(getStage(), name, !name.getText().matches(GateModel.NAME_REGEX), "Inproper name scheme", GateModel.IMPROPER_NAME_SCHEME_MSG)) return false;
 
 			if(checkTextFieldError(getStage(), symbol, symbol.getText() == null, "Unfilled prompts", "Symbol must be defined")) return false;
 			if(checkTextFieldError(getStage(), symbol, !symbol.getText().matches(GateModel.SYMBOL_REGEX), "Inproper symbol scheme", GateModel.IMPROPER_SYMBOL_SCHEME_MSG)) return false;
@@ -298,7 +301,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			
 			DefinitionEvaluatorException exception = null;
 			try {
-				newGm = new BasicGateModel(first.name.getText(), first.symbol.getText(), first.description.getText(), first.params, first.modelType.getValue(), definitions);
+				newGm = new BasicGateModel(first.fileLocation.getText(), first.name.getText(), first.symbol.getText(), first.description.getText(), first.params, first.modelType.getValue(), definitions);
 			} catch (DefinitionEvaluatorException e) {
 				exception = e;
 			}
@@ -364,7 +367,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			DefinitionEvaluatorException exception = null;
 			String message = "";
 			try {
-				newGm = new BasicGateModel(first.name.getText(), first.symbol.getText(), first.description.getText(), first.params, first.modelType.getValue(), definition);
+				newGm = new BasicGateModel(first.fileLocation.getText(), first.name.getText(), first.symbol.getText(), first.description.getText(), first.params, first.modelType.getValue(), definition);
 			} catch (DefinitionEvaluatorException e) {
 				exception = e;
 				message = exception.getMessage();
@@ -391,7 +394,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 							+ "All instances of the previous gate model in this project will be changed to the new implementation.", AlertType.WARNING);
 			if(buttonType == ButtonType.CANCEL)
 				return false;
-			if(!newGm.getName().equals(referencedGm.getName()) && p.containsGateModel(newGm.getFormalName())) {
+			if(!newGm.getName().equals(referencedGm.getName()) && p.containsGateModel(newGm.getLocationString())) {
 				buttonType = AppAlerts.showMessage(stage, "Override Gate Model " + newGm.getName(), 
 						"A Gate Model with the name \"" + newGm.getName() + "\" already exists, "
 								+ "do you want to override this gate model?"
@@ -403,9 +406,9 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			if(buttonType == ButtonType.CANCEL)
 				return false;
 			
-			pht.replace(referencedGm.getFormalName(), newGm);
+			pht.replace(referencedGm.getLocationString(), newGm);
 		} else {
-			if(pht.containsGateModel(newGm.getFormalName())) {
+			if(pht.containsGateModel(newGm.getLocationString())) {
 				ButtonType buttonType = AppAlerts.showMessage(stage, "Override Gate Model " + newGm.getName(), 
 						"A Gate Model with the name \"" + newGm.getName() + "\" already exists, "
 								+ "do you want to override this gate model?"
@@ -418,7 +421,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			pht.put(newGm);
 		}
 		
-		AppCommand.doAction(AppCommand.OPEN_GATE, newGm.getFormalName());
+		AppCommand.doAction(AppCommand.OPEN_GATE, newGm.getLocationString());
 		
 		return true;
 	}

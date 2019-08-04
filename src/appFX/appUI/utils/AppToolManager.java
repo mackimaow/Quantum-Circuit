@@ -6,16 +6,26 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 
 public class AppToolManager {
-	public static final int 
-		SELECT_TOOL_BUTTON = 0,
-		SOLDER_TOOL_BUTTON = 1,
-		EDIT_TOOL_BUTTON = 2,
-		CONTROL_TOOL_BUTTON = 3,
-		CONTROL_NOT_TOOL_BUTTON = 4,
-		ADD_COLUMN_TOOL_BUTTON = 5,
-		REMOVE_COLUMN_TOOL_BUTTON = 6,
-		ADD_ROW_TOOL_BUTTON = 7,
-		REMOVE_ROW_TOOL_BUTTON = 8;
+	private static int toolCount = 0;
+	public static enum AppTool {
+		SELECT_TOOL,
+		SOLDER_TOOL,
+		PRY_TOOL,
+		EDIT_TOOL,
+		LINK_TOOL,
+		CONTROL_TOOL,
+		CONTROL_NOT_TOOL,
+		ADD_COLUMN_TOOL,
+		REMOVE_COLUMN_TOOL,
+		ADD_ROW_TOOL,
+		REMOVE_ROW_TOOL
+		;
+		
+		private final int toolIndex;
+		private AppTool() {
+			toolIndex = toolCount++;
+		}
+	}
 	
 	private ToggleButton[] toolToggleButtons;
 	private ToggleGroup tools;
@@ -25,8 +35,8 @@ public class AppToolManager {
 		this.toolToggleButtons = toolToggleButtons;
 	}
 	
-	public ToggleButton getToolButton(int buttonName) {
-		return toolToggleButtons[buttonName];
+	public ToggleButton getToolButton(AppTool tool) {
+		return toolToggleButtons[tool.toolIndex];
 	}
 	
 	public void initializeTools() {
@@ -40,10 +50,6 @@ public class AppToolManager {
 	
 	public ToggleButton getSelectedTool() {
 		return (ToggleButton) tools.getSelectedToggle();
-	}
-	
-	public boolean doesSelectedToolMatch(int buttonName) {
-		return getSelectedTool() == toolToggleButtons[buttonName];
 	}
 		
 	public void addToolButtonListener(ChangeListener<? super Toggle> listener) {

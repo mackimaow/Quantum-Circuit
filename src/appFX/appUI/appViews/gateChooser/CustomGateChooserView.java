@@ -44,20 +44,20 @@ public class CustomGateChooserView extends AbstractGateChooserView {
 		if(p != null && source == p.getCustomGates()) {
 			if(methodName.equals("put")) {
 				GateModel replacement = (GateModel) args[0];
-				removeGateModelByName(replacement.getFormalName());
+				removeGateModelByLocationString(replacement.getLocationString());
 				addGateModel(replacement);
 			} else if(methodName.equals("replace") ) {
-				String name = (String) args[0];
+				String locationString = (String) args[0];
 				GateModel replacement = (GateModel) args[1];
-				removeGateModelByName(name);
+				removeGateModelByLocationString(locationString);
 				
-				String newName = replacement.getFormalName();
-				if(!newName.equals(name))
-					removeGateModelByName(newName);	
+				String newLocationString = replacement.getLocationString();
+				if(!newLocationString.equals(locationString))
+					removeGateModelByLocationString(newLocationString);	
 				addGateModel(replacement);
 			} else if(methodName.equals("remove")) {
-				String name = (String) args[0];
-				removeGateModelByName(name);
+				String locationString = (String) args[0];
+				removeGateModelByLocationString(locationString);
 			}
 		}
 	}

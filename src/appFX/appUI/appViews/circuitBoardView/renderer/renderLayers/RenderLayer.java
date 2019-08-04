@@ -2,6 +2,7 @@ package appFX.appUI.appViews.circuitBoardView.renderer.renderLayers;
 
 import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
 import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
+import appFX.framework.gateModels.CircuitBoardModel.RowTypeList;
 import graphicsWrapper.CompiledGraphics;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.GraphicalBluePrint;
@@ -25,8 +26,8 @@ public abstract class RenderLayer implements GraphicalBluePrint<Image, Font, Col
 		customFXGraphics = new CustomFXGraphics(canvas.getGraphicsContext2D());
 	}
 	
-	public synchronized ImmutableTree<FocusData> calculateBounds(ImmutableTree<FocusData> gridFocusData) {
-		compiledGraphics = Graphics.compileGraphicalBluePrint(this, gridFocusData);
+	public synchronized ImmutableTree<FocusData> calculateBounds(ImmutableTree<FocusData> gridFocusData, RowTypeList rowTypeList) {
+		compiledGraphics = Graphics.compileGraphicalBluePrint(this, gridFocusData, rowTypeList);
 		return compiledGraphics.getFocusData();
 	}
 	

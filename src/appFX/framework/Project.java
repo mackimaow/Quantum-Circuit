@@ -11,7 +11,7 @@ import appFX.framework.exportGates.RawExportableGateData;
 import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
-import appFX.framework.gateModels.OracleModel;
+import appFX.framework.gateModels.GateModel.GateComputingType;
 import appFX.framework.gateModels.PresetGateType;
 import utils.customCollections.Pair;
 import utils.customCollections.eventTracableCollections.Notifier;
@@ -36,13 +36,12 @@ public class Project implements Serializable {
 	
 	private final ProjectHashtable subCircuits;
     private final ProjectHashtable customGates;
-    private final ProjectHashtable customOracles;
 	
-	private transient URI fileLocation = null;
+	private transient URI projectFileLocation = null;
 	
 	// Notifies User-Interface of changes
 	private Notifier notifier;
-	private String topLevelCircuit = null;
+	private String topLevelCircuitLocationString = null;
 	
 	
 	
@@ -52,7 +51,7 @@ public class Project implements Serializable {
 	 */
 	public static Project createNewTemplateProject() {
 		Project project = new Project();
-		project.topLevelCircuit = project.addUntitledSubCircuit();
+		project.topLevelCircuitLocationString = project.addUntitledSubCircuit();
 		return project;
 	}
 	
@@ -84,7 +83,6 @@ public class Project implements Serializable {
 		notifier = new Notifier();
 		subCircuits = new ProjectHashtable();
 		customGates = new ProjectHashtable();
-		customOracles = new ProjectHashtable();
 	}
 	
 	
@@ -104,9 +102,10 @@ public class Project implements Serializable {
 		String symbol = "U" + nameAttr.second();
 
 		notifier.sendChange(this, "addUntitledSubCircuit");
-		subCircuits.put(new CircuitBoardModel(name, symbol, "", 5, 5));
+		String location = name + "." + CircuitBoardModel.CIRCUIT_BOARD_EXTENSION;
+		subCircuits.put(new CircuitBoardModel(location, name, symbol, "", GateComputingType.QUANTUM, 5, 5));
 		
-		return name + "." + CircuitBoardModel.CIRCUIT_BOARD_EXTENSION;
+		return location;
 	}
 	
 	
@@ -135,7 +134,7 @@ public class Project implements Serializable {
 	 * @return the name of this project (the given file name without extension)
 	 */
 	public String getProjectName() {
-		return getProjectNameFromURI(fileLocation);
+		return getProjectNameFromURI(projectFileLocation);
 	}
 	
 	
@@ -162,27 +161,18 @@ public class Project implements Serializable {
 	
 	
 	
-	
-	
-	
-	/**
-	 * @return the list of the custom-oracles for this project
-	 */
-	public ProjectHashtable getCustomOracles() {
-		return customOracles;
-	}
 
 	
 	/**
 	 * @return the name of the top-level sub-circuit
 	 */
-	public String getTopLevelCircuitName() {
-		return topLevelCircuit;
+	public String getTopLevelCircuitLocationString() {
+		return topLevelCircuitLocationString;
 	}
 	
 	
 	public boolean hasTopLevel() {
-		return topLevelCircuit != null;
+		return topLevelCircuitLocationString != null;
 	}
 	
 	
@@ -193,16 +183,16 @@ public class Project implements Serializable {
 	 * <b>MODIFIES INSTANCE</b>
 	 * @param name
 	 */
-	public void setTopLevelCircuitName(String formalName) {
-		if(formalName == null) {
-			notifier.sendChange(this, "setTopLevelCircuitName", formalName);
-			topLevelCircuit = null;
+	public void setTopLevelCircuitName(String circuitBoardLocationString) {
+		if(circuitBoardLocationString == null) {
+			notifier.sendChange(this, "setTopLevelCircuitName", circuitBoardLocationString);
+			topLevelCircuitLocationString = null;
 		} else {
-			String[] parts = formalName.split("\\.");
+			String[] parts = circuitBoardLocationString.split("\\.");
 			if(parts.length == 2 && parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
-				if(subCircuits.containsGateModel(formalName)) {
-					notifier.sendChange(this, "setTopLevelCircuitName", formalName);
-					topLevelCircuit = formalName;
+				if(subCircuits.containsGateModel(circuitBoardLocationString)) {
+					notifier.sendChange(this, "setTopLevelCircuitName", circuitBoardLocationString);
+					topLevelCircuitLocationString = circuitBoardLocationString;
 				}
 			}
 		}
@@ -214,7 +204,7 @@ public class Project implements Serializable {
 	 * @return this project's location on the drive
 	 */
 	public URI getProjectFileLocation() {
-		return fileLocation;
+		return projectFileLocation;
 	}
 	
 	
@@ -229,7 +219,7 @@ public class Project implements Serializable {
 	 */
 	public void setProjectFileLocation(URI fileLocation) {
 		notifier.sendChange(this, "setProjectFileLocation", fileLocation);
-		this.fileLocation = fileLocation;
+		this.projectFileLocation = fileLocation;
 	}
 	
 	
@@ -243,38 +233,34 @@ public class Project implements Serializable {
 		this.notifier.setReceiver(receiver);
 	}
 	
-	public GateModel getGateModel(String gateModelFormalName) {
-		String[] parts = gateModelFormalName.split("\\.");
+	public GateModel getGateModel(String gateModelLocationString) {
+		String[] parts = gateModelLocationString.split("\\.");
 		
 		if(parts.length == 2) {
 			if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
-				return subCircuits.get(gateModelFormalName);
+				return subCircuits.get(gateModelLocationString);
 			} else if(parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
-				PresetGateType pgt = PresetGateType.getPresetTypeByFormalName(gateModelFormalName);
+				PresetGateType pgt = PresetGateType.getPresetTypeByLocation(gateModelLocationString);
 				if(pgt != null) 
 					return pgt.getModel();
 				else
-					return customGates.get(gateModelFormalName);
-			} else if(parts[1].equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
-				return customOracles.get(gateModelFormalName);
+					return customGates.get(gateModelLocationString);
 			}
 		}
 		return null;
 	}
 	
-	public boolean containsGateModel(String gateModelFormalName) {
-		String[] parts = gateModelFormalName.split("\\.");
+	public boolean containsGateModel(String gateModelLocationString) {
+		String[] parts = gateModelLocationString.split("\\.");
 		
 		if(parts.length == 2) {
 			if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
-				return subCircuits.containsGateModel(gateModelFormalName);
+				return subCircuits.containsGateModel(gateModelLocationString);
 			} else if(parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
-				if(PresetGateType.containsPresetTypeByFormalName(gateModelFormalName))
+				if(PresetGateType.containsPresetTypeByLocation(gateModelLocationString))
 					return true;
 				else
-					return customGates.containsGateModel(gateModelFormalName);
-			} else if(parts[1].equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
-				return customOracles.containsGateModel(gateModelFormalName);
+					return customGates.containsGateModel(gateModelLocationString);
 			}
 		}
 		return false;
@@ -291,23 +277,23 @@ public class Project implements Serializable {
 		
 		public void put(GateModel newValue) {
 			
-			if(elements.containsKey(newValue.getFormalName())) {
-				GateModel gm = elements.get(newValue.getFormalName());
+			if(elements.containsKey(newValue.getLocationString())) {
+				GateModel gm = elements.get(newValue.getLocationString());
 				
 				if(gm == newValue)
 					return;
 				
 				notifier.sendChange(this, "put", newValue);
 				
-				elements.put(newValue.getFormalName(), newValue);
+				elements.put(newValue.getLocationString(), newValue);
 				
 				removeCircuitBoardTraits(gm, true);
-				removeAllOccurances(gm.getFormalName());
+				removeAllOccurances(gm.getLocationString());
 				
 			} else {
 				notifier.sendChange(this, "put", newValue);
 				
-				elements.put(newValue.getFormalName(), newValue);
+				elements.put(newValue.getLocationString(), newValue);
 			}
 
 			addCircuitBoardTraits(newValue);
@@ -316,53 +302,53 @@ public class Project implements Serializable {
 		
 		
 		
-		public void replace(String formalNameToReplace, GateModel newValue) {
+		public void replace(String gateModelLocationStringToReplace, GateModel newValue) {
 			if(newValue == null)
 				throw new NullPointerException("Gate to replace cannot be null");
 			
-			GateModel toReplace = elements.get(formalNameToReplace);
+			GateModel toReplace = elements.get(gateModelLocationStringToReplace);
 			
 			
 			if(toReplace == null) {
-				throw new RuntimeException("Gate \"" + formalNameToReplace + "\" does not exist and cannot be replaced");
+				throw new RuntimeException("Gate \"" + gateModelLocationStringToReplace + "\" does not exist and cannot be replaced");
 			} else {
 				if(toReplace == newValue)
 					return;
-				if(formalNameToReplace.equals(newValue.getFormalName())) {
-					notifier.sendChange(this, "replace", formalNameToReplace, newValue);
+				if(gateModelLocationStringToReplace.equals(newValue.getLocationString())) {
+					notifier.sendChange(this, "replace", gateModelLocationStringToReplace, newValue);
 					
-					elements.put(newValue.getFormalName(), newValue);
+					elements.put(newValue.getLocationString(), newValue);
 					removeCircuitBoardTraits(toReplace, false);
 				} else {
-					notifier.sendChange(this, "replace", formalNameToReplace, newValue);
+					notifier.sendChange(this, "replace", gateModelLocationStringToReplace, newValue);
 					
 					for(GateModel circ : subCircuits.getGateModelIterable())
 						if(circ != toReplace)
-							((CircuitBoardModel)circ).changeAllOccurrences(formalNameToReplace, newValue.getFormalName());
+							((CircuitBoardModel)circ).changeAllOccurrences(gateModelLocationStringToReplace, newValue.getLocationString());
 					
-					elements.remove(formalNameToReplace);
-					elements.put(newValue.getFormalName(), newValue);
+					elements.remove(gateModelLocationStringToReplace);
+					elements.put(newValue.getLocationString(), newValue);
 					
 					if(removeCircuitBoardTraits(toReplace, true))
-						setTopLevelCircuitName(newValue.getFormalName());
+						setTopLevelCircuitName(newValue.getLocationString());
 				}
 			}
 		}
 		
-		public GateModel get (String formalName) {
-			return elements.get(formalName);
+		public GateModel get (String gateModelLocationString) {
+			return elements.get(gateModelLocationString);
 		}
 		
-		public void remove (String formalName) {
-			if(elements.containsKey(formalName)) {
+		public void remove (String gateModelLocationString) {
+			if(elements.containsKey(gateModelLocationString)) {
 				
-				notifier.sendChange(this, "remove", formalName);
+				notifier.sendChange(this, "remove", gateModelLocationString);
 				
-				GateModel gm = elements.get(formalName);
+				GateModel gm = elements.get(gateModelLocationString);
 
-				elements.remove(formalName);
+				elements.remove(gateModelLocationString);
 				removeCircuitBoardTraits(gm, true);
-				removeAllOccurances(formalName);
+				removeAllOccurances(gateModelLocationString);
 			}
 		}
 		
@@ -370,8 +356,8 @@ public class Project implements Serializable {
 			return elements.contains(gateModel);
 		}
 		
-		public boolean containsGateModel (String gateModelFormalName) {
-			return elements.containsKey(gateModelFormalName);
+		public boolean containsGateModel (String gateModelLocationString) {
+			return elements.containsKey(gateModelLocationString);
 		}
 		
 		public Iterable<String> getGateNameIterable() {
@@ -386,12 +372,10 @@ public class Project implements Serializable {
 			return elements.size();
 		}
 		
-		private void removeAllOccurances (String formalName) {
-			for(GateModel si : subCircuits.getGateModelIterable()) {
-				Iterator<RawExportableGateData> gateData = ((CircuitBoardModel)si).iterator();
-				while (gateData.hasNext())
-					if(gateData.next().getSolderedGate().getGateModelFormalName().equals(formalName))
-						gateData.remove();
+		private void removeAllOccurances (String gmLocationString) {
+			for(GateModel gm : subCircuits.getGateModelIterable()) {
+				CircuitBoardModel cbm = (CircuitBoardModel) gm;
+				cbm.removeAllOccurrences(gmLocationString);
 			}
 		}
 		
@@ -406,7 +390,7 @@ public class Project implements Serializable {
 			if(gm instanceof CircuitBoardModel) {
 				CircuitBoardModel cb = (CircuitBoardModel) gm;
 				cb.getNotifier().setReceiver(null);
-				if(removeTopLevel && topLevelCircuit != null && cb.getFormalName().equals(topLevelCircuit)) {
+				if(removeTopLevel && topLevelCircuitLocationString != null && cb.getLocationString().equals(topLevelCircuitLocationString)) {
 					setTopLevelCircuitName(null);
 					return true;
 				}

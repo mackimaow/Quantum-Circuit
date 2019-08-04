@@ -1,5 +1,6 @@
 package appFX.appUI.appViews.circuitBoardView.renderer.renderLayers;
 
+import appFX.framework.gateModels.CircuitBoardModel.RowTypeList;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.Graphics;
 import javafx.scene.image.Image;
@@ -15,18 +16,18 @@ public class NotificationRenderLayer extends RenderLayer {
 		super(width, height);
 	}
 	
-	public synchronized void calculateDrawErrorBounds(int rowStart, int rowEnd, int column, ImmutableTree<FocusData> gridFocusData) {
+	public synchronized void calculateDrawErrorBounds(int rowStart, int rowEnd, int column, ImmutableTree<FocusData> gridFocusData, RowTypeList rowTypeList) {
 		drawError = true;
 		this.rowStart = rowStart;
 		this.rowEnd = rowEnd;
 		this.column = column;
-		super.calculateBounds(gridFocusData);
+		super.calculateBounds(gridFocusData, rowTypeList);
 	}
 	
 	@Override
-	public synchronized ImmutableTree<FocusData> calculateBounds(ImmutableTree<FocusData> gridFocusData) {
+	public synchronized ImmutableTree<FocusData> calculateBounds(ImmutableTree<FocusData> gridFocusData, RowTypeList rowTypeList) {
 		drawError = false;
-		return super.calculateBounds(gridFocusData);
+		return super.calculateBounds(gridFocusData, rowTypeList);
 	}
 	
 	@Override

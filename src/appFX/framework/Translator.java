@@ -97,7 +97,7 @@ public class Translator {
                String[] split = code.split(" ");
                String gate = split[0];
 
-               for (Control c : eg.getControls()) {
+               for (Control c : eg.getQuantumControls()) {
                   if(!c.getControlStatus()) {
                      notBuffer = "X " + c.getRegister() + "\n" + notBuffer;
                   }

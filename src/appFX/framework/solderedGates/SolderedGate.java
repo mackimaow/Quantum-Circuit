@@ -2,55 +2,51 @@ package appFX.framework.solderedGates;
 
 import java.io.Serializable;
 
-import appFX.framework.InputDefinitions;
-import appFX.framework.InputDefinitions.ArgDefinition;
-import appFX.framework.InputDefinitions.CheckDefinitionRunnable;
-import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
-import appFX.framework.InputDefinitions.GroupDefinition;
-import appFX.framework.InputDefinitions.MatrixDefinition;
-import appFX.framework.InputDefinitions.ScalarDefinition;
 import appFX.framework.gateModels.PresetGateType;
-import utils.customCollections.Manifest.ManifestObject;
+import appFX.framework.utils.InputDefinitions.GroupDefinition;
+import utils.customCollections.Manifest.ManifestElementHandle;
 
 
 
-public class SolderedGate implements Serializable, CheckDefinitionRunnable {
+public class SolderedGate implements Serializable {
 	private static final long serialVersionUID = 2595030500395644473L;
 	
 	@SuppressWarnings("rawtypes")
-	private ManifestObject gateModelFormalName;
+	private ManifestElementHandle locationHandle;
 	private final GroupDefinition parameterSet;
 	
 	@SuppressWarnings("rawtypes")
-	public SolderedGate(ManifestObject gateModelFormalName, String ... parameters) throws DefinitionEvaluatorException {
-		this.gateModelFormalName = gateModelFormalName;
-		parameterSet = InputDefinitions.evaluateInput(this, parameters); 
+	public SolderedGate(ManifestElementHandle locationHandle, GroupDefinition parameterSet) {
+		this.locationHandle = locationHandle;
+		this.parameterSet = parameterSet;
 	}
 	
-	public String getGateModelFormalName() {
-		return (String) gateModelFormalName.getObject();
+	@SuppressWarnings("rawtypes")
+	public SolderedGate(ManifestElementHandle locationHandle) {
+		this.locationHandle = locationHandle;
+		this.parameterSet = new GroupDefinition();
+	}
+	
+	public String getGateModelLocationString() {
+		return (String) locationHandle.getElement();
 	}
 	
 	public GroupDefinition getParameterSet() {
 		return parameterSet;
 	}
 	
-	public boolean isIdentity() {
-		return getGateModelFormalName().equals(PresetGateType.IDENTITY.getModel().getFormalName());
+	@SuppressWarnings("rawtypes")
+	public ManifestElementHandle getManifestHandle() {
+		return locationHandle;
 	}
 	
-	@Override
-	public void checkScalarDefinition(ScalarDefinition definition, int i) {}
-
-	@Override
-	public void checkMatrixDefinition(MatrixDefinition definition, int i) throws DefinitionEvaluatorException {
-		throw new DefinitionEvaluatorException("Definition should not define a matrix", i);
+	@SuppressWarnings("rawtypes")
+	public void setManifestHandle(ManifestElementHandle meh) {
+		locationHandle = meh;
 	}
-
-	@Override
-	public void checkArgDefinition(ArgDefinition definition, int i) throws DefinitionEvaluatorException {
-		if(definition.isMatrix())
-			throw new DefinitionEvaluatorException("Definition should not define a matrix", i);
+	
+	public boolean isIdentity() {
+		return getGateModelLocationString().equals(PresetGateType.IDENTITY.getModel().getLocationString());
 	}
 	
 }

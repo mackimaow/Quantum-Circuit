@@ -37,6 +37,9 @@ public class AppMenuBar implements AppPreferences{
 			addItemToMenu(menu, mkItem("Preferences", AppCommand.OPEN_USER_PREFERENCES, KeyShortCuts.PREFERENCES));
 		} menus.add(menu);
 		menu = new Menu("Edit"); {
+			addItemToMenu(menu, mkItem("Undo", AppCommand.UNDO_FOCUSED_CB, KeyShortCuts.UNDO));
+			addItemToMenu(menu, mkItem("Redo", AppCommand.REDO_FOCUSED_CB, KeyShortCuts.REDO));
+			addItemToMenu(menu, mkItem("Reset Current Tool", AppCommand.RESET_CURRENT_TOOL, KeyShortCuts.RESET_CURRENT_TOOL));
 			addItemToMenu(menu, mkItem("Add Row", AppCommand.ADD_ROW_TO_FOCUSED_CB, KeyShortCuts.ADD_ROW));
 			addItemToMenu(menu, mkItem("Add Column", AppCommand.ADD_COLUMN_TO_FOCUSED_CB, KeyShortCuts.ADD_COLUMN));
 			addItemToMenu(menu, mkItem("Remove Last Row", AppCommand.REMOVE_ROW_FROM_FOCUSED_CB, KeyShortCuts.REMOVE_LAST_ROW));

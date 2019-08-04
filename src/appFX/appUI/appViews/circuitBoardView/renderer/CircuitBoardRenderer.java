@@ -3,6 +3,8 @@ package appFX.appUI.appViews.circuitBoardView.renderer;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.sun.rowset.providers.RIOptimisticProvider;
+
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GateRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GridRenderLayer;
@@ -12,6 +14,7 @@ import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.QubitRegister
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.ToolActionRenderLayer;
 import appFX.framework.gateModels.CircuitBoardModel;
+import appFX.framework.gateModels.CircuitBoardModel.RowTypeList;
 import graphicsWrapper.FocusData;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -32,6 +35,7 @@ public class CircuitBoardRenderer {
 	public static final int NOTIFICATION_RENDER_LAYER_INDEX = 4;
 	
 	private ImmutableTree<FocusData> gridData = null;
+	private RowTypeList rowTypes = null;
 	
 	private double zoom = 1;
 	private double horizontalGridFocused;
@@ -45,15 +49,16 @@ public class CircuitBoardRenderer {
 	private double viewLeftOriginX = 0d;
 	private double viewTopOriginY = 0d;
 	
+	private CircuitBoardModel circuitBoardModel;
 	
 	public CircuitBoardRenderer(CircuitBoardView circuitBoardView) {
 		this.stackPane = new StackPane();
 		this.layers = new LinkedList<>();
-		CircuitBoardModel circuitBoard = circuitBoardView.getCircuitBoardModel();
-		horizontalGridFocused = (double) circuitBoard.getColumns() / 2d;
-		verticalGridFocused = (double) circuitBoard.getRows() / 2d;
+		circuitBoardModel = circuitBoardView.getCircuitBoardModel();
+		horizontalGridFocused = (double) circuitBoardModel.getColumns() / 2d;
+		verticalGridFocused = (double) circuitBoardModel.getRows() / 2d;
 		addLayer(new QubitLineRenderLayer(viewWidth, viewHeight));
-		addLayer(new GateRenderLayer(viewWidth, viewHeight, circuitBoard));
+		addLayer(new GateRenderLayer(viewWidth, viewHeight, circuitBoardModel));
 		addLayer(new GridRenderLayer(viewWidth, viewHeight));
 		addLayer(new ToolActionRenderLayer(viewWidth, viewHeight, circuitBoardView));
 		addLayer(new NotificationRenderLayer(viewWidth, viewHeight));
@@ -84,11 +89,12 @@ public class CircuitBoardRenderer {
 	
 	public synchronized void calculateBounds() {
 		GateRenderLayer gateLayer = (GateRenderLayer) layers.get(GATE_RENDER_LAYER_INDEX);
-		gridData = gateLayer.calculateBounds(null);
+		rowTypes = circuitBoardModel.getCopyOfRowTypeList();
+		gridData = gateLayer.calculateBounds(null, rowTypes);
 		
 		for(RenderLayer layer : layers) {
 			if(layer == gateLayer) continue;
-			layer.calculateBounds(gridData);
+			layer.calculateBounds(gridData, rowTypes);
 		}
 	}
 	
@@ -180,7 +186,7 @@ public class CircuitBoardRenderer {
 			return new double[] {-1d, xCord};
 		FocusData fd = gridData.getElement();
 		double totalWidth = fd.getWidth();
-		if(xCord > totalWidth)
+		if(xCord >= totalWidth)
 			return new double[] {-1d, xCord - totalWidth};
 		List<Double> heightData = fd.getCummulativeWidthData();
 		int newIndex = CollectionUtils.binarySearch(heightData, xCord);
@@ -195,7 +201,7 @@ public class CircuitBoardRenderer {
 			return new double[] {-1d, yCoord};
 		FocusData fd = gridData.getElement();
 		double totalHeight = fd.getHeight();
-		if(yCoord > totalHeight)
+		if(yCoord >= totalHeight)
 			return new double[] {-1d, yCoord - totalHeight};
 		List<Double> widthData = fd.getCummulativeHeightData();
 		int newIndex = CollectionUtils.binarySearch(widthData, yCoord);
@@ -261,6 +267,10 @@ public class CircuitBoardRenderer {
 
 	public ImmutableTree<FocusData> getGridData() {
 		return gridData;
+	}
+	
+	public RowTypeList getRowTypeList() {
+		return rowTypes;
 	}
 
 	public double getViewWidth() {

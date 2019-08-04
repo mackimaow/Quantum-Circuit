@@ -44,4 +44,13 @@ public class AxisBound {
 		}
 	}
 	
+//	public static final class FractionalBound extends AxisBound {
+//		final double fractionOfParent;
+//		
+//		public FractionalBound(double fractionOfParent, int focusGroupAbove) {
+//			super(focusGroupAbove);
+//			this.fractionOfParent = fractionOfParent;
+//		}
+//	}
+	
 }

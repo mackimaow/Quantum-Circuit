@@ -10,6 +10,11 @@ public class SolderedRegister extends SolderedPin  {
 		this.solderedGatePinNumber = solderedGatePinNumber;
 	}
 	
+	@Override
+	public boolean isNotEmptySpace() {
+		return true;
+	}
+	
 	public int getSolderedGatePinNumber() {
 		return solderedGatePinNumber;
 	}

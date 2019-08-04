@@ -7,11 +7,14 @@ import org.scilab.forge.jlatexmath.TeXFormula;
 import org.scilab.forge.jlatexmath.TeXIcon;
 
 public abstract class Graphics<ImageType, FontType, ColorType> {
-	public static final byte LEFT_ALIGN 	= -1;
-	public static final byte TOP_ALIGN 		= -1;
-	public static final byte RIGHT_ALIGN 	=  1;
-	public static final byte BOTTOM_ALIGN 	=  1;
-	public static final byte CENTER_ALIGN 	=  0;
+	static final byte LOW_ALIGN = 1;
+	static final byte HIGH_ALIGN = 3;
+	public static final byte CENTER_ALIGN 	=  2;
+	
+	public static final byte LEFT_ALIGN 	= LOW_ALIGN;
+	public static final byte TOP_ALIGN 		= LOW_ALIGN;
+	public static final byte RIGHT_ALIGN 	= HIGH_ALIGN;
+	public static final byte BOTTOM_ALIGN 	= HIGH_ALIGN;
 	
 	public static final byte FOCUS_WIDTH = -1;
 	public static final byte FOCUS_HEIGHT = -1;
@@ -20,8 +23,8 @@ public abstract class Graphics<ImageType, FontType, ColorType> {
 	private FontWrapper<FontType> fontWrapper;
 	private FontType font;
 	private double fontHeight;
-	private int horizontalLayout = LEFT_ALIGN;
-	private int verticalLayout = TOP_ALIGN;
+	private byte horizontalLayout = LEFT_ALIGN;
+	private byte verticalLayout = TOP_ALIGN;
 	protected final double scale;
 	
 	public static <ImageType, FontType, ColorType> CompiledGraphics<ImageType, FontType, ColorType> compileGraphicalBluePrint(GraphicalBluePrint<ImageType, FontType, ColorType> bluePrint, Object ... userArgs) {
@@ -41,24 +44,32 @@ public abstract class Graphics<ImageType, FontType, ColorType> {
 		setLineWidth(1);
 	};
 	
-	public void setLayout(int horizontalLayout, int verticalLayout) {
+	public static double getFocusWidth(double percentOfWidth) {
+		return -1 * percentOfWidth;
+	}
+	
+	public static double getFocusHeight(double percentOfHeight) {
+		return -1 * percentOfHeight;
+	}
+	
+	public void setLayout(byte horizontalLayout, byte verticalLayout) {
 		this.horizontalLayout = horizontalLayout;
 		this.verticalLayout = verticalLayout;
 	}
 	
-	public void setHorizontalLayout(int align) {
+	public void setHorizontalLayout(byte align) {
 		horizontalLayout = align;
 	}
 	
-	public void setVerticalyLayout(int align) {
+	public void setVerticalyLayout(byte align) {
 		verticalLayout = align;
 	}
 	
-	public int getHorizontalLayout() {
+	public byte getHorizontalLayout() {
 		return horizontalLayout;
 	}
 	
-	public int getVerticalLayout() {
+	public byte getVerticalLayout() {
 		return verticalLayout;
 	}
 	

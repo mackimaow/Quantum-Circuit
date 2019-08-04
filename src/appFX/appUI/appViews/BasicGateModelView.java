@@ -20,18 +20,12 @@ import utils.customCollections.immutableLists.ImmutableArray;
 
 public class BasicGateModelView extends AppView {
 	
-	@FXML
-	private TextField name, symbol, registers, modelType;
-	@FXML
-	private ScrollPane description;
-	@FXML
-	private BorderPane iconSpace;
-	@FXML
-	private HBox parameters, definitionStatement, editBar;
-	@FXML
-	private VBox definition;
-	@FXML
-	private Button editButton, editNewButton;
+	@FXML private TextField fileLocation, name, symbol, registers, modelType, computingType;
+	@FXML private ScrollPane description;
+	@FXML private BorderPane iconSpace;
+	@FXML private HBox parameters, definitionStatement, editBar;
+	@FXML private VBox definition;
+	@FXML private Button editButton, editNewButton;
 	
 	private boolean initialized = false;
 	
@@ -39,17 +33,17 @@ public class BasicGateModelView extends AppView {
 	private BasicGateModel gm;
 	
 	public BasicGateModelView(BasicGateModel gm) {
-		super("views/BasicGateModelView.fxml", gm.getFormalName(), ViewLayout.CENTER);
+		super("views/BasicGateModelView.fxml", gm.getLocationString(), ViewLayout.CENTER);
 		this.gm = gm;
 		initialize();
 	}
 
 	public void onButtonPress(ActionEvent e) {
-		AppCommand.doAction(AppCommand.EDIT_GATE, gm.getFormalName());
+		AppCommand.doAction(AppCommand.EDIT_GATE, gm.getLocationString());
 	}
 	
 	public void onButton2Press(ActionEvent e) {
-		AppCommand.doAction(AppCommand.EDIT_AS_NEW_GATE, gm.getFormalName());
+		AppCommand.doAction(AppCommand.EDIT_AS_NEW_GATE, gm.getLocationString());
 	}
 	
 	@Override
@@ -58,7 +52,7 @@ public class BasicGateModelView extends AppView {
 		if(initialized && p.getCustomGates() == source) {
 
 			if(methodName.equals("put")) {
-				if(((GateModel)args[0]).getFormalName().equals(getName()))
+				if(((GateModel)args[0]).getLocationString().equals(getName()))
 					closeView();
 			} else if (methodName.equals("replace") || methodName.equals("remove")){
 				if(args[0].equals(getName()))
@@ -74,13 +68,17 @@ public class BasicGateModelView extends AppView {
 	}
 	
 	private void updateDefinitionUI() {
+		fileLocation.setEditable(false);
 		name.setEditable(false);
 		symbol.setEditable(false);
 		registers.setEditable(false);
 		modelType.setEditable(false);
+		computingType.setEditable(false);
 		
+		fileLocation.setText(gm.getLocationString());
 		name.setText(gm.getName());
 		symbol.setText(gm.getSymbol());
+		computingType.setText(gm.getComputingType().toString());
 		
 		Node n = new LatexNode(gm.getDescription(), 20);
 		
@@ -91,7 +89,7 @@ public class BasicGateModelView extends AppView {
 		
 		parameters.getChildren().clear();
 		
-		ImmutableArray<String> args = gm.getArguments();
+		ImmutableArray<String> args = gm.getParameters();
 		
 		if(!args.isEmpty()) {
 			String parametersLatex = "\\(" + args.get(0) + "\\)";
@@ -122,16 +120,16 @@ public class BasicGateModelView extends AppView {
 			
 			break;
 		case POVM:
-			latex = "\\text{The model is specified by kraus matricies } \\( (k_1, k_2, k_3, ... k_n) \\) \\text{ where } \\( \\sum_{ i = 1 } ^ { n } k_i k_i ^ * = I \\) \\text{ : }";
+			latex = "\\text{The model is specified by a set of Hermitian positive semidefinite operators } \\( (F_1, F_2, F_3, ... F_i) \\) \\text{ where } \\( \\sum_{ i = 1 } ^ { n } F_i  = I \\) \\text{ : }";
 			definitionStatement.getChildren().add(new LatexNode(latex, 15));
 			
-			ImmutableArray<String> krausLatex = gm.getLatex();
+			ImmutableArray<String> povmLatex = gm.getLatex();
 			
 			latex = "\\begin{eqnarray}";
 			
 			int i = 1;
-			for(String l : krausLatex)
-				latex += "k_" + (i++) + " = " + l + " \\\\";
+			for(String l : povmLatex)
+				latex += "F_{" + (i++) + "} = " + l + " \\\\";
 			
 			latex += "\\end{eqnarray}";
 			
@@ -145,8 +143,23 @@ public class BasicGateModelView extends AppView {
 			definition.getChildren().add(new LatexNode(" $$ U = " + gm.getLatex().get(0) + " $$ ", 20));
 			
 			break;
+		case KRAUS_OPERATORS:
+			latex = "\\text{The model is specified by a set of kraus matricies } \\( (K_1, K_2, K_3, ... K_n) \\) \\text{ where } \\( \\sum_{ i = 1 } ^ { n } K_i K_i ^ * = I \\) \\text{ : }";
+			definitionStatement.getChildren().add(new LatexNode(latex, 15));
 			
-			default:
+			ImmutableArray<String> krausLatex = gm.getLatex();
+			
+			latex = "\\begin{eqnarray}";
+			
+			i = 1;
+			for(String l : krausLatex)
+				latex += "K_{" + (i++) + "} = " + l + " \\\\";
+			
+			latex += "\\end{eqnarray}";
+			
+			definition.getChildren().add(new LatexNode(latex, 20));
+			break;
+		default:
 			break;
 		}
 		

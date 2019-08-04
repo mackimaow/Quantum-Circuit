@@ -9,9 +9,8 @@ import appFX.appUI.appViews.gateChooser.AbstractGateChooserView;
 import appFX.appUI.utils.AppAlerts;
 import appFX.appUI.utils.ParameterPrompt;
 import appFX.framework.AppStatus;
-import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
-import appFX.framework.gateModels.CircuitBoardModel.RecursionException;
 import appFX.framework.gateModels.GateModel;
+import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.Graphics;
 import javafx.scene.control.Alert.AlertType;
@@ -22,7 +21,7 @@ import utils.customCollections.immutableLists.ImmutableArray;
 
 public class SolderRegionToolAction  extends ToolAction {
 	private Hashtable<Integer, Integer> globalToLocalRegs = new Hashtable<>();
-	private Integer[] regs = null;
+	private int[] regs = null;
 	private int currentReg = -1;
 	private int nextReg = -1;
 	private int selectedColumn = -1;
@@ -51,16 +50,9 @@ public class SolderRegionToolAction  extends ToolAction {
 		
 		if(gm != null) { 
 			
-			try {
-				cbv.getCircuitBoardModel().assertNoRecursion(gm.getFormalName());
-			} catch(RecursionException re) {
-				AppAlerts.showMessage(AppStatus.get().getPrimaryStage(),
-						"Recursion detected", re.getMessage(), AlertType.ERROR);
-				return;
-			}
 			
 			if(regs == null) {
-				regs = new Integer[gm.getNumberOfRegisters()];
+				regs = new int[gm.getNumberOfRegisters()];
 				nextReg = 1;
 				currentReg = 0;
 			}
@@ -76,18 +68,19 @@ public class SolderRegionToolAction  extends ToolAction {
 			}
 			
 			if(nextReg - 1 == regs.length) {
-				ImmutableArray<String> args = gm.getArguments();
+				ImmutableArray<String> args = gm.getParameters();
 				if(args.size() > 0) {
-					ParameterPrompt pp = new ParameterPrompt(cbv.getProject(), cbv.getCircuitBoardModel(), gm.getFormalName(), regs, selectedColumn);
+					ParameterPrompt pp = new ParameterPrompt(cbv.getProject(), cbv.getCircuitBoardModel(), gm.getLocationString(), regs, selectedColumn);
 					pp.showAndWait();
 				} else {
 					try {
-						cbv.getCircuitBoardModel().placeGate(gm.getFormalName(), selectedColumn, regs);
+						cbv.getCircuitBoardModel().placeGate(gm.getLocationString(), selectedColumn, regs);
 					} catch (DefinitionEvaluatorException e) {
-						e.printStackTrace();
-					} catch(RecursionException e2) {
 						AppAlerts.showMessage(AppStatus.get().getPrimaryStage(),
-								"Recursion detected", e2.getMessage(), AlertType.ERROR);
+								"Parameter(s) is invalid", e.getMessage(), AlertType.ERROR);
+					} catch(IllegalArgumentException e2) {
+						AppAlerts.showMessage(AppStatus.get().getPrimaryStage(),
+								"Illegal placement of gate", e2.getMessage(), AlertType.ERROR);
 					}
 				}
 				reset();

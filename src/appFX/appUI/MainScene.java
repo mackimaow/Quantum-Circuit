@@ -9,8 +9,10 @@ import appFX.appUI.appViews.ConcreteView;
 import appFX.appUI.menuBar.AppMenuBar;
 import appFX.appUI.utils.AppFXMLComponent;
 import appFX.appUI.utils.AppToolManager;
+import appFX.framework.AppCommand;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.SplitPane;
@@ -22,18 +24,14 @@ import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
 public class MainScene extends AppFXMLComponent implements Initializable, AppPreferences, ReceivedEvent {
 	
-	@FXML
-	private SplitPane verticalSplitPane, horizontalSplitPane;
-	@FXML
-	private BorderPane leftBorderPane, bottomBorderPane, rightBorderPane;
-	@FXML
-	private TabPane leftTabPane, centerTabPane, rightTabPane, bottomTabPane;
-	@FXML
-	private ToggleButton selectTool, solderTool, editTool, controlTool, controlNotTool, addColumnTool, removeColumnTool, addRowTool, removeRowTool;
-	@FXML
-	private MenuBar menuBar;
-	@FXML
-	private Label appNameLabel;
+	@FXML private SplitPane verticalSplitPane, horizontalSplitPane;
+	@FXML private BorderPane frame, leftBorderPane, bottomBorderPane, rightBorderPane;
+	@FXML private TabPane leftTabPane, centerTabPane, rightTabPane, bottomTabPane;
+	@FXML private ToggleButton selectTool, solderTool, pryTool, editTool, linkTool, controlTool, controlNotTool, addColumnTool, removeColumnTool, addRowTool, removeRowTool;
+	@FXML private MenuBar menuBar;
+	@FXML private Label appNameLabel;
+	@FXML private Button undoButton, redoButton, startSimulationButton;
+	
 	
 	private AppViewManager viewManager;
 	private AppToolManager toolManager;
@@ -52,8 +50,9 @@ public class MainScene extends AppFXMLComponent implements Initializable, AppPre
 		ConcreteView.initializeViews();
 		AppMenuBar.initializeMenuBar(this);
 		
-		toolManager = new AppToolManager(selectTool, solderTool, editTool, controlTool, controlNotTool, addColumnTool, removeColumnTool, addRowTool, removeRowTool);
+		toolManager = new AppToolManager(selectTool, solderTool, pryTool, editTool, linkTool, controlTool, controlNotTool, addColumnTool, removeColumnTool, addRowTool, removeRowTool);
 		toolManager.initializeTools();
+		initializeButtons();
 		
 		viewManager = new AppViewManager(leftTabPane, centerTabPane, rightTabPane, bottomTabPane);
 		viewManager.initializeViews(leftBorderPane, rightBorderPane, bottomBorderPane, verticalSplitPane, horizontalSplitPane);
@@ -69,6 +68,17 @@ public class MainScene extends AppFXMLComponent implements Initializable, AppPre
 	public AppToolManager getToolManager() {
 		return toolManager;
 	}
+	
+	private void initializeButtons() {
+		initializeButton(undoButton, AppCommand.UNDO_FOCUSED_CB);
+		initializeButton(redoButton, AppCommand.REDO_FOCUSED_CB);
+		initializeButton(startSimulationButton, AppCommand.RUN_SIMULATION);
+	}
+	
+	private void initializeButton(Button button, AppCommand command) {
+		button.setOnAction((e)-> AppCommand.doAction(command));
+	}
+	
 	
 	@Override
 	public void receive(Object source, String methodName, Object... args) {

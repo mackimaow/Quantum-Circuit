@@ -71,11 +71,11 @@ public abstract class AbstractGateChooserView extends AppView implements Initial
 //		tg.getToggles().add(stb);
 //	}
 	
-	public void removeGateModelByName(String name) {
+	public void removeGateModelByLocationString(String gmLocationString) {
 		Iterator<Node> buttons = list.getChildren().iterator();
 		while(buttons.hasNext()) {
 			GateToggleButton stb = (GateToggleButton) buttons.next();
-			if(stb.gateModel.getFormalName().equals(name)) {
+			if(stb.gateModel.getLocationString().equals(gmLocationString)) {
 				buttons.remove();
 				tg.getToggles().remove(stb);
 				return;
@@ -127,7 +127,7 @@ public abstract class AbstractGateChooserView extends AppView implements Initial
 			setOnMouseClicked((mouseEvent) -> {
 				if(mouseEvent.getButton().equals(MouseButton.PRIMARY))
 		            if(mouseEvent.getClickCount() == 2)
-		            	AppCommand.doAction(AppCommand.OPEN_GATE, gateModel.getFormalName());
+		            	AppCommand.doAction(AppCommand.OPEN_GATE, gateModel.getLocationString());
 		                
 			});
 			setContextMenu(new GateModelContextMenu(null, gateModel));

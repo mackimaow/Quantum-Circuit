@@ -60,8 +60,8 @@ public class Executor {
         	e.showExportErrorSource();
             return "";
         }
-        CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitName());
-        int colHeight = cb.getRows();
+        CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitLocationString());
+        int colHeight = cb.getNumberOfRegisters();
         System.out.println(colHeight);
         ArrayList<Matrix<Complex>> columns = new ArrayList<>();
         addCols: for(Iterator<ExportedGate> itr = exps.iterator(); itr.hasNext();) {
@@ -116,7 +116,7 @@ public class Executor {
            ExportedGate eg = column.get(itr);
            colmat = eg.getInputMatrixes()[0];
            int span = 1+getMaxElement(eg.getGateRegister())-getMinElement(eg.getGateRegister());
-           if (eg.getControls().length != 0) {
+           if (eg.getQuantumControls().length != 0) {
 
            }
            //Shuffle eg to be contiguous and in order, then pad with identity
@@ -258,8 +258,8 @@ public class Executor {
     }
 
     public static String executeMixedState(Project p) {
-        CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitName());
-        int colHeight = cb.getRows();
+        CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitLocationString());
+        int colHeight = cb.getNumberOfRegisters();
         System.out.println(colHeight);
 
         //A state |x> is now |x><x|, and applying an operator A|x> is A|x><x|A*

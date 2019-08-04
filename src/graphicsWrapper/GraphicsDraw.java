@@ -40,7 +40,7 @@ class GraphicsDraw<ImageType, FontType, ColorType> extends Graphics<ImageType, F
 	}
 	
 	
-	private void changeInAxisFocus(int boundsIndexOffset, AxisBound axisBound, int layout) {
+	private void changeInAxisFocus(int boundsIndexOffset, AxisBound axisBound, byte layout) {
 		FocusData fd = focusContainerTree.getElement();
 		Double[] nextBounds = boundsStack.getFirst();
 		Double[] parentBounds = boundsStack.get(axisBound.focusGroupAbove + 1);
@@ -74,10 +74,10 @@ class GraphicsDraw<ImageType, FontType, ColorType> extends Graphics<ImageType, F
 					nextBounds[boundsIndexOffset] = parentBounds[boundsIndexOffset] + (parentLength - totalChildSpace) / 2d + rimBound.lowMargin;
 					nextBounds[boundsIndexOffset + 2] = nextBounds[boundsIndexOffset] + childLength;
 				}
-			} else if (layout < CENTER_ALIGN) {
+			} else if (layout == LOW_ALIGN) {
 				nextBounds[boundsIndexOffset] = parentBounds[boundsIndexOffset] + rimBound.lowMargin;
 				nextBounds[boundsIndexOffset + 2] = nextBounds[boundsIndexOffset] + childLength;
-			} else {
+			} else if(layout == HIGH_ALIGN) {
 				nextBounds[boundsIndexOffset + 2] = parentBounds[boundsIndexOffset + 2] - rimBound.highMargin;
 				nextBounds[boundsIndexOffset] = nextBounds[boundsIndexOffset] - childLength;
 			}
@@ -111,18 +111,15 @@ class GraphicsDraw<ImageType, FontType, ColorType> extends Graphics<ImageType, F
 			translateBounds[i + 4] = otherBounds[i] * scale;
 		return translateBounds;
 	}
-	private static void translateAxis(int boundsIndexOffset, Double[] currentBounds, double[] translateBounds, int layout, double translate, double length, double scale) {
+	private static void translateAxis(int boundsIndexOffset, Double[] currentBounds, double[] translateBounds, byte layout, double translate, double length, double scale) {
 		double parentLength = currentBounds[boundsIndexOffset + 2] - currentBounds[boundsIndexOffset]; 
-		if(length < 0) {
-			translateBounds[boundsIndexOffset] = (int) Math.round(currentBounds[boundsIndexOffset] * scale);
-			translateBounds[boundsIndexOffset + 2] = (int) Math.round( parentLength * scale);
-			return;
-		}
+		if(length < 0)
+			length = parentLength * (-length);
 		if(layout == CENTER_ALIGN)
 			translateBounds[boundsIndexOffset] = (int) Math.round( (translate + currentBounds[boundsIndexOffset] + (parentLength - length) / 2d) * scale );
-		else if (layout < CENTER_ALIGN)
+		else if (layout == LOW_ALIGN)
 			translateBounds[boundsIndexOffset] = (int) Math.round( (translate + currentBounds[boundsIndexOffset]) * scale );
-		else
+		else if(layout == HIGH_ALIGN)
 			translateBounds[boundsIndexOffset] = (int) Math.round( (currentBounds[boundsIndexOffset + 2] - translate - length) * scale );
 		translateBounds[boundsIndexOffset + 2] = (int) Math.round( (length) * scale );
 	}

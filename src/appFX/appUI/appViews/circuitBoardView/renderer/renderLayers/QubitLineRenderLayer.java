@@ -2,6 +2,7 @@ package appFX.appUI.appViews.circuitBoardView.renderer.renderLayers;
 
 import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
 import appFX.appUI.appViews.circuitBoardView.renderer.GateRenderer;
+import appFX.framework.gateModels.CircuitBoardModel.RowTypeList;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.Graphics;
 import javafx.scene.image.Image;
@@ -19,8 +20,9 @@ public class QubitLineRenderLayer extends RenderLayer {
 	@SuppressWarnings("unchecked")
 	public void onDraw(Graphics<Image, Font, Color> graphics, Object... userArgs) {
 		ImmutableTree<FocusData> fd = (ImmutableTree<FocusData>) userArgs[0];
+		RowTypeList rowTypeList = (RowTypeList) userArgs[1];
 		FocusData gridData = fd.getElement();
-		GateRenderer.renderQubitLines(graphics, CustomFXGraphics.RENDER_PALETTE, gridData);
+		GateRenderer.renderQubitLines(graphics, CustomFXGraphics.RENDER_PALETTE, gridData, rowTypeList);
 	}
 
 }

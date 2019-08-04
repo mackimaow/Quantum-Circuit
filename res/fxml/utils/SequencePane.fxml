@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" xmlns="http://javafx.com/javafx/10.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<BorderPane xmlns="http://javafx.com/javafx/10.0.1" xmlns:fx="http://javafx.com/fxml/1">
    <bottom>
       <HBox nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
          <children>
@@ -28,6 +28,6 @@
       </HBox>
    </bottom>
    <center>
-      <ScrollPane fx:id="contentPane" fitToHeight="true" fitToWidth="true" BorderPane.alignment="CENTER" />
+      <ScrollPane fx:id="contentPane" BorderPane.alignment="CENTER" />
    </center>
 </BorderPane>

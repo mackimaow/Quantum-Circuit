@@ -9,17 +9,19 @@ import java.util.stream.Stream;
 import appFX.appUI.utils.AppAlerts;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
-import appFX.framework.InputDefinitions.ArgObject;
-import appFX.framework.InputDefinitions.GroupDefinition;
-import appFX.framework.InputDefinitions.MathObject;
-import appFX.framework.InputDefinitions.MatrixObject;
-import appFX.framework.InputDefinitions.ScalarObject;
 import appFX.framework.MathDefinitions;
 import appFX.framework.Project;
+import appFX.framework.exportGates.RawExportableGateData.RawExportControl;
+import appFX.framework.exportGates.RawExportableGateData.RawExportRegister;
 import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.solderedGates.SolderedGate;
+import appFX.framework.utils.InputDefinitions.ArgObject;
+import appFX.framework.utils.InputDefinitions.GroupDefinition;
+import appFX.framework.utils.InputDefinitions.MathObject;
+import appFX.framework.utils.InputDefinitions.MatrixObject;
+import appFX.framework.utils.InputDefinitions.ScalarObject;
 import javafx.scene.control.Alert.AlertType;
 import javafx.stage.Window;
 import mathLib.Complex;
@@ -39,11 +41,11 @@ public class GateManager {
 	}
 	
 	public static Stream<ExportedGate> exportGates(Project p) throws ExportException {
-		return exportGates(p.getTopLevelCircuitName());
+		return exportGates(p.getTopLevelCircuitLocationString());
 	}
 	
 	public static Stream<Exportable> exportGatesRecursively(Project p) throws ExportException {
-		return exportGatesRecursively(p.getTopLevelCircuitName());
+		return exportGatesRecursively(p.getTopLevelCircuitLocationString());
 	}
 	
 	public static Stream<Exportable> exportGatesRecursively(String circuitboardName) throws ExportException {
@@ -64,7 +66,8 @@ public class GateManager {
 		public int getColumn();
 		public int[] getRegisters();
 		public int[] getUnderneathIdentityRegisters();
-		public Control[] getControls();
+		public Control[] getQuantumControls();
+		public Control[] getClassicalControls();
 	}
 	
 	
@@ -101,11 +104,11 @@ public class GateManager {
 		@Override
 		public int[] getRegisters() {
 			RawExportableGateData regs = n.rawData;
-			Hashtable<Integer, Integer> registers = regs.getRegisters();
+			Hashtable<Integer, RawExportRegister> registers = regs.getRegisters();
 			int[] temp = new int[registers.size()];
 			
 			for(int i = 0; i < registers.size(); i++)
-				temp[i] = registers.get(i);
+				temp[i] = registers.get(i).globalReg;
 			
 			return temp;
 		}
@@ -113,25 +116,26 @@ public class GateManager {
 		@Override
 		public int[] getUnderneathIdentityRegisters() {
 			RawExportableGateData regs = n.rawData;
-			LinkedList<Integer> registers = regs.getUnderneathIdentityGates();
+			LinkedList<RawExportRegister> registers = regs.getUnderneathQuantumIdentityGates();
 			int[] temp = new int[registers.size()];
 			
 			for(int i = 0; i < registers.size(); i++)
-				temp[i] = registers.get(i);
+				temp[i] = registers.get(i).globalReg;
 			
 			return temp;
 		}
+		
+		
+		@Override
+		public Control[] getQuantumControls() {
+			RawExportableGateData exportData = n.rawData;
+			return getControls(exportData, false);
+		}
 
 		@Override
-		public Control[] getControls() {
-			RawExportableGateData regs = n.rawData;
-			LinkedList<Control> controls = regs.getControls();
-			Control[] temp = new Control[controls.size()];
-			
-			for(int i = 0; i < controls.size(); i++)
-				temp[i] = controls.get(i);
-			
-			return temp;
+		public Control[] getClassicalControls() {
+			RawExportableGateData exportData = n.rawData;
+			return getControls(exportData, true);
 		}
 	}
 	
@@ -168,11 +172,11 @@ public class GateManager {
 		@Override
 		public int[] getRegisters() {
 			RawExportableGateData regs = tree.rawData;
-			Hashtable<Integer, Integer> registers = regs.getRegisters();
+			Hashtable<Integer, RawExportRegister> registers = regs.getRegisters();
 			int[] temp = new int[registers.size()];
 			
 			for(int i = 0; i < registers.size(); i++)
-				temp[i] = registers.get(i);
+				temp[i] = registers.get(i).globalReg;
 			
 			return temp;
 		}
@@ -180,30 +184,42 @@ public class GateManager {
 		@Override
 		public int[] getUnderneathIdentityRegisters() {
 			RawExportableGateData regs = tree.rawData;
-			LinkedList<Integer> gates = regs.getUnderneathIdentityGates();
+			LinkedList<RawExportRegister> gates = regs.getUnderneathQuantumIdentityGates();
 			int[] temp = new int[gates.size()];
 			
 			for(int i = 0; i < gates.size(); i++)
-				temp[i] = gates.get(i);
+				temp[i] = gates.get(i).globalReg;
 			
 			return temp;
 		}
+		
+		@Override
+		public Control[] getQuantumControls() {
+			RawExportableGateData exportData = tree.rawData;
+			return getControls(exportData, false);
+		}
 
 		@Override
-		public Control[] getControls() {
-			RawExportableGateData regs = tree.rawData;
-			LinkedList<Control> controls = regs.getControls();
-			Control[] temp = new Control[controls.size()];
-			
-			for(int i = 0; i < controls.size(); i++)
-				temp[i] = controls.get(i);
-			
-			return temp;
+		public Control[] getClassicalControls() {
+			RawExportableGateData exportData = tree.rawData;
+			return getControls(exportData, true);
 		}
 		
 	}
 	
 	
+	private static Control[] getControls(RawExportableGateData exportData, boolean classicalControls) {
+		LinkedList<RawExportControl> exportControls;
+		if(classicalControls)
+			exportControls = exportData.getClassicalControls();
+		else 
+			exportControls = exportData.getQuantumControls();
+		Control[] temp = new Control[exportControls.size()];
+		int i = 0;
+		for(RawExportControl exportControl : exportControls)
+			temp[i++] = new Control(exportControl.globalReg, exportControl.controlStatus);
+		return temp;
+	}
 	
 	
 	
@@ -211,14 +227,6 @@ public class GateManager {
 	
 	@SuppressWarnings("unchecked")
 	private static ExportedGate toExportedGate(ExportLeaf leaf) {
-		LinkedList<Control> tempControls = leaf.rawData.getControls();
-		Control[] controls = new Control[tempControls.size()];
-		controls = tempControls.toArray(controls);
-		
-		Hashtable<Integer, Integer> tempRegs = leaf.rawData.getRegisters();
-		int[] registers = new int[tempRegs.size()];
-		for(int i = 0; i < tempRegs.size(); i++)
-			registers[i] = tempRegs.get(i);
 		
 		GateModel gm = leaf.gm;
 		Hashtable<String, Complex> argParamTable = leaf.parameters;
@@ -239,7 +247,14 @@ public class GateManager {
 			}
 		}
 		
-		return new ExportedGate(dg, argParamTable, registers, controls, matrixes);
+		Hashtable<Integer, RawExportRegister> tempRegs = leaf.rawData.getRegisters();
+		int[] registers = new int[tempRegs.size()];
+		for(int i = 0; i < tempRegs.size(); i++)
+			registers[i] = tempRegs.get(i).globalReg;
+
+		Control[] classicalControls = getControls(leaf.rawData, true);
+		Control[] quantumControls = getControls(leaf.rawData, false);
+		return new ExportedGate(dg, argParamTable, registers, !leaf.rawData.isQuantum(), classicalControls, quantumControls, matrixes);
 	}
 	
 	
@@ -250,25 +265,27 @@ public class GateManager {
 			super(et);
 		}
 
+		
+		// TODO: add functionality for classical controls
 		@Override
 		public void doActionToNode(ExportTree previous, ExportNode next) {
 			if(previous.rawData != null) {
-				Hashtable<Integer, Integer> registers = previous.rawData.getRegisters();
-				Hashtable<Integer, Integer> nextRegisters = next.rawData.getRegisters();
+				Hashtable<Integer, RawExportRegister> registers = previous.rawData.getRegisters();
+				Hashtable<Integer, RawExportRegister> nextRegisters = next.rawData.getRegisters();
 				
 				for(int i = 0; i < nextRegisters.size(); i++)
-					nextRegisters.put(i, registers.get(nextRegisters.get(i)));
+					nextRegisters.put(i, registers.get(nextRegisters.get(i).globalReg));
 				
-				LinkedList<Control> controls = next.rawData.getControls();
-				ListIterator<Control> li = controls.listIterator();
+				LinkedList<RawExportControl> quantumControls = next.rawData.getQuantumControls();
+				ListIterator<RawExportControl> li = quantumControls.listIterator();
 				
 				while(li.hasNext()){
-					Control previousControl = li.next();
-					int previousReg = previousControl.getRegister();
-					boolean previousStat = previousControl.getControlStatus();
-					li.set(new Control(registers.get(previousReg), previousStat));
+					RawExportControl previousControl = li.next();
+					int previousReg = previousControl.globalReg;
+					boolean previousStat = previousControl.controlStatus;
+					li.set(new RawExportControl(registers.get(previousReg).globalReg, -1, previousStat));
 				}
-				controls.addAll(previous.rawData.getControls());
+				quantumControls.addAll(previous.rawData.getQuantumControls());
 			}
 		}
 		
@@ -379,24 +396,24 @@ public class GateManager {
 		
 		for(RawExportableGateData rawData : cb) {
 			SolderedGate sg = rawData.getSolderedGate();
-			GateModel gm = p.getGateModel(sg.getGateModelFormalName());
+			GateModel gm = p.getGateModel(sg.getGateModelLocationString());
 			
-			if(gm == null) throw new ExportException("Gate \"" + sg.getGateModelFormalName() + 
-					"\" is not valid or does not exist in \"" + cb.getFormalName() + "\"", cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
+			if(gm == null) throw new ExportException("Gate \"" + sg.getGateModelLocationString() + 
+					"\" is not valid or does not exist in \"" + cb.getLocationString() + "\"", cb.getLocationString(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			
 
 			GroupDefinition        parameters = sg.getParameterSet();
-			ImmutableArray<String> arguments = gm.getArguments();
+			ImmutableArray<String> arguments = gm.getParameters();
 			
 			
 			if(arguments.size() != parameters.getSize()) {
-				throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-											+ cb.getFormalName() + "\" are missing necessary arguments", cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
+				throw new ExportException("Gate \"" + sg.getGateModelLocationString() + "\" in \"" 
+											+ cb.getLocationString() + "\" are missing necessary arguments", cb.getLocationString(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			}
 			
 			if(rawData.getRegisters().size() != gm.getNumberOfRegisters()) {
-				throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-						+ cb.getFormalName() + "\" is not the appropriate size", cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
+				throw new ExportException("Gate \"" + sg.getGateModelLocationString() + "\" in \"" 
+						+ cb.getLocationString() + "\" is not the appropriate size", cb.getLocationString(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			}
 			
 			int i = 0;
@@ -409,8 +426,8 @@ public class GateManager {
 				if(gm instanceof CircuitBoardModel) {
 					for(MathObject mo : parameters.getMathDefinitions()) {
 						if(mo.isMatrix())
-							throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-									+ cb.getFormalName() + "\" cannot not pass a matrix in parameter " + i, cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
+							throw new ExportException("Gate \"" + sg.getGateModelLocationString() + "\" in \"" 
+									+ cb.getLocationString() + "\" cannot not pass a matrix in parameter " + i, cb.getLocationString(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 						
 						if(mo.hasArguments())
 							c = (Complex) ((ArgObject) mo).getDefinition().compute(runtimeVariables);
@@ -424,8 +441,8 @@ public class GateManager {
 					Hashtable<String, Complex> argParamTable = new Hashtable<>();
 					for(MathObject mo : parameters.getMathDefinitions()) {
 						if(mo.isMatrix())
-							throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-									+ cb.getFormalName() + "\" cannot not pass a matrix in parameter " + i, cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
+							throw new ExportException("Gate \"" + sg.getGateModelLocationString() + "\" in \"" 
+									+ cb.getLocationString() + "\" cannot not pass a matrix in parameter " + i, cb.getLocationString(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 						
 						if(mo.hasArguments())
 							c = (Complex) ((ArgObject) mo).getDefinition().compute(runtimeVariables);
@@ -439,8 +456,8 @@ public class GateManager {
 				}
 				
 			} catch (EvaluateExpressionException e) {
-				throw new ExportException("Gate \"" + sg.getGateModelFormalName() + "\" in \"" 
-						+ cb.getFormalName() + "\" could not evaluate parameter " + i + " due to: " + e.getMessage(), cb.getFormalName(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
+				throw new ExportException("Gate \"" + sg.getGateModelLocationString() + "\" in \"" 
+						+ cb.getLocationString() + "\" could not evaluate parameter " + i + " due to: " + e.getMessage(), cb.getLocationString(), rawData.getGateRowBodyStart(), rawData.getGateRowBodyEnd(), rawData.getColumn());
 			}
 			
 			

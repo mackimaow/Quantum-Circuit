@@ -1,28 +1,40 @@
 package appFX.framework.gateModels;
 
-import java.util.ArrayList;
+import java.io.Serializable;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
-import appFX.appUI.utils.AppAlerts;
+import appFX.appPreferences.AppPreferences;
 import appFX.framework.AppStatus;
-import appFX.framework.InputDefinitions.DefinitionEvaluatorException;
 import appFX.framework.Project;
-import appFX.framework.exportGates.Control;
 import appFX.framework.exportGates.RawExportableGateData;
-import appFX.framework.solderedGates.SolderedControl;
+import appFX.framework.exportGates.RawExportableGateData.RawExportControl;
+import appFX.framework.exportGates.RawExportableGateData.RawExportLink;
+import appFX.framework.exportGates.RawExportableGateData.RawExportOutputLink;
+import appFX.framework.exportGates.RawExportableGateData.RawExportRegister;
+import appFX.framework.gateModels.BasicGateModel.BasicGateModelType;
+import appFX.framework.solderedGates.SolderedControlPin;
 import appFX.framework.solderedGates.SolderedGate;
 import appFX.framework.solderedGates.SolderedPin;
 import appFX.framework.solderedGates.SolderedRegister;
-import appFX.framework.solderedGates.SpacerPin;
-import utils.customCollections.CollectionUtils;
-import utils.customCollections.CustomLinkedList;
-import utils.customCollections.CustomLinkedList.CustomListIterator;
+import appFX.framework.solderedGates.SpacePin;
+import appFX.framework.solderedGates.SpacePin.OutputLinkType;
+import appFX.framework.utils.Action;
+import appFX.framework.utils.Action.MultipleAction;
+import appFX.framework.utils.InputDefinitions;
+import appFX.framework.utils.InputDefinitions.ArgDefinition;
+import appFX.framework.utils.InputDefinitions.CheckDefinitionRunnable;
+import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
+import appFX.framework.utils.InputDefinitions.GroupDefinition;
+import appFX.framework.utils.InputDefinitions.MatrixDefinition;
+import appFX.framework.utils.InputDefinitions.ScalarDefinition;
 import utils.customCollections.Manifest;
-import utils.customCollections.Manifest.ManifestObject;
+import utils.customCollections.Manifest.ManifestElementHandle;
 import utils.customCollections.Pair;
+import utils.customCollections.Queue;
+import utils.customCollections.Stack;
 import utils.customCollections.eventTracableCollections.Notifier;
 import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
@@ -47,11 +59,31 @@ import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
  * @author quantumresearch
  *
  */
-public class CircuitBoardModel extends GateModel implements  Iterable<RawExportableGateData> {
+public class CircuitBoardModel extends GateModel implements  Iterable<RawExportableGateData>, CheckDefinitionRunnable, AppPreferences {
 	private static final long serialVersionUID = -6921131331890897905L;
 	
-	private final CustomLinkedList<CustomLinkedList<SolderedPin>> elements;
-    
+	public static enum RowType {
+		SPACE("Space"),
+		CLASSICAL("Classical"),
+		QUANTUM("Quantum");
+		
+		private final String name;
+		private RowType(String name) {
+			this.name = name;
+		}
+		
+		@Override
+		public String toString() {
+			return name;
+		}
+	}
+	
+	private transient LinkedList<Action> undoList = null;
+	private transient Stack<Action> redoStack = null;
+	
+	private final LinkedList<LinkedList<SolderedPin>> elements;
+    private final RowTypeList rowTypes;
+	
 	public static final String CIRCUIT_BOARD_EXTENSION =  "cb";
 	
 	
@@ -59,39 +91,63 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     private final Notifier notifier;
     private final Notifier renderNotifier;
     
-    private final Manifest<String> circuitBoardsUsed;
-    private final Manifest<String> defaultGatesUsed;
-    private final Manifest<String> presetGatesUsed;
-    private final Manifest<String> oraclesUsed;
+    private final Manifest<String> gateModelsUsed;
     
-    private CircuitBoardModel(String name, String symbol, String description, String[] arguments, CircuitBoardModel oldModel) {
-    	this(name, symbol, description, arguments, oldModel.elements, oldModel.circuitBoardsUsed, 
-    			oldModel.defaultGatesUsed, oldModel.presetGatesUsed, oldModel.oraclesUsed);
+    {
+    	if(getComputingType() == GateComputingType.CLASSICAL_OR_QUANTUM)
+			throw new IllegalArgumentException("A Circuit board cannot act as both a quantum operation and a classical operation");
     }
     
-    private CircuitBoardModel(String name, String symbol, String description, String[] arguments, CustomLinkedList<CustomLinkedList<SolderedPin>> elements,
-    		Manifest<String> circuitBoardsUsed, Manifest<String> defaultGatesUsed, Manifest<String> presetGatesUsed, Manifest<String> oraclesUsed) {
-    	super(name, symbol, description, arguments);
+    private CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, String[] arguments, CircuitBoardModel oldModel) {
+    	this(locationString, name, symbol, description, computingType, arguments, oldModel.elements, oldModel.gateModelsUsed, oldModel.rowTypes);
+    }
+    
+    private CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, String[] arguments, LinkedList<LinkedList<SolderedPin>> elements,
+    		Manifest<String> gateModelsUsed, RowTypeList rowTypes) {
+    	super(locationString, name, symbol, description, computingType, arguments);
     	
     	this.elements = elements;
+    	this.rowTypes = rowTypes;
     	
-    	this.circuitBoardsUsed = circuitBoardsUsed;
-    	this.defaultGatesUsed = defaultGatesUsed;
-    	this.presetGatesUsed = presetGatesUsed;
-    	this.oraclesUsed = oraclesUsed;
+    	this.gateModelsUsed = gateModelsUsed;
     	
     	this.notifier = new Notifier();
     	this.renderNotifier = new Notifier();
+    	
+    	// adding at least one classical reg (if classical circuitboard)
+    	// or adding at least one quantum reg (if quantum circuitboard>
+    	// if the circuit board is changed from quantum to classical, 
+    	// then all quantum rows are removed
+    	if(computingType == GateComputingType.CLASSICAL) {
+    		int rows = elements.get(0).size();
+    		int amtClassical = rowTypes.countTypeAmtFrom(RowType.CLASSICAL, 0, rows);
+    		if(amtClassical <= 0) {
+    			Action addRows = addRowsAction(0, 5, RowType.CLASSICAL);
+    			addRows.apply();
+    		}
+    		rows = elements.get(0).size();
+    		LinkedList<Pair<Integer, Integer>> ranges = rowTypes.getRangesOfType(RowType.QUANTUM);
+    		Iterator<Pair<Integer, Integer>> rangeIterator = ranges.descendingIterator();
+    		while(rangeIterator.hasNext()) {
+    			Pair<Integer, Integer> range = rangeIterator.next();
+    			Action removeRows = removeRowsAction(range.first(), range.second());
+    			removeRows.apply();
+    		}
+    	} else {
+    		int rows = elements.get(0).size();
+    		int amtQuantum = rowTypes.countTypeAmtFrom(RowType.QUANTUM, 0, rows);
+    		if(amtQuantum <= 0) {
+    			Action addRows = addRowsAction(0, 5, RowType.QUANTUM);
+    			addRows.apply();
+    		}
+    	}
     }
     
     
-    public CircuitBoardModel(String name, String symbol, String description, int rows, int columns, String ... arguments) {
-    	super (name, symbol, description, arguments);
+    public CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, int rows, int columns, String ... arguments) {
+    	super (locationString, name, symbol, description, computingType, arguments);
     	
-    	circuitBoardsUsed = new Manifest<>();
-        defaultGatesUsed = new Manifest<>();
-        presetGatesUsed = new Manifest<>();
-        oraclesUsed = new Manifest<>();
+    	gateModelsUsed = new Manifest<>();
     	
     	if (rows < 1)
 			throw new IllegalArgumentException("Rows cannot be less than 1");
@@ -100,15 +156,24 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		
 		this.notifier = new Notifier();
     	this.renderNotifier = new Notifier();
-		this.elements = new CustomLinkedList<>();
+		this.elements = new LinkedList<>();
+		this.rowTypes = new RowTypeList();
 		
-		CustomLinkedList<SolderedPin> column;
+		RowType rowsToAdd;
+		if(computingType == GateComputingType.CLASSICAL)
+			rowsToAdd = RowType.CLASSICAL;
+		else
+			rowsToAdd = RowType.QUANTUM;
+		
+		
+		LinkedList<SolderedPin> column;
 		for(int c = 0; c < columns; c++) {
-			column = new CustomLinkedList<>();
+			column = new LinkedList<>();
 			for(int r = 0; r < rows; r++)
 				column.offerLast(mkIdent());
 			elements.offerLast(column);
 		}
+		rowTypes.add(0, rowsToAdd, rows);
     }
     
     @Override
@@ -116,1033 +181,2024 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		return false;
 	}
     
+    private void checkToInitUndoRedoLists() {
+    	if(undoList == null)
+    		undoList = new LinkedList<>();
+    	if(redoStack == null)
+    		redoStack = new Stack<>();
+    }
     
-    public void changeAllOccurrences(String oldGateName, String newGateName) {
-    	String[] parts = oldGateName.split("\\.");
-    	
-    	
-    	if(parts.length == 2 && newGateName.endsWith("." + parts[1])) {
-        	notifier.sendChange(this, "changeAllOccurrences", oldGateName, newGateName);
-    		if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
-    			circuitBoardsUsed.replace(oldGateName, newGateName);
-    		} else if (parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
-    			defaultGatesUsed.replace(oldGateName, newGateName);
-    		} else if (parts[1].equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
-    			oraclesUsed.replace(oldGateName, newGateName);
-    		}
-
-        	renderNotifier.sendChange(this, "changeAllOccurrences", oldGateName, newGateName);
+    private synchronized void doAction(Action action) {
+    	checkToInitUndoRedoLists();
+    	redoStack.clear();
+    	if(undoList.size() == Integers.UNDO_REDO_HISTORY_REDO.get())
+    		undoList.removeLast();
+    	undoList.offerFirst(action);
+    	action.apply();
+    }
+    
+    public synchronized void undo() {
+    	checkToInitUndoRedoLists();
+    	if(!undoList.isEmpty()) {
+        	notifier.sendChange(this, "undo");
+    		Action action = undoList.pop();
+    		action.undo();
+    		redoStack.add(action);
+        	renderNotifier.sendChange(this, "undo");
     	}
     }
     
-    public int getOccurrences(String gateName) {
-    	String[] parts = gateName.split("\\.");
-    	
-    	if(parts.length == 2) {
-    		if(parts[1].equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
-    			return circuitBoardsUsed.getOccurrences(gateName);
-    		} else if (parts[1].equals(BasicGateModel.GATE_MODEL_EXTENSION)) {
-    			if(PresetGateType.containsPresetTypeByFormalName(gateName))
-    				return presetGatesUsed.getOccurrences(gateName);
-    			else	
-    				return defaultGatesUsed.getOccurrences(gateName);
-    		} else if (parts[1].equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
-    			return oraclesUsed.getOccurrences(gateName);
-    		}
+    public synchronized void redo() {
+    	checkToInitUndoRedoLists();
+    	if(!redoStack.isEmpty()) {
+        	notifier.sendChange(this, "redo");
+    		Action action = redoStack.pop();
+    		action.apply();
+    		undoList.offerFirst(action);
+        	renderNotifier.sendChange(this, "redo");
     	}
+    }
+    
+    public int getRows() {
+    	return elements.get(0).size();
+    }
+    
+    public int getColumns() {
+    	return elements.size();
+    }
+    
+    public Notifier getNotifier() {
+    	return notifier;
+    }
+    
+    public Notifier getRenderNotifier() {
+    	return renderNotifier;
+    }
+    
+    public void setRenderEventHandler(ReceivedEvent event) {
+    	renderNotifier.setReceivedEvent(event);
+    }
+    
+    public int[] getGateBodyBoundsFromSpace(int rowSpace, int columnSpace) {
+    	int reg = findRowOfBody(rowSpace, columnSpace);
+    	return getGateBodyBounds(reg, columnSpace);
+    }
+    
+    public SolderedGate getGateAt(int row, int column) {
+		return elements.get(column).get(row).getSolderedGate();
+	}
+    
+    public SolderedPin getSolderedPinAt(int row, int column) {
+		return elements.get(column).get(row);
+	}
+    
+    public int getOccurrences(String gateLocationString) {
+    	String[] parts = gateLocationString.split("\\.");
+    	
+    	if(parts.length == 2)
+    		return gateModelsUsed.getOccurrences(gateLocationString);
     	return 0;
     }
     
-    
-    
-    
-    public synchronized void addRows(int index, int amt) {
-    	if(amt < 0) throw new IllegalArgumentException("Amount must be positive");
-    	if(index < 0 || index > getRows())
-			throw new IllegalArgumentException("Index must be a postive and less than or equal the size");
-    	if(amt == 0)
-    		return;
-    	
-    	notifier.sendChange(this, "addRows", index, amt);
-    	
-    	
-		if(index  == 0 || index == getRows()) {
-			ListIterator<SolderedPin> iterator;
-			for(CustomLinkedList<SolderedPin> column : elements) {
-				iterator = column.listIterator(index);
-				for(int i = 0; i < amt; i++)
-					iterator.add(mkIdent());
-			}
-		} else {
-			ListIterator<SolderedPin> iterator;
-			
-			SolderedPin spp, spc;
-			SolderedGate sg;
-			for(CustomLinkedList<SolderedPin> column : elements) {
-				iterator = column.listIterator(index-1);
-				spp = iterator.next();
-				spc = iterator.next();
-				iterator.previous();
-				
-				if(spp.getSolderedGate() == spc.getSolderedGate()) {
-					sg = spp.getSolderedGate();
-					
-					for(int i = 0; i< amt; i++)
-						iterator.add(new SpacerPin(sg, spp.isWithinBody() && spc.isWithinBody()));
-					
-				} else {
-					for(int i = 0; i< amt; i++)
-						iterator.add(mkIdent());
-				}
-			}
-		}
-
-    	renderNotifier.sendChange(this, "addRows", index, amt);
-	}
-	
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-	public synchronized void removeRows(int firstIndex, int lastIndex) {
-    	if(firstIndex < 0 || firstIndex > getRows())
-			throw new IllegalArgumentException("First arg must be a postive and less than or equal the size");
-		if(lastIndex < firstIndex || lastIndex > getRows())
-			throw new IllegalArgumentException("Last arg must be a postive and less than or equal the size");
-		if(lastIndex - firstIndex == getRows())
-			throw new IllegalArgumentException("Rows cannot be less than 1");
-		if(firstIndex == lastIndex)
-			return;
-		
-		notifier.sendChange(this, "removeRows", firstIndex, lastIndex);
-		
-		for(CustomLinkedList<SolderedPin> column : elements) {
-			ListIterator<SolderedPin> iterator = column.listIterator(firstIndex);
-			SolderedPin firstP = iterator.next();
-			SolderedGate firstG = firstP.getSolderedGate();
-			
-			boolean hitFirstReg = firstP instanceof SolderedRegister;
-			boolean hitLastReg = hitFirstReg;
-			
-			iterator.previous();
-			
-			
-			SolderedGate lastG = firstG;
-			
-			int i = 0;
-			while (i++ < lastIndex - firstIndex) {
-				SolderedPin current = iterator.next();
-				
-				if(current.getSolderedGate() != lastG) {
-					if(lastG != firstG)
-						removeFromManifest(lastG.getGateModelFormalName());
-					lastG = current.getSolderedGate();
-					hitLastReg = false;
-				}
-				
-				if(current  instanceof SolderedRegister) {
-					if(lastG == firstG)
-						hitFirstReg = true;
-					hitLastReg = true;
-				}
-				iterator.remove();
-			}
-			
-			ListIterator<SolderedPin> copy = column.iterator((CustomListIterator)iterator);
-			if(!isSectionSimplyRemovable(firstG, iterator, copy) || hitFirstReg || hitLastReg) {
-				removeBoundaryGates(firstG, lastG, hitFirstReg, hitLastReg, iterator, copy);
-			}
-		}
-		
-
-		renderNotifier.sendChange(this, "removeRows", firstIndex, lastIndex);
-	}
-    
-    
-    
-    
-    private boolean isSectionSimplyRemovable(SolderedGate solderedGate, 
-    		ListIterator<SolderedPin> solderedRegRowIteratorFirst, ListIterator<SolderedPin> solderedRegRowIteratorLast) {
-    	return isAbovePartOfSolderedGate(solderedGate, solderedRegRowIteratorFirst)  &&
-    			isBelowPartOfSolderedGate(solderedGate, solderedRegRowIteratorLast);
-    }
-    
-    private boolean isAbovePartOfSolderedGate(SolderedGate solderedGate, ListIterator<SolderedPin> solderedRegRowIterator) {
-    	if (!solderedRegRowIterator.hasPrevious())
-    		return false;
-    	SolderedPin solderedPin = solderedRegRowIterator.previous();
-    	SolderedGate solderedGatePrevious = solderedPin.getSolderedGate();
-    	boolean isTheSameGate = solderedGatePrevious == solderedGate;
-    	solderedRegRowIterator.next();
-    	return isTheSameGate;
-    }
-    
-    private boolean isBelowPartOfSolderedGate(SolderedGate solderedGate, ListIterator<SolderedPin> solderedRegRowIterator) {
-    	if (!solderedRegRowIterator.hasNext())
-    		return false;
-    	SolderedPin solderedPin = solderedRegRowIterator.next();
-    	SolderedGate solderedGateNext = solderedPin.getSolderedGate();
-    	boolean isTheSameGate = solderedGateNext == solderedGate;
-    	solderedRegRowIterator.previous();
-    	return isTheSameGate;
-    }
-    
-    
-    
-    
-    
-    
-    
-	public synchronized void addColumns(int index, int amt) {
-		if(amt < 0) throw new IllegalArgumentException("Amount must be positive");
-		if(index < 0 || index > getColumns())
-			throw new IllegalArgumentException("Index must be a postive and less than or equal the size");
-    	if(amt == 0)
-    		return;
-    	
-    	notifier.sendChange(this, "addColumns", index, amt);
-		
-		
-		ListIterator<CustomLinkedList<SolderedPin>> iterator = elements.listIterator(index);
-		CustomLinkedList<SolderedPin> column;
-		for(int i = 0; i < amt; i++) {
-			column = new CustomLinkedList<SolderedPin>();
-			for(int r = 0; r < getRows(); r++)
-				column.add(mkIdent());
-			iterator.add(column);
-		}
-    	renderNotifier.sendChange(this, "addColumns", index, amt);
-	}
-	
-	
-	
-	
-	
-	
-	
-	
-	public synchronized void removeColumns(int firstIndex, int lastIndex) {
-		if(firstIndex < 0 || firstIndex > getColumns())
-			throw new IllegalArgumentException("First arg must be a postive and less than or equal the size");
-		if(lastIndex < firstIndex || lastIndex > getColumns())
-			throw new IllegalArgumentException("Last arg must be a postive and less than or equal the size");
-		if(lastIndex - firstIndex == getColumns())
-			throw new IllegalArgumentException("Columns cannot be less than 1");
-		if(firstIndex == lastIndex)
-			return;
-		
-		notifier.sendChange(this, "removeColumns", firstIndex, lastIndex);
-		
-
-		ListIterator<CustomLinkedList<SolderedPin>> iterator = elements.listIterator(firstIndex);
-		
-		for(int i = 0; i < lastIndex - firstIndex; i++) {
-			Iterator<SolderedPin> rowIterator = iterator.next().iterator();
-			
-			SolderedGate currentG = rowIterator.next().getSolderedGate();
-			while(rowIterator.hasNext()) {
-				SolderedPin currentP = rowIterator.next();
-				if(currentP.getSolderedGate() != currentG) {
-					removeFromManifest(currentG.getGateModelFormalName());
-					currentG = currentP.getSolderedGate();
-				}
-			}
-			removeFromManifest(currentG.getGateModelFormalName());
-			
-			iterator.remove();
-		}
-		
-    	renderNotifier.sendChange(this, "removeColumns", firstIndex, lastIndex);
-	}
-	
-	
-	
-	
-	public int getRows() {
-		return elements.getFirst().size();
-	}
-	
-	
-	
-	public int getColumns() {
-		return elements.size();
+    @Override
+	public Iterator<RawExportableGateData> iterator() {
+		return new ExportableGateIterator(0);
 	}
 
+	@Override
+	public int getNumberOfRegisters() {
+		if(getComputingType().isQuantum)
+			return rowTypes.countTypeAmtFrom(RowType.QUANTUM, 0, rowTypes.size());
+		else
+			return rowTypes.countTypeAmtFrom(RowType.CLASSICAL, 0, rowTypes.size());
+	}
 	
-	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public synchronized void placeGate(String gateModelFormalName, int column, Integer[] registers, String ... parameters) throws DefinitionEvaluatorException {
-		if(column < 0 || column > getColumns())
-			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
-		for(int reg : registers)
-			if(reg < 0 || reg > getRows())
-				throw new IllegalArgumentException("Register should be greater than 0 and less than circuitboard row size");
-		
-		
-		notifier.sendChange(this, "placeGate", gateModelFormalName, column, registers, parameters);
-		
-		
-		SolderedGate toPlace = new SolderedGate(addToManifest(gateModelFormalName), parameters);
-		
-		
-		ArrayList<Integer> localRegs = CollectionUtils.sortedListIndexes(registers);
-		int firstGlobalReg = registers[(localRegs.get(0))];
-		
-		ListIterator<SolderedPin> iterator = elements.get(column).listIterator(firstGlobalReg);
-		ListIterator<SolderedPin> copy = elements.get(column).iterator((CustomListIterator)iterator);
-		
-		SolderedPin firstP = iterator.next();
-		SolderedGate firstG = firstP.getSolderedGate();
-		SolderedGate lastG = firstG;
-		
-		boolean hitFirstReg = firstP instanceof SolderedRegister;
-		boolean hitLastReg = hitFirstReg;
-		boolean isWithinGate = firstP.isWithinBody();
-		
-		iterator.previous();
-		
-		int i = 0;
-		
-		
-		while (iterator.hasNext()) {
-			SolderedPin current = iterator.next();
-			
-			if(current.getSolderedGate() != lastG) {
-				if(lastG != firstG)
-					removeFromManifest(lastG.getGateModelFormalName());
-				lastG = current.getSolderedGate();
-				hitLastReg = false;
-			}
-			
-			if(current  instanceof SolderedRegister) {
-				if(lastG == firstG)
-					hitFirstReg = true;
-				hitLastReg = true;
-			}
-			
-			if(registers[localRegs.get(i)] == iterator.previousIndex()) {
-				iterator.set(new SolderedRegister(toPlace, localRegs.get(i)));
-				if(++i == localRegs.size())
-					break;
-			} else {
-				iterator.set(new SpacerPin(toPlace, true));
-			}
-		}
-		
-		
-		if(isWithinGate && !hitFirstReg && !hitLastReg) {
-			while(iterator.hasNext()) {
-				SolderedPin temp = iterator.next();
-				if(temp.getSolderedGate() == firstG)
-					iterator.set(mkIdent());
-				else break;
-			}
-			ListIterator<SolderedPin> topIterator = copy;
-			while(topIterator.hasPrevious()) {
-				SolderedPin temp = topIterator.previous();
-				if(temp.getSolderedGate() == firstG)
-					topIterator.set(mkIdent());
-				else break;
-			}
-			removeFromManifest(firstG.getGateModelFormalName());
-		} else {
-			removeBoundaryGates(firstG, lastG, hitFirstReg, hitLastReg, copy, iterator);
-		}
+	public RowTypeList getCopyOfRowTypeList() {
+		return rowTypes.deepCopy();
+	}
 
-		renderNotifier.sendChange(this, "placeGate", gateModelFormalName, column, registers, parameters);
-	}
-	
-	
-	
-	
-	
-	public synchronized void removeGate(int row, int column) {
-		if(row < 0 || row >= getRows())
-			throw new IllegalArgumentException("first arg must be a postive and less than the size");
-		if(column < 0|| column >= getColumns())
-			throw new IllegalArgumentException("last arg must be a postive and less than the size");
-		
-		notifier.sendChange(this, "removeGate", row, column);
-		
-		ListIterator<SolderedPin> iterator = elements.get(column).listIterator(row);
-		SolderedGate sg = iterator.next().getSolderedGate();
-		
-		iterator.previous();
-		
-		while(iterator.hasPrevious()) {
-			SolderedPin sp = iterator.previous();
-			if(sp.getSolderedGate() == sg)
-				iterator.set(mkIdent());
-			else break;
-		}
-		
-		while(iterator.hasNext()) {
-			SolderedPin sp = iterator.next();
-			if(sp.getSolderedGate() == sg)
-				iterator.set(mkIdent());
-			else break;
-		}
-		removeFromManifest(sg.getGateModelFormalName());
-		
-		renderNotifier.sendChange(this, "removeGate", row, column);
-	}
-	
-	
-	
-	
-	
-	
-	
-	public synchronized void placeControl(int rowControl, int rowGate, int column, boolean controlStatus) {
-		if(rowControl < 0 || rowControl >= getRows())
-			throw new IllegalArgumentException("row must be a postive and less than the size");
-		if(rowGate < 0 || rowGate >= getRows())
-			throw new IllegalArgumentException("row must be a postive and less than the size");
-		if(column < 0|| column >= getColumns())
-			throw new IllegalArgumentException("column must be a postive and less than the size");
-		
-		
-		ListIterator<SolderedPin> iterator = elements.get(column).listIterator(rowControl);
-		SolderedPin spc = iterator.next();
-		SolderedGate sgc = spc.getSolderedGate();
-		iterator.previous();
-		
-		
-		
-		SolderedGate sg = getGateAt(rowGate, column);
-		
-		if(sg.isIdentity())
-			return;
-		
-		if(sgc == sg) {
-			if(spc instanceof SolderedRegister)
-				throw new IllegalArgumentException("Gate cannot add control where a local register is currently present");
-			
-			notifier.sendChange(this, "placeControl", rowControl, rowGate, column, controlStatus);
-			
-			iterator.set(new SolderedControl(sg, spc.isWithinBody(), controlStatus));
-		} else {
-			
-			notifier.sendChange(this, "placeControl", rowControl, rowGate, column, controlStatus);
-			
-			SolderedGate currentGate = sgc;
-			boolean remove = spc instanceof SolderedRegister;
-			
-			if(rowControl - rowGate > 0) {
-				iterator.set(new SolderedControl(sg, false, controlStatus));
-				
-				while (iterator.hasPrevious()) {
-					SolderedPin current = iterator.previous();
-					
-					if(current.getSolderedGate() != currentGate) {
-						if(currentGate != sgc)
-							removeFromManifest(currentGate.getGateModelFormalName());
-						currentGate = current.getSolderedGate();
-					}
-					
-					if(currentGate == sg)
-						break;
-					if(currentGate == sgc && current instanceof SolderedRegister)
-						remove = true;
-					iterator.set(new SpacerPin(sg, false));
-				}
-				
-				removeBoundaryGates(currentGate, sgc, false, remove, null, 
-						elements.get(column).listIterator(rowControl + 1));
-			} else {
-				iterator.next();
-				iterator.set(new SolderedControl(sg, false, controlStatus));
-				
-				while (iterator.hasNext()) {
-					SolderedPin current = iterator.next();
-					
-					if(current.getSolderedGate() != currentGate) {
-						if(currentGate != sgc)
-							removeFromManifest(currentGate.getGateModelFormalName());
-						currentGate = current.getSolderedGate();
-					}
-					
-					if(currentGate == sg)
-						break;
-					if(currentGate == sgc && current instanceof SolderedRegister)
-						remove = true;
-					iterator.set(new SpacerPin(sg, false));
-				}
-				
-				removeBoundaryGates(sgc, currentGate, remove, false, 
-						elements.get(column).listIterator(rowControl), null);
-			}
-		}
-		
-		renderNotifier.sendChange(this, "placeControl", rowControl, rowGate, column, controlStatus);
-	}
-	
-	
-	
-	
-	public synchronized void removeControl(int row, int column) {
-		if(row < 0 || row >= getRows())
-			throw new IllegalArgumentException("row must be a postive and less than the size");
-		if(column < 0|| column >= getColumns())
-			throw new IllegalArgumentException("column must be a postive and less than the size");
-		
-		
-		
-		ListIterator<SolderedPin> iterator = elements.get(column).listIterator(row);
-		SolderedPin sp = iterator.next();
-		SolderedGate sg = sp.getSolderedGate();
-		iterator.previous();
-		
-		if(!(sp instanceof SolderedControl))
-			throw new IllegalArgumentException("There is no control at (row, column): (" + row + ", " + column + " )");
-		
-		
-		notifier.sendChange(this, "removeControl", row, column);
-		
-		
-		boolean checkAbove, checkBelow;
-		
-		SolderedPin prev = null;
-		
-		if(iterator.hasPrevious()) {
-			prev = iterator.previous();
-			checkAbove = prev.getSolderedGate() == sg;
-			iterator.next();
-		} else {
-			checkAbove = false;
-		}
-		
-		SolderedPin next = iterator.next();
-		checkBelow = next.getSolderedGate() == sg;
-		iterator.previous();
-		
-		if(checkAbove && checkBelow) {
-			iterator.next();
-			iterator.set(new SpacerPin(sg, prev.isWithinBody() && next.isWithinBody() ));
-		} else if (checkAbove) {
-			iterator.set(mkIdent());
-			while (iterator.hasPrevious()) {
-				prev = iterator.previous();
-				if(prev instanceof SpacerPin)
-					iterator.set(mkIdent());
-				else
-					break;
-			}
-			
-		} else if (checkBelow) {
-			while (iterator.hasNext()) {
-				next = iterator.next();
-				if(next instanceof SpacerPin)
-					iterator.set(mkIdent());
-				else
-					break;
-			}
-		}
-		
-
-		renderNotifier.sendChange(this, "removeControl", row, column);
-		
-	}
-	
-	
-	
-	
-	
-	public SolderedGate getGateAt(int row, int column) {
-		return elements.get(column).get(row).getSolderedGate();
-	}
-	
-	
-	
-	public SolderedPin getSolderPinAt(int row, int column) {
-		return elements.get(column).get(row);
-	}
-	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public Pair<Integer, Integer> getSolderedGateBodyBounds(int row, int column) {
-		CustomLinkedList<SolderedPin> list = elements.listIterator(column).next();
-		ListIterator<SolderedPin> solderedPins = list.listIterator(row);
-		ListIterator<SolderedPin> copy = list.iterator((CustomListIterator) solderedPins);
-		SolderedPin spS = solderedPins.next();
-		SolderedGate spG = spS.getSolderedGate();
-		solderedPins.previous();
-		
-		int top = 0, bot = 0;
-		
-		if(spS.isWithinBody()) {
-			top = row;
-			while(solderedPins.hasPrevious()) {
-				SolderedPin sp = solderedPins.previous();
-				if(sp.getSolderedGate() == spG && sp.isWithinBody())
-					top--;
-				else
-					break;
-			}
-			bot = row;
-			while(copy.hasNext()) {
-				SolderedPin sp = copy.next();
-				if(sp.getSolderedGate() == spG && sp.isWithinBody())
-					bot++;
-				else
-					break;
-			}
-		} else {
-			
-			boolean hitTop = false;
-			
-			while(solderedPins.hasPrevious()) {
-				SolderedPin sp = solderedPins.previous();
-				if(sp.getSolderedGate() != spG)
-					break;
-				if(sp.isWithinBody()) {
-					hitTop = true;
-					break;
-				}
-			}
-			
-			if(hitTop) {
-				bot = solderedPins.nextIndex() + 1;
-				top = bot - 1;
-				while(solderedPins.hasPrevious()) {
-					SolderedPin sp = solderedPins.previous();
-					if(sp.getSolderedGate() == spG && sp.isWithinBody())
-						top--;
-					else
-						break;
-				}
-			} else {
-				while(copy.hasNext()) {
-					SolderedPin sp = copy.next();
-					if(sp.isWithinBody())
-						break;
-				}
-				top = copy.previousIndex();
-				bot = top + 1;
-				while(copy.hasNext()) {
-					SolderedPin sp = copy.next();
-					if(sp.getSolderedGate() == spG && sp.isWithinBody())
-						bot++;
-					else
-						break;
-				}
-			}
-		}
-		return new Pair<Integer, Integer> (top, bot);
-	}
-	
-	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private Pair<Boolean, ListIterator<SolderedPin>> getSolderedBodyDirection(SolderedGate sg, CustomListIterator top, CustomListIterator bottom) {
-		ListIterator<SolderedPin> outIterator = null;
-		
-		top = top.mkCopy();
-		bottom = bottom.mkCopy();
-		
-		while(top.hasPrevious()) {
-			SolderedPin sp = (SolderedPin) top.previous();
-			if(sp.getSolderedGate() != sg)
-				break;
-			if(sp instanceof SolderedControl && outIterator == null)
-				outIterator = top.mkCopy();
-			
-			if(sp.isWithinBody())
-				return new Pair<>(true, outIterator == null? 
-						(ListIterator<SolderedPin>) top.mkCopy() : outIterator);
-		}
-		
-		outIterator = null;
-		
-		while(bottom.hasNext()) {
-			SolderedPin sp = (SolderedPin) bottom.next();
-			if(sp.getSolderedGate() != sg)
-				break;
-			if(sp instanceof SolderedControl && outIterator == null)
-				outIterator = bottom.mkCopy();
-			if(sp.isWithinBody())
-				return new Pair<>(false, outIterator == null? 
-						(ListIterator<SolderedPin>) bottom.mkCopy() : outIterator);
-		}
-		return null;
-	}
-	
-	
 	@Override
 	public String getExtString() {
 		return CIRCUIT_BOARD_EXTENSION;
 	}
-	
-	
-	@Override
-	public CircuitBoardIterator iterator() {
-		return new CircuitBoardIterator(0);
-	}
-	
-	
-	@Override
-	public int getNumberOfRegisters() {
-		return getRows();
-	}
-	
-	
-	public void setReciever(Notifier reciever) {
-		this.notifier.setReceiver(reciever);
-	}
-	
-	
-	public Notifier getNotifier() {
-		return notifier;
-	}
-	
-	public void setRenderEventHandler(ReceivedEvent re) {
-		this.renderNotifier.setReceivedEvent(re);
-	}
-	
-	
-	public class CircuitBoardIterator implements Iterator<RawExportableGateData> {
-		private Iterator<CustomLinkedList<SolderedPin>> columns;
-		private CustomLinkedList<SolderedPin> rowList;
-		private ListIterator<SolderedPin> rows;
-		private ListIterator<SolderedPin> lookAhead;
-		private int r, c;
-		private int gateRowBodyStart, gateRowBodyEnd;
-		
-		public CircuitBoardIterator(int index) {
-			columns = elements.listIterator(index);
-			c = index - 1;
-			nextColumn();
-		}
-		
-		@Override
-		public boolean hasNext() {
-			return lookAhead.hasNext() || columns.hasNext();
-		}
-		
-		@SuppressWarnings({ "rawtypes", "unchecked" })
-		@Override
-		public RawExportableGateData next() {
-			if(!lookAhead.hasNext())
-				nextColumn();
-			rows = rowList.iterator((CustomListIterator)lookAhead);
-			
-			
-			SolderedPin sp = lookAhead.next();
-			
-			SolderedGate sg = sp.getSolderedGate();
-			SolderedGate current = sg;
-			
-			LinkedList<Control> controls = new LinkedList<>();
-			LinkedList<Integer> underneathIdentityGates = new LinkedList<>();
-			Hashtable<Integer, Integer> registers = new Hashtable<>();
-			
-			gateRowBodyStart = -1;
-			gateRowBodyEnd = -1;
-			
-			incrRowAndAddData(sp, controls, underneathIdentityGates, registers);
-			
-			int gateRowSpaceStart = r;
-			
-			boolean hitNoRowEnd;
-			while (hitNoRowEnd = lookAhead.hasNext()) {
-				sp = lookAhead.next();
-				if(sp.getSolderedGate() != current)
-					break;
-				incrRowAndAddData(sp, controls, underneathIdentityGates, registers);
-			}
-			
-			if(hitNoRowEnd)
-				lookAhead.previous();
-			
-			return new RawExportableGateData(current, registers, controls, underneathIdentityGates,
-					gateRowSpaceStart, r, gateRowBodyStart, gateRowBodyEnd, c);
-		}
-		
-		
-		
-		private void incrRowAndAddData(SolderedPin sp, LinkedList<Control> controls, 
-				LinkedList<Integer> underneathIdentityGates, Hashtable<Integer, Integer> registers) {
-			
-			r++;
-			if(sp instanceof SolderedControl) {
-				controls.offer(new Control(r, ((SolderedControl) sp).getControlStatus()));
-			} else if (sp instanceof SolderedRegister) {
-				int pinNumber = ((SolderedRegister) sp).getSolderedGatePinNumber();
-				registers.put(pinNumber, r);
-				if(gateRowBodyStart == -1)
-					gateRowBodyStart = r;
-				gateRowBodyEnd = r;
-			} else {
-				if(gateRowBodyStart != -1 && gateRowBodyEnd == -1)
-					underneathIdentityGates.offer(r);
-			}
-		}
-		
-		private void nextColumn() {
-			rowList = columns.next();
-			lookAhead = rowList.listIterator();
-			c++;
-			r = -1;
-		}
-		
-		@SuppressWarnings({ "rawtypes", "unchecked" })
-		public ListIterator<SolderedPin> iteratorAtStart() {
-			return rowList.iterator((CustomListIterator)rows);
-		}
-		
-		@SuppressWarnings({ "rawtypes", "unchecked" })
-		public ListIterator<SolderedPin> iteratorAtEnd() {
-			return rowList.iterator((CustomListIterator)rows);
-		}
-		
-		@Override
-		public void remove() {
-			
-			notifier.sendChange(this, "remove");
-			
-			SolderedGate sg = null;
-			ListIterator<SolderedPin> iterator = iteratorAtStart();
-			
-
-			while (iterator.nextIndex() != r) {
-				sg = iterator.next().getSolderedGate();
-				iterator.set(mkIdent());
-			}
-			removeFromManifest(sg.getGateModelFormalName());
-			
-			renderNotifier.sendChange(this, "remove");
-		}
-	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	@SuppressWarnings("rawtypes")
-	private SolderedRegister mkIdent() {
-		
-		ManifestObject mo = presetGatesUsed.add(PresetGateType.IDENTITY.getModel().getFormalName());
-		
-		try {
-			return new SolderedRegister(new SolderedGate(mo), 0);
-		} catch (DefinitionEvaluatorException e) {
-			AppAlerts.showJavaExceptionMessage(AppStatus.get().getPrimaryStage(), "Program Crashed", "Could not make Identity Gate", e);
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return null;
-	}
-	
-	
-	
-	@SuppressWarnings("rawtypes")
-	private ManifestObject addToManifest(String gateModel) {
-		Project p = AppStatus.get().getFocusedProject();
-		GateModel gm = p.getGateModel(gateModel);
-		
-		if(gm instanceof CircuitBoardModel) {
-			if(((CircuitBoardModel) gm).findRecursion(p, getFormalName()))
-				throw new RecursionException();
-			return circuitBoardsUsed.add(gateModel); 
-		} else if (gm instanceof BasicGateModel) {
-			if(gm.isPreset())
-				return presetGatesUsed.add(gm.getFormalName());
-			else
-				return defaultGatesUsed.add(gm.getFormalName());
-		} else if (gm instanceof OracleModel) {
-			return oraclesUsed.add(gm.getFormalName());
-		}
-		return null;
-	}
-	
-	
-	public void assertNoRecursion(String gateModelName) {
-		Project p = AppStatus.get().getFocusedProject();
-		GateModel gm = p.getGateModel(gateModelName);
-		
-		if(gm != null) {
-			if(!(gm instanceof CircuitBoardModel))
-				return;
-			if(((CircuitBoardModel) gm).findRecursion(p, getFormalName()))
-				throw new RecursionException();
-		} else { 
-			throw new NullPointerException("Circuit Board \"" + gateModelName + "\" is not within the project.");
-		}
-	}
-	
-	private boolean findRecursion(Project p, String circuitBoardName) {
-		if(getFormalName().equals(circuitBoardName))
-			return true;
-		
-		if(circuitBoardsUsed.contains(circuitBoardName)) {
-			return true;
-		} else {
-			for(String usedB : circuitBoardsUsed.getElements()) {
-				CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(usedB);
-				if(cb.findRecursion(p, circuitBoardName)) return true;
-			}
-		}
-		return false;
-	}
-	
-	
-	private void removeFromManifest(String gateModel) {
-		Project p = AppStatus.get().getFocusedProject();
-		GateModel gm = p.getGateModel(gateModel);
-		
-		if(gm instanceof CircuitBoardModel) {
-			circuitBoardsUsed.remove(gateModel); 
-		} else if (gm instanceof BasicGateModel) {
-			if(gm.isPreset())
-				presetGatesUsed.remove(gm.getFormalName());
-			else
-				defaultGatesUsed.remove(gm.getFormalName());
-		} else if (gm instanceof OracleModel) {
-			oraclesUsed.remove(gm.getFormalName());
-		}
-	}
-	
-	
-	
-	
-	@SuppressWarnings("rawtypes")
-	private void removeBoundaryGates (SolderedGate firstG, SolderedGate lastG, 
-			boolean hitFirstReg, boolean hitLastReg, 
-			ListIterator<SolderedPin> firstIt, ListIterator<SolderedPin> lastIt) {
-		
-		boolean diffGates = firstG != lastG;
-		boolean sameGateNoRegs = false;
-		
-		if(hitFirstReg) {
-			while(firstIt.hasPrevious()) {
-				SolderedPin sp = firstIt.previous();
-				if(sp.getSolderedGate() == firstG)					
-					firstIt.set(mkIdent());
-				else
-					break;
-			}
-			removeFromManifest(firstG.getGateModelFormalName());
-		} else if (firstIt != null) {
-			if(diffGates) {
-				while(firstIt.hasPrevious()) {
-					SolderedPin sp = firstIt.previous();
-					if(!(sp instanceof SolderedControl) && sp instanceof SpacerPin && sp.getSolderedGate() == firstG)					
-						firstIt.set(mkIdent());
-					else
-						break;
-				}
-			} else {
-				sameGateNoRegs = true;
-			}
-		}
-		
-		if(hitLastReg) {
-			while(lastIt.hasNext()) {
-				SolderedPin sp = lastIt.next();
-				if(sp.getSolderedGate() == lastG)					
-					lastIt.set(mkIdent());
-				else
-					break;
-			}
-			if(diffGates)
-				removeFromManifest(lastG.getGateModelFormalName());
-		} else if (lastIt != null) {
-			if(diffGates) {
-				while(lastIt.hasNext()) {
-					SolderedPin sp = lastIt.next();
-					if(!(sp instanceof SolderedControl) && sp instanceof SpacerPin && sp.getSolderedGate() == lastG)					
-						lastIt.set(mkIdent());
-					else
-						break;
-				}
-			} else {
-				sameGateNoRegs = true;
-			}
-		}
-		
-		if(sameGateNoRegs) {
-			Pair<Boolean, ListIterator<SolderedPin>> out = 
-					getSolderedBodyDirection(firstG, (CustomListIterator) firstIt, (CustomListIterator) lastIt);
-			
-			ListIterator<SolderedPin> outPins = out.second();
-			
-			if(out.first()) {
-				outPins.next();
-				while(outPins.hasNext()) {
-					SolderedPin sp = outPins.next();
-					if(sp.getSolderedGate() == firstG)					
-						outPins.set(mkIdent());
-					else
-						break;
-				}
-				while(lastIt.hasNext()) {
-					SolderedPin sp = lastIt.next();
-					if(sp.getSolderedGate() == firstG)					
-						lastIt.set(mkIdent());
-					else
-						break;
-				}
-			} else {
-				outPins.previous();
-				while(outPins.hasPrevious()) {
-					SolderedPin sp = outPins.previous();
-					if(sp.getSolderedGate() == firstG)					
-						outPins.set(mkIdent());
-					else
-						break;
-				}
-				while(firstIt.hasPrevious()) {
-					SolderedPin sp = firstIt.previous();
-					if(sp.getSolderedGate() == firstG)					
-						firstIt.set(mkIdent());
-					else
-						break;
-				}
-			}
-		}
-	}
-	
-	
 
 	@Override
-	public CircuitBoardModel shallowCopyToNewName(String name, String symbol, String description, String ... parameters) {
-		
-		return new CircuitBoardModel(name, symbol, description, parameters, this);
+	public GateModel shallowCopyToNewName(String location, String name, String symbol, String description, GateComputingType computingType,
+			String... parameters) {
+		return new CircuitBoardModel(location, name, symbol, description, computingType, parameters, this);
 	}
 	
-	public CircuitBoardModel createDeepCopyToNewName(String name, String symbol, String description, String ... parameters) {
-		CustomLinkedList<CustomLinkedList<SolderedPin>> temp = new CustomLinkedList<>();
+	
+	public CircuitBoardModel createDeepCopyToNewName(String locationString, String name, String symbol, String description, GateComputingType computingType, String ... parameters) {
+		LinkedList<LinkedList<SolderedPin>> temp = new LinkedList<>();
 		
-		for(CustomLinkedList<SolderedPin> columns : elements) {
-			CustomLinkedList<SolderedPin> tempColumn = new CustomLinkedList<>();
+		for(LinkedList<SolderedPin> columns : elements) {
+			LinkedList<SolderedPin> tempColumn = new LinkedList<>();
 			
 			for(SolderedPin sp : columns)
 				tempColumn.addLast(sp);
 			temp.addLast(tempColumn);
 		}
 		
-		return new CircuitBoardModel(name, symbol, description, parameters, temp, circuitBoardsUsed.deepCopy(), 
-				defaultGatesUsed.deepCopy(), presetGatesUsed.deepCopy(), oraclesUsed.deepCopy());
+		return new CircuitBoardModel(locationString, name, symbol, description, computingType, parameters, temp, gateModelsUsed.deepCopy(), rowTypes.deepCopy());
 	}
 	
 	
-	@SuppressWarnings("serial")
-	public class RecursionException extends RuntimeException {
-		private RecursionException() {
-			super("The circuit board \"" + getName() + "\" makes circuit board \"" + getName() + "\" recusively defined");
+//	---------------------------------------------------------------------------------------------------------------------
+    
+	public synchronized void removeLinksAndControls(int row, int column, boolean removeInputLink, boolean removeControl, boolean removeOutputLink) {
+		if(column < 0 || column > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(row < 0 || row > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+		SolderedPin sp = getSolderedPinAt(row, column);
+		if(sp instanceof SolderedRegister)
+			throw new IllegalArgumentException("The chosen location to remove is a gate register and neither controls nor links reside there");
+		if(removeControl && !(sp instanceof SolderedControlPin))
+			throw new IllegalArgumentException("The chosen location to remove has no controls");
+		SpacePin spacePin = (SpacePin) sp;
+		if(removeInputLink && !spacePin.isInputLinked())
+			throw new IllegalArgumentException("The chosen location to remove has no input Links");
+		if(removeOutputLink && !spacePin.isOutputLinked())
+			throw new IllegalArgumentException("The chosen location to remove has no output Links");
+		
+		notifier.sendChange(this, "removeLinksAndControls", row, column, removeControl, removeInputLink, removeOutputLink);
+    	Action removeLinksAndControls = removeLinksAndControlsAction(row, column, removeControl, removeInputLink, removeOutputLink);
+    	doAction(removeLinksAndControls);
+    	renderNotifier.sendChange(this, "removeLinksAndControls", row, column, removeControl, removeInputLink, removeOutputLink);
+	}
+	
+	
+	public synchronized void removeAllOccurrences(String oldGateLocationString) {
+		String[] parts = oldGateLocationString.split("\\.");
+		
+		String identityLocation = PresetGateType.IDENTITY.getModel().getLocationString();
+		
+		if(parts.length == 2 && !oldGateLocationString.equals(identityLocation)) {
+        	notifier.sendChange(this, "removeAllOccurrences", oldGateLocationString);
+        	Action removeAllOccurrences = removeAllOccurrencesAction(oldGateLocationString);
+        	doAction(removeAllOccurrences);
+        	renderNotifier.sendChange(this, "removeAllOccurrences", oldGateLocationString);
+    	}
+	}
+	
+	public synchronized void changeAllOccurrences(String oldGateLocationString, String newGateLocationString) {
+    	String[] parts = oldGateLocationString.split("\\.");
+    	
+    	if(parts.length == 2 && newGateLocationString.endsWith("." + parts[1])) {
+        	notifier.sendChange(this, "changeAllOccurrences", oldGateLocationString, newGateLocationString);
+        	Action changeAllOccurances = changeAllOccurrencesAction(oldGateLocationString, newGateLocationString);
+        	doAction(changeAllOccurances);
+        	renderNotifier.sendChange(this, "changeAllOccurrences", oldGateLocationString, newGateLocationString);
+    	}
+    }
+    
+    public synchronized void placeGate(String gateModelLocationString, int column, int[] localToGlobalRegs, String ... parameters) throws DefinitionEvaluatorException {
+    	Project p = AppStatus.get().getFocusedProject();
+    	GateModel gm = p.getGateModel(gateModelLocationString);
+    	if(gm == null)
+    		throw new IllegalArgumentException("Gate: \"" + gateModelLocationString + "\"does not exist");
+    	
+    	GateComputingType computingType = gm.getComputingType();
+    	
+    	if(column < 0 || column > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	
+    	int arbitraryGlobalReg = localToGlobalRegs[0];
+    	if(arbitraryGlobalReg < 0 || arbitraryGlobalReg > getRows())
+			throw new IllegalArgumentException("Gate register should be greater than 0 and less than circuitboard row size");
+    	
+    	RowType rowType = rowTypes.getTypeAtRow(arbitraryGlobalReg);
+    	RowType chosenType;
+    	if(rowType == RowType.SPACE) {
+			throw new IllegalArgumentException("Register can not be placed on an empty row");
+    	} else if(rowType == RowType.QUANTUM) {
+    		if(!computingType.isQuantum())
+    			throw new IllegalArgumentException("Gate that is not a quantum operation is placed on quantum registers");
+    		chosenType = RowType.QUANTUM;
+    	} else {
+    		if(!computingType.isClassical())
+    			throw new IllegalArgumentException("Gate that is not a classical operation is placed on classical registers");
+    		chosenType = RowType.CLASSICAL;
+    	}
+    	
+    	for(int reg : localToGlobalRegs) {
+			if(reg < 0 || reg > getRows())
+				throw new IllegalArgumentException("Gate register should be greater than 0 and less than circuitboard row size");
+			rowType = rowTypes.getTypeAtRow(reg);
+			if(rowType == RowType.SPACE)
+				throw new IllegalArgumentException("Gate register can not be placed on an empty row");
+			else if (rowType != chosenType) 
+				throw new IllegalArgumentException("Gate is placed on both quantum registers and classical registers");
+		}
+    	
+		GroupDefinition parameterSet = InputDefinitions.evaluateInput(this, parameters);
+    	
+		notifier.sendChange(this, "placeGate", gateModelLocationString, column, localToGlobalRegs, parameters);
+		Action addGate = addGateAction(gateModelLocationString, column, localToGlobalRegs, parameterSet);
+    	doAction(addGate);
+    	renderNotifier.sendChange(this, "placeGate", gateModelLocationString, column, localToGlobalRegs, parameters);
+    }
+    
+    
+    public synchronized void removeGate(int rowSpace, int columnSpace) {
+    	if(columnSpace < 0 || columnSpace > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(rowSpace < 0 || rowSpace > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	RowType rowType = rowTypes.getTypeAtRow(rowSpace);
+    	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
+    	SolderedGate sg = sp.getSolderedGate();
+    	if(rowType == RowType.SPACE && sg.isIdentity())
+			throw new IllegalArgumentException("Cannot remove gate on an empty row");
+    	
+    	if(!sp.getSolderedGate().isIdentity()) {
+    		notifier.sendChange(this, "removeGate", rowSpace, columnSpace);
+    		doAction(removeEntireGateAction(rowSpace, columnSpace));
+    		renderNotifier.sendChange(this, "removeGate", rowSpace, columnSpace);
+    	}
+    }
+    
+    public synchronized void placeControl(int rowControl, int rowSpace, int columnSpace, boolean controlStatus) {
+    	if(columnSpace < 0 || columnSpace > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(rowControl < 0 || rowControl > getRows() || rowSpace < 0 || rowSpace > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	RowType controlRowType = rowTypes.getTypeAtRow(rowControl);
+    	if(controlRowType == RowType.SPACE)
+			throw new IllegalArgumentException("Control can not be placed on an empty row");
+		RowType rowType = rowTypes.getTypeAtRow(rowSpace);
+    	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
+    	SolderedGate sg = sp.getSolderedGate();
+    	if(rowType == RowType.SPACE && sg.isIdentity())
+			throw new IllegalArgumentException("Control can not be attached on an empty row");
+    	int regRow = getArbitraryGateRegisterLocation(rowSpace, columnSpace);
+    	RowType gateType = rowTypes.getTypeAtRow(regRow);
+    	if(controlRowType == RowType.QUANTUM && gateType == RowType.CLASSICAL)
+    		throw new IllegalArgumentException("A quantum control cannot be attached to a classical gate");
+		sp = getSolderedPinAt(rowControl, columnSpace);
+    	if(sp.getSolderedGate() == sg && sp instanceof SolderedRegister)
+			throw new IllegalArgumentException("Control can not be attached to a register of the attaching gate");
+    	String gateLocationString = sg.getGateModelLocationString();
+    	GateModel gm = AppStatus.get().getFocusedProject().getGateModel(gateLocationString);
+		if(gm == null)
+			throw new IllegalArgumentException("Gate: \"" + gateLocationString + "\"does not exist");
+		
+    	notifier.sendChange(this, "placeControl", rowControl, rowSpace, columnSpace, controlStatus);
+    	Action action = addControlAction(rowControl, rowSpace, columnSpace, controlStatus);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "placeControl", rowControl, rowSpace, columnSpace, controlStatus);
+    }
+    
+    public synchronized void removeControl(int rowControl, int columnControl) {
+    	if(columnControl < 0 || columnControl > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(rowControl < 0 || rowControl > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	
+    	SolderedPin sp = getSolderedPinAt(rowControl, columnControl);
+    	
+    	if(sp instanceof SolderedControlPin) {
+	    	notifier.sendChange(this, "removeControl", rowControl, columnControl);
+	    	Action action = removeControlPinAction(rowControl, columnControl);
+	    	doAction(action);
+	    	renderNotifier.sendChange(this, "removeControl", rowControl, columnControl);
+    	}
+    	
+    	throw new IllegalArgumentException("No link is at the specified location");
+    }
+    
+    
+    public synchronized void placeInputLink(int rowLink, int rowSpace, int columnSpace, int inputLinkReg) {
+    	if(columnSpace < 0 || columnSpace > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(rowLink < 0 || rowLink > getRows() || rowSpace < 0 || rowSpace > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+		
+    	
+    	RowType rowType = rowTypes.getTypeAtRow(rowLink);
+    	if(rowType == RowType.SPACE)
+			throw new IllegalArgumentException("Input link can not be placed on an empty row");
+    	if(rowType == RowType.QUANTUM)
+			throw new IllegalArgumentException("Input link can not be placed on an quantum register");
+    	rowType = rowTypes.getTypeAtRow(rowSpace);
+    	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
+    	SolderedGate sg = sp.getSolderedGate();
+    	if(rowType == RowType.SPACE && sg.isIdentity())
+			throw new IllegalArgumentException("Input link can not be attached on an empty row");
+    	int regRow = getArbitraryGateRegisterLocation(rowSpace, columnSpace);
+    	RowType gateType = rowTypes.getTypeAtRow(regRow);
+    	if(gateType == RowType.CLASSICAL)
+    		throw new IllegalArgumentException("Input link can not be attached to an already classical gate");
+		sp = getSolderedPinAt(rowLink, columnSpace);
+    	if(sp.getSolderedGate() == sg && sp instanceof SolderedRegister)
+			throw new IllegalArgumentException("Input link can not be attached on a register of the attaching gate");
+		
+		AppStatus status = AppStatus.get();
+		Project project = status.getFocusedProject();
+		String gateModelLocationString = sg.getGateModelLocationString();
+		GateModel gm = project.getGateModel(gateModelLocationString);
+		
+		if(gm == null)
+			throw new IllegalArgumentException("Gate Model: \"" + gateModelLocationString + "\" does not exist within the project");
+		if(gm instanceof BasicGateModel)
+			throw new IllegalArgumentException("Cannot place classical input registers onto non-circuitBoard gates");
+		
+		
+		int outputReg = -1;
+		OutputLinkType type = OutputLinkType.CLASSICAL_LINK;
+		if(sp instanceof SpacePin && sp.getSolderedGate() == sg) {
+			SpacePin spacePin = (SpacePin) sp;
+			outputReg = spacePin.getInputReg();
+			type = spacePin.getOutputLinkType();
+		}
+		
+    	notifier.sendChange(this, "placeInputLink", rowLink, rowSpace, columnSpace, inputLinkReg);
+    	Action action = addLinkAction(rowLink, rowSpace, columnSpace, inputLinkReg, type, outputReg);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "placeInputLink", rowLink, rowSpace, columnSpace, inputLinkReg);
+    }
+    
+    
+    public synchronized void placeOutputLink(int rowLink, int rowSpace, int columnSpace, OutputLinkType outputLinkType, int outputLinkReg) {
+    	if(columnSpace < 0 || columnSpace > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(rowLink < 0 || rowLink > getRows() || rowSpace < 0 || rowSpace > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	RowType rowType = rowTypes.getTypeAtRow(rowLink);
+    	if(rowType == RowType.SPACE)
+			throw new IllegalArgumentException("Output link can not be placed on an empty row");
+    	if(rowType == RowType.QUANTUM)
+			throw new IllegalArgumentException("Output link can not be placed on an quantum register");
+		rowType = rowTypes.getTypeAtRow(rowSpace);
+    	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
+		SolderedGate sg = sp.getSolderedGate();
+    	if(rowType == RowType.SPACE && sg.isIdentity())
+			throw new IllegalArgumentException("Output link can not be attached on an empty row");
+    	int regRow = getArbitraryGateRegisterLocation(rowSpace, columnSpace);
+    	RowType gateType = rowTypes.getTypeAtRow(regRow);
+    	if(gateType == RowType.CLASSICAL)
+    		throw new IllegalArgumentException("Output link can not be attached to an already classical gate");
+		sp = getSolderedPinAt(rowLink, columnSpace);
+    	if(sp.getSolderedGate() == sg && sp instanceof SolderedRegister)
+			throw new IllegalArgumentException("Output link can not be attached on a register of the attaching gate");
+    	
+		AppStatus status = AppStatus.get();
+		Project project = status.getFocusedProject();
+		String gateModelLocationString = sg.getGateModelLocationString();
+		GateModel gm = project.getGateModel(gateModelLocationString);
+		
+		if(gm == null)
+			throw new IllegalArgumentException("Gate Model: \"" + gateModelLocationString + "\" does not exist within the project");
+		if(gm instanceof BasicGateModel) {
+			BasicGateModel bgm = (BasicGateModel) gm;
+			if(bgm.getGateModelType() != BasicGateModelType.POVM && bgm.getGateModelType() != BasicGateModelType.KRAUS_OPERATORS)
+				throw new IllegalArgumentException("Cannot place output classical registers from non-circuitboard or non-measurement gates");
+		}
+		
+		int inputReg = -1;
+		if(sp instanceof SpacePin && sp.getSolderedGate() == sg) {
+			SpacePin spacePin = (SpacePin) sp;
+			inputReg = spacePin.getInputReg();
+		}
+		
+		notifier.sendChange(this, "placeOutputLink", rowLink, rowSpace, columnSpace, outputLinkType, outputLinkReg);
+    	Action action = addLinkAction(rowLink, rowSpace, columnSpace, inputReg, outputLinkType, outputLinkReg);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "placeOutputLink", rowLink, rowSpace, columnSpace, outputLinkType, outputLinkReg);
+    }
+    
+    public synchronized void removeLink(int rowLink, int columnLink, boolean output) {
+    	if(columnLink < 0 || columnLink > getColumns())
+    		throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+		if(rowLink < 0 || rowLink > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	SolderedPin sp = getSolderedPinAt(rowLink, columnLink);
+    	
+    	if(!(sp instanceof SolderedRegister)) {
+    		SpacePin spacePin = (SpacePin) sp;
+    		if(output? spacePin.isOutputLinked() : spacePin.isInputLinked()) {
+	    		notifier.sendChange(this, "removeLink", rowLink, columnLink, output);
+	        	Action action = removeLinkPinAction(rowLink, columnLink, output);
+	        	doAction(action);
+	        	renderNotifier.sendChange(this, "removeLink", rowLink, columnLink, output);
+    		}
+    	}
+    	throw new IllegalArgumentException("No link is at the specified location");
+    }
+    
+    public synchronized void removeRows(int rowStartInclusize, int rowEndExclusive) {
+    	if(rowStartInclusize < 0 || rowStartInclusize > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	if(rowStartInclusize >= rowEndExclusive)
+    		throw new IllegalArgumentException("Row range should be greater than 0");
+    	GateComputingType computingType = getComputingType();
+    	RowType rowType = computingType == GateComputingType.CLASSICAL? RowType.CLASSICAL : RowType.QUANTUM;
+    	int typeAmtInRange = rowTypes.countTypeAmtFrom(rowType, rowStartInclusize, rowEndExclusive);
+    	int totalAmt = rowTypes.countTypeAmtFrom(rowType, 0, getRows());
+    	
+    	if(totalAmt - typeAmtInRange <= 0) {
+    		if (computingType == GateComputingType.CLASSICAL)
+    			throw new IllegalArgumentException("There should be at least one classical register");
+    		else 
+    			throw new IllegalArgumentException("There should be at least one quantum register");
+    	}
+    		
+    	notifier.sendChange(this, "removeRows", rowStartInclusize, rowEndExclusive);
+    	Action action = removeRowsAction(rowStartInclusize, rowEndExclusive);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "removeRows", rowStartInclusize, rowEndExclusive);
+    }
+    
+    public synchronized void removeColumns(int columnStartInclusize, int columnEndExclusive) {
+    	if(columnStartInclusize < 0 || columnEndExclusive > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	if(columnStartInclusize >= columnEndExclusive)
+    		throw new IllegalArgumentException("Column range should be greater than 0");
+    	
+    	int columnsRemoved = columnEndExclusive - columnStartInclusize;
+    	
+    	if(getColumns() - columnsRemoved < 1 )
+    		throw new IllegalArgumentException("There should be at least one column");
+    	
+    	notifier.sendChange(this, "removeColumns", columnStartInclusize, columnEndExclusive);
+    	Action action = removeColumnsAction(columnStartInclusize, columnEndExclusive);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "removeColumns", columnStartInclusize, columnEndExclusive);
+    }
+    
+    public synchronized void addRows(int rowToAdd, int amt, RowType rowType) {
+    	if(rowToAdd < 0 || rowToAdd > getRows())
+			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	if(amt < 1)
+    		throw new IllegalArgumentException("The amt of rows to add must be greater than 0");
+    	GateComputingType computingType = getComputingType();
+    	if(computingType == GateComputingType.CLASSICAL && rowType == RowType.QUANTUM)
+    		throw new IllegalArgumentException("Cannot add quantum registers to a classical circuitboard");
+    	
+    	notifier.sendChange(this, "addRows", rowToAdd, amt, rowType);
+    	Action action = addRowsAction(rowToAdd, amt, rowType);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "addRows", rowToAdd, amt, rowType);
+    }
+    
+    public synchronized void addColumns(int columnToAdd, int amt) {
+    	if(columnToAdd < 0 || columnToAdd > getColumns())
+			throw new IllegalArgumentException("Columns should be greater than 0 and less than circuitboard column size");
+    	if(amt < 1)
+    		throw new IllegalArgumentException("The amt of columns to add must be greater than 0");
+    	
+    	notifier.sendChange(this, "addColumns", columnToAdd, amt);
+    	Action action = addColumnsAction(columnToAdd, amt);
+    	doAction(action);
+    	renderNotifier.sendChange(this, "addColumns", columnToAdd, amt);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+//  ---------------------------------------------------------------------------
+    
+    private Action removeLinksAndControlsAction(int row, int column, boolean removeControl, boolean removeInputLink, boolean removeOutputLink) {
+    	Action action = new MultipleAction() {
+    		@Override
+    		public void initActionQueue(LinkedList<Action> actions) {
+    			if(removeControl) {
+    				Action removeControl = removeControlPinAction(row, column);
+    				actions.add(removeControl);
+    			}
+    			if(removeInputLink) {
+    				Action removeInputLink = removeLinkPinAction(row, column, false);
+    				actions.add(removeInputLink);
+    			}
+    			if(removeOutputLink) {
+    				Action removeOutputLink = removeLinkPinAction(row, column, true);
+    				actions.add(removeOutputLink);
+    			}
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action removeAllOccurrencesAction(String oldGateLocationString) {
+    	Action action = new MultipleAction() {
+			@Override
+			public void initActionQueue(LinkedList<Action> actions) {
+				for(RawExportableGateData data : getInstance()) {
+					if(data.getSolderedGate().getGateModelLocationString().equals(oldGateLocationString)) {
+						Action removeGate = removeEntireGateAction(data.getGateRowBodyStart(), data.getColumn());
+						actions.add(removeGate);
+					}
+				}
+			}
+		};
+		return action;
+    }
+    
+    
+    private Action changeAllOccurrencesAction(String oldGateLocationString, String newGateLocationString) {
+    	Action action = new Action() {
+    		@Override
+    		protected void applyActionFunction() {
+    			gateModelsUsed.replace(oldGateLocationString, newGateLocationString);
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			gateModelsUsed.replace(newGateLocationString, oldGateLocationString);
+    		}
+    	};
+    	return action;
+    }
+    
+    
+    private Action removeRowsAction(int rowStartInclusize, int rowEndExclusive) {
+    	Action action = new MultipleAction() {
+			@Override
+			public void initActionQueue(LinkedList<Action> actions) {
+				for(int i = 0; i < getColumns(); i++) {
+					Action clearArea = clearAreaAction(rowStartInclusize, rowEndExclusive - 1, i, false);
+					actions.offerLast(clearArea);
+				}
+				Action removeRows = removeRowsOnClearedAreaAction(rowStartInclusize, rowEndExclusive);
+				actions.offerLast(removeRows);
+			}
+		};
+    	return action;
+    }
+    
+    private Action removeColumnsAction(int columnStartInclusize, int columnEndExclusive) {
+    	Action action  = new MultipleAction() {
+			@Override
+			public void initActionQueue(LinkedList<Action> actions) {
+				for(int i = columnStartInclusize; i < columnEndExclusive; i++) {
+					Action clearColumn = clearAreaAction(0, getRows() - 1, i, true);
+					actions.offerLast(clearColumn);
+				}
+				Action removeColumns = removeColumnsOnClearedAreaAction(columnStartInclusize, columnEndExclusive);
+				actions.offerLast(removeColumns);
+			}
+		};
+		return action;
+    }
+    
+    private Action removeRowsOnClearedAreaAction(int rowStartInclusize, int rowEndExclusive) {
+    	Action action = new Action() {
+    		final LinkedList<RowType> rowTypesRemoved;
+    		{
+    			rowTypesRemoved = rowTypes.getRowTypes(rowStartInclusize, rowEndExclusive);
+    		}
+    		
+    		@Override
+    		protected void applyActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator();
+    			while(iterator.hasNext()) {
+    				LinkedList<SolderedPin> column = iterator.next();
+    				ListIterator<SolderedPin> rowIterator = column.listIterator(rowStartInclusize);
+    				for(int i = rowStartInclusize; i < rowEndExclusive; i++) {
+    					rowIterator.next();
+    					rowIterator.remove();
+    				}
+    			}
+    			rowTypes.remove(rowStartInclusize, rowEndExclusive);
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator();
+    			while(iterator.hasNext()) {
+    				LinkedList<SolderedPin> column = iterator.next();
+    				Pair<Boolean, Boolean> isWithinBodyOrSpace = isRowInsertedWithinGateBodyOrSpace(rowStartInclusize, iterator.previousIndex());
+    				
+    				ListIterator<SolderedPin> rowIterator = column.listIterator(rowStartInclusize);
+    				if(isWithinBodyOrSpace.first()) {
+    					boolean isWithinBody = isWithinBodyOrSpace.second();
+    					for(int i = rowStartInclusize; i < rowEndExclusive; i++) {
+    						SolderedPin sp = getSolderedPinAt(rowStartInclusize, iterator.previousIndex());
+    						SpacePin toAdd = new SpacePin(sp.getSolderedGate(), isWithinBody);
+    						rowIterator.add(toAdd);
+    					}
+    				} else {
+    					for(int i = rowStartInclusize; i < rowEndExclusive; i++)
+    						rowIterator.add(mkIdent());
+    				}
+    			}
+    			rowTypes.add(rowStartInclusize, rowTypesRemoved);
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action removeColumnsOnClearedAreaAction(int columnStartInclusize, int columnEndExclusive) {
+    	Action action = new Action() {
+    		protected void applyActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator(columnStartInclusize);
+    			for(int i = columnStartInclusize; i < columnEndExclusive; i++) {
+    				iterator.next();
+    				iterator.remove();
+    			}
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator(columnStartInclusize);
+    			for(int i = columnStartInclusize; i < columnEndExclusive; i++) {
+    				LinkedList<SolderedPin> column = new LinkedList<>();
+    				for(int j = 0; j < getRows(); j++)
+    					column.add(mkIdent());
+    				iterator.add(column);
+    			}
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addRowsAction(int row, int amt, RowType type) {
+    	Action action = new Action() {
+    		@Override
+    		protected void applyActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator();
+    			while(iterator.hasNext()) {
+    				LinkedList<SolderedPin> column = iterator.next();
+    				Pair<Boolean, Boolean> isWithinBodyOrSpace = isRowInsertedWithinGateBodyOrSpace(row, iterator.previousIndex());
+					ListIterator<SolderedPin> rowIterator = column.listIterator(row);
+    				if(isWithinBodyOrSpace.first()) {
+    					boolean isWithinBody = isWithinBodyOrSpace.second();
+        				for(int i = 0; i < amt; i++) {
+        					SolderedPin sp = getSolderedPinAt(row, iterator.previousIndex());
+        					SolderedPin toAdd = new SpacePin(sp.getSolderedGate(), isWithinBody);
+        					rowIterator.add(toAdd);
+        				}
+    					
+    				} else {
+        				for(int i = 0; i < amt; i++)
+        					rowIterator.add(mkIdent());
+    				}
+    			}
+    			rowTypes.add(row, type, amt);
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator();
+    			while(iterator.hasNext()) {
+    				LinkedList<SolderedPin> column = iterator.next();
+    				ListIterator<SolderedPin> rowIterator = column.listIterator(row);
+    				for(int i = 0; i < amt; i++) {
+    					rowIterator.next();
+    					rowIterator.remove();
+    				}
+    			}
+    			rowTypes.remove(row, row + amt);
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addColumnsAction(int column, int amt) {
+    	Action action = new Action() {
+    		@Override
+    		protected void applyActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator(column);
+    			for(int i = 0; i < amt; i++) {
+    				LinkedList<SolderedPin> row = new LinkedList<>();
+    				for(int j = 0; j < getRows(); j++)
+    					row.offerLast(mkIdent());
+    				iterator.add(row);
+    			}
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			ListIterator<LinkedList<SolderedPin>> iterator = elements.listIterator(column);
+    			for(int i = 0; i < amt; i++) {
+    				iterator.next();
+    				iterator.remove();
+				}
+    		}
+    	};
+    	return action;
+    }
+    
+    
+    
+    
+    
+    
+    private Action addControlAction(int rowControl, int rowSpace, int columnSpace, boolean controlStatus) {
+    	Action action = new MultipleAction() {
+    		@Override
+    		public void initActionQueue(LinkedList<Action> actions) {
+    			int[] bounds = getGateSpaceBounds(rowSpace, columnSpace);
+    			if(rowControl < bounds[0]) {
+    				Action clearRows = clearAreaAction(rowControl, bounds[0] - 1, columnSpace, true);
+    				actions.offerLast(clearRows);
+    			} else if (rowControl > bounds[1]) {
+    				Action clearRows = clearAreaAction(bounds[1] + 1, rowControl, columnSpace, true);
+    				actions.offerLast(clearRows);
+    			}
+    			Action addControl = addControlOnClearedAreaAction(rowControl, rowSpace, columnSpace, controlStatus);
+    			actions.offerLast(addControl);
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addControlOnClearedAreaAction(int rowControl, int rowSpace, int columnSpace, boolean controlStatus) {
+    	Action action = new Action() {
+    		final SolderedPin pinBeforePlacement;
+    		
+    		{
+    			pinBeforePlacement = getSolderedPinAt(rowControl, columnSpace);
+    		}
+    		
+    		@Override
+    		protected void applyActionFunction() {
+    			SolderedPin spGate = getSolderedPinAt(rowSpace, columnSpace);
+    			SolderedGate sg = spGate.getSolderedGate();
+    			
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowControl, columnSpace);
+    			SolderedPin sp = iterator.next();
+    			
+    			if(sp.getSolderedGate() == sg) {
+    				SpacePin spacePin = (SpacePin) sp;
+    				iterator.set(new SolderedControlPin(sg, spacePin.isWithinBody(), controlStatus, 
+    						spacePin.getInputReg(), spacePin.getOutputLinkType(), spacePin.getOutputReg()));
+    			} else {
+    				iterator.set(new SolderedControlPin(sg, false, controlStatus));
+    				if(rowControl > rowSpace) {
+    					iterator.previous();
+    					while(iterator.hasPrevious()) {
+    						sp = iterator.previous();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(new SpacePin(sg, false));
+    					}
+    				} else {
+    					while(iterator.hasNext()) {
+    						sp = iterator.next();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(new SpacePin(sg, false));
+    					}
+    				}
+    			}
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			SolderedPin spGate = getSolderedPinAt(rowSpace, columnSpace);
+    			SolderedGate sg = spGate.getSolderedGate();
+    			
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowControl, columnSpace);
+    			SolderedPin sp = iterator.next();
+    			
+    			if(pinBeforePlacement.getSolderedGate() == sg) {
+    				if(pinBeforePlacement instanceof SolderedControlPin) {
+    					SolderedControlPin controlPinBeforePlacement = (SolderedControlPin) pinBeforePlacement;
+        				iterator.set(new SolderedControlPin(sg, controlPinBeforePlacement.isWithinBody(), controlPinBeforePlacement.getControlStatus(), 
+        						controlPinBeforePlacement.getInputReg(), controlPinBeforePlacement.getOutputLinkType(), controlPinBeforePlacement.getOutputReg()));
+    				} else {
+    					SpacePin spacePin = (SpacePin) pinBeforePlacement;
+        				iterator.set(new SpacePin(sg, spacePin.isWithinBody(),
+        						spacePin.getInputReg(), spacePin.getOutputLinkType(), spacePin.getOutputReg()));
+    				}
+    			} else {
+    				iterator.set(mkIdent());
+    				if(rowControl > rowSpace) {
+    					iterator.previous();
+    					while(iterator.hasPrevious()) {
+    						sp = iterator.previous();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				} else {
+    					while(iterator.hasNext()) {
+    						sp = iterator.next();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				}
+    			}
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addLinkAction(int rowControl, int rowSpace, int columnSpace, int inputLinkReg,
+    		OutputLinkType outputLinkType, int outputLinkReg) {
+    	Action action = new MultipleAction() {
+    		@Override
+    		public void initActionQueue(LinkedList<Action> actions) {
+    			int[] bounds = getGateSpaceBounds(rowSpace, columnSpace);
+    			if(inputLinkReg != -1) {
+    				ListIterator<SolderedPin> iterator = getRowIterator(bounds[0], columnSpace);
+	    			for(int i = bounds[0]; i <= bounds[1]; i++) {
+	    				SolderedPin sp = iterator.next();
+	    				if(sp instanceof SpacePin) {
+	    					SpacePin spacePin = (SpacePin) sp;
+	    					if(spacePin.getInputReg() == inputLinkReg) {
+	    						Action removeLink = removeLinkPinAction(i, columnSpace, false);
+	    						actions.offerLast(removeLink);
+	    						break;
+	    					}
+	    				}
+	    			}
+    			}
+    			if(rowControl < bounds[0]) {
+    				Action clearRows = clearAreaAction(rowControl, bounds[0] - 1, columnSpace, true);
+    				actions.offerLast(clearRows);
+    			} else if (rowControl > bounds[1]) {
+    				Action clearRows = clearAreaAction(bounds[1] + 1, rowControl, columnSpace, true);
+    				actions.offerLast(clearRows);
+    			}
+    			Action addControl = addLinkOnClearedAreaAction(rowControl, rowSpace, columnSpace, inputLinkReg,
+    		    		outputLinkType, outputLinkReg);
+    			actions.offerLast(addControl);
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addLinkOnClearedAreaAction(int rowLink, int rowSpace, int columnSpace, int inputLinkReg,
+    		OutputLinkType outputLinkType, int outputLinkReg) {
+    	Action action = new Action() {
+    		final SolderedPin pinBeforePlacement;
+    		
+    		{
+    			pinBeforePlacement = getSolderedPinAt(rowLink, columnSpace);
+    		}
+    		
+    		@Override
+    		protected void applyActionFunction() {
+    			SolderedPin spGate = getSolderedPinAt(rowSpace, columnSpace);
+    			SolderedGate sg = spGate.getSolderedGate();
+    			
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowLink, columnSpace);
+    			SolderedPin sp = iterator.next();
+    			
+    			if(sp.getSolderedGate() == sg) {
+    				if(sp instanceof SolderedControlPin) {
+    					SolderedControlPin controlPinBeforePlacement = (SolderedControlPin) pinBeforePlacement;
+    					iterator.set(new SolderedControlPin(sg, controlPinBeforePlacement.isWithinBody(), controlPinBeforePlacement.getControlStatus(), 
+    							inputLinkReg, outputLinkType, outputLinkReg));
+    				} else {
+    					iterator.set(new SpacePin(sg, sp.isWithinBody(), inputLinkReg, outputLinkType, outputLinkReg));
+    				}
+    			} else {
+    				iterator.set(new SpacePin(sg, false, inputLinkReg, outputLinkType, outputLinkReg));
+    				if(rowLink > rowSpace) {
+    					iterator.previous();
+    					while(iterator.hasPrevious()) {
+    						sp = iterator.previous();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(new SpacePin(sg, false));
+    					}
+    				} else {
+    					while(iterator.hasNext()) {
+    						sp = iterator.next();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(new SpacePin(sg, false));
+    					}
+    				}
+    			}
+    		}
+    		@Override
+    		protected void undoActionFunction() {
+    			SolderedPin spGate = getSolderedPinAt(rowSpace, columnSpace);
+    			SolderedGate sg = spGate.getSolderedGate();
+    			
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowLink, columnSpace);
+    			SolderedPin sp = iterator.next();
+    			
+    			if(sp.getSolderedGate() == sg) {
+    				if(pinBeforePlacement instanceof SolderedControlPin) {
+    					SolderedControlPin controlPinBeforePlacement = (SolderedControlPin) pinBeforePlacement;
+        				iterator.set(new SolderedControlPin(sg, controlPinBeforePlacement.isWithinBody(), controlPinBeforePlacement.getControlStatus(), 
+        						controlPinBeforePlacement.getInputReg(), controlPinBeforePlacement.getOutputLinkType(), controlPinBeforePlacement.getOutputReg()));
+    				} else {
+    					SpacePin spacePin = (SpacePin) pinBeforePlacement;
+        				iterator.set(new SpacePin(sg, spacePin.isWithinBody(),
+        						spacePin.getInputReg(), spacePin.getOutputLinkType(), spacePin.getOutputReg()));
+    				}
+    			} else {
+    				iterator.set(mkIdent());
+    				if(rowLink > rowSpace) {
+    					iterator.previous();
+    					while(iterator.hasPrevious()) {
+    						sp = iterator.previous();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				} else {
+    					while(iterator.hasNext()) {
+    						sp = iterator.next();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				}
+    			}
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addGateAction(String gateModelLocationString, int column, int[] localToGlobalRegs, GroupDefinition parameterSet) {
+    	Action action = new MultipleAction() {
+    		@Override
+    		public void initActionQueue(LinkedList<Action> actions) {
+    			int[] regBounds = getRegBounds(localToGlobalRegs);
+    			Action clearArea = clearAreaAction(regBounds[0], regBounds[1], column, true);
+    			actions.offerLast(clearArea);
+    			Action addGateBodyOnClearArea = addGateBodyOnClearedAreaAction(gateModelLocationString, column, localToGlobalRegs, parameterSet);
+    			actions.offerLast(addGateBodyOnClearArea);
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action addGateBodyOnClearedAreaAction(String gateModelLocationString, int column, int[] localToGlobalRegs, GroupDefinition parameterSet) {
+    	Action action = new Action() {
+    		final int rowBodyStart, rowBodyEnd;
+    		final SolderedGate sg;
+    		{
+    			int[] regBounds = getRegBounds(localToGlobalRegs);
+    			rowBodyStart = regBounds[0];
+    			rowBodyEnd = regBounds[1];
+    			sg = new SolderedGate(null, parameterSet);
+    		}
+    		
+			@Override
+			protected void applyActionFunction() {
+    			sg.setManifestHandle(addToManifest(gateModelLocationString));
+    			
+    			for(int i = 0; i < localToGlobalRegs.length; i++) {
+    				int globalReg = localToGlobalRegs[i];
+    				placePin(new SolderedRegister(sg, i), globalReg, column);
+    			}
+    			
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowBodyStart, column);
+    			for(int i = rowBodyStart; i <= rowBodyEnd; i++) {
+    				SolderedPin sp = iterator.next();
+    				if(sp.getSolderedGate() != sg)
+    					iterator.set(new SpacePin(sg, true));
+    			}
+			}
+			@Override
+			protected void undoActionFunction() {
+				ListIterator<SolderedPin> iterator = getRowIterator(rowBodyStart, column);
+				SolderedPin sp = null;
+    			
+    			for(int i = rowBodyStart; i <= rowBodyEnd; i++) {
+    				sp = iterator.next();
+    				iterator.set(mkIdent());
+    			}
+
+				SolderedGate sg = sp.getSolderedGate();
+				removeFromManifest(sg);
+    			
+			}
+		};
+		return action;
+    }
+    
+    private Action clearAreaAction(int rowStart, int rowEnd, int column, boolean removeWhenInsideGate) {
+    	Action action = new MultipleAction() {
+
+			@Override
+			public void initActionQueue(LinkedList<Action> actions) {
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowStart, column); 
+    			
+    			SolderedGate currentGate = null;
+    			
+    			
+    			Queue<Integer> controlsToRemoveQueue = new Queue<>();
+    			Queue<Integer> inputLinksToRemoveQueue = new Queue<>();
+    			Queue<Integer> outputLinksToRemoveQueue = new Queue<>();
+    			
+    			for(int i = rowStart; i <= rowEnd; i++) {
+    				SolderedPin sp = iterator.next();
+    				
+    				if(currentGate == null)
+    					currentGate = sp.getSolderedGate();
+    				
+    				if(checkIfRemoveGate(sp)) {
+    					
+    					if(sp.getSolderedGate() != currentGate) {
+    						addActions(actions, controlsToRemoveQueue, inputLinksToRemoveQueue, outputLinksToRemoveQueue);
+    						currentGate = sp.getSolderedGate();
+    					}
+    						
+    					controlsToRemoveQueue.clear();
+    					inputLinksToRemoveQueue.clear();
+    					outputLinksToRemoveQueue.clear();
+    					
+        				if(!sp.getSolderedGate().isIdentity()) { 
+    	    				Action removeGate = removeEntireGateAction(iterator.previousIndex(), column);
+    	    				actions.offerLast(removeGate);
+        				}
+        				
+        				for(int j = i + 1; j <= rowEnd; j++) {
+        					i++;
+            				sp = iterator.next();
+            				SolderedGate nextGate = sp.getSolderedGate();
+        					if(nextGate != currentGate) {
+        						currentGate = nextGate;
+        						i--;
+        						iterator.previous();
+        						break;
+        					}
+        				}
+        				
+        			} else {
+        				
+        				if(sp.getSolderedGate() != currentGate) {
+    						addActions(actions, controlsToRemoveQueue, inputLinksToRemoveQueue, outputLinksToRemoveQueue);
+    						controlsToRemoveQueue.clear();
+	    					inputLinksToRemoveQueue.clear();
+	    					outputLinksToRemoveQueue.clear();
+	    					currentGate = sp.getSolderedGate();
+        				}
+    					
+        				if(sp instanceof SpacePin) {
+    						SpacePin spacePin = (SpacePin) sp;
+    						if(sp instanceof SolderedControlPin)
+    							controlsToRemoveQueue.enqueue(iterator.previousIndex());
+    						if(spacePin.isInputLinked())
+    							inputLinksToRemoveQueue.enqueue(iterator.previousIndex());
+    						if(spacePin.isOutputLinked())
+    							outputLinksToRemoveQueue.enqueue(iterator.previousIndex());
+    					}
+        			}
+    			}
+    			addActions(actions, controlsToRemoveQueue, inputLinksToRemoveQueue, outputLinksToRemoveQueue);
+			}
+			
+			private boolean checkIfRemoveGate(SolderedPin sp) {
+				if(removeWhenInsideGate)
+					return sp.isWithinBody();
+				else
+					return sp instanceof SolderedRegister;
+			}
+			
+			private void addActions(LinkedList<Action> actions, Queue<Integer> controlsQueue, Queue<Integer> inputLinksQueue, Queue<Integer> outputLinksQueue) {
+				for(int i : controlsQueue) {
+    				Action removeControl = removeControlPinAction(i, column);
+					actions.offerLast(removeControl);
+    			}
+    			for(int i : inputLinksQueue) {
+    				Action removeLink = removeLinkPinAction(i, column, false);
+					actions.offerLast(removeLink);
+    			}
+    			for(int i : outputLinksQueue) {
+    				Action removeLink =  removeLinkPinAction(i, column, true);
+					actions.offerLast(removeLink);
+    			}
+			}
+    	};
+    	
+    	return action;
+    }
+    
+    private Action removeEntireGateAction(int rowSpace, int columnSpace) {
+    	Action action = new MultipleAction() {
+    		
+    		@Override
+    		public void initActionQueue(LinkedList<Action> actions) {
+    			int[] rowSpaceBounds = getGateSpaceBounds(rowSpace, columnSpace);
+    			
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowSpaceBounds[0], columnSpace);
+    			for(int i = rowSpaceBounds[0]; i <= rowSpaceBounds[1]; i++) {
+    				SolderedPin sp = iterator.next();
+    				if(sp instanceof SpacePin) {
+    					SpacePin spacePin = (SpacePin) sp;
+    					if(spacePin instanceof SolderedControlPin) {
+        					Action removeControl = removeControlPinAction(i, columnSpace);
+        					actions.offerLast(removeControl);
+        				}
+    					if(spacePin.isInputLinked()) {
+    						Action removeLink = removeLinkPinAction(i, columnSpace, false);
+    						actions.offerLast(removeLink);
+    					}
+    					if(spacePin.isOutputLinked()) {
+    						Action removeLink = removeLinkPinAction(i, columnSpace, true);
+    						actions.offerLast(removeLink);
+    					}
+    				}
+    			}
+    			
+
+    			int rowBody = findRowOfBody(rowSpace, columnSpace);
+    			Action removeBody = removeGateBodyAction(rowBody, columnSpace);
+    			actions.offerLast(removeBody);
+    			
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action removeGateBodyAction(int rowBody, int columnBody) {
+    	Action action = new Action() {
+    		final SolderedGate sg;
+    		final Hashtable<Integer, Integer> globalToLocalRegs;
+    		final int bodyStart;
+    		final int bodyEnd;
+    		
+    		{
+    			SolderedPin sp = getSolderedPinAt(rowBody, columnBody);
+    			sg = sp.getSolderedGate();
+    			globalToLocalRegs = getGlobalToLocalRegsFromGate(rowBody, columnBody);
+    			
+    			int[] bounds = getGateBodyBounds(rowBody, columnBody);
+    			bodyStart = bounds[0];
+    			bodyEnd = bounds[1];
+    		}
+    		
+    		@Override
+    		protected void applyActionFunction() {
+    			ListIterator<SolderedPin> iterator = getRowIterator(bodyStart, columnBody);
+    			for(int i = bodyStart; i <= bodyEnd; i++) {
+    				iterator.next();
+    				iterator.set(mkIdent());
+    			}
+    			removeFromManifest(sg);
+    		}
+    		
+    		@Override
+    		protected void undoActionFunction() {
+    			ListIterator<SolderedPin> iterator = getRowIterator(bodyStart, columnBody);
+    			for(int i = bodyStart; i <= bodyEnd; i++) {
+    				iterator.next();
+    				Integer localReg = globalToLocalRegs.get(i);
+    				if(localReg == null)
+    					iterator.set(new SpacePin(sg, true));
+    				else
+    					iterator.set(new SolderedRegister(sg, localReg));
+    			}
+    			addToManifest(sg);
+    		}
+    	};
+    	return action;
+    }
+    
+    private Action removeControlPinAction(int rowControl, int columnControl) {
+    	Action action = new Action() {
+    		final int rowGateBody;
+    		final boolean controlStatus;
+    		
+    		{
+    			rowGateBody = findRowOfBody(rowControl, columnControl);
+    			SolderedControlPin sp = (SolderedControlPin) getSolderedPinAt(rowControl, columnControl);
+    			controlStatus = sp.getControlStatus();
+    		}
+    		
+    		@Override
+    		protected void applyActionFunction() {
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowControl, columnControl);
+    			SolderedControlPin controlPin = (SolderedControlPin) iterator.next();
+    			SolderedGate sg = controlPin.getSolderedGate();
+    			SolderedPin pinAbove = peakPinAbove(iterator);
+    			iterator.previous();
+    			SolderedPin pinBelow = peakPinBelow(iterator);
+    			boolean isPinBelow = pinBelow == null? false : pinBelow.getSolderedGate() == sg;
+    			boolean isPinAbove = pinAbove == null? false : pinAbove.getSolderedGate() == sg;
+    			
+    			if(isPinBelow && isPinAbove || controlPin.isInputLinked() || controlPin.isOutputLinked()) {
+    				iterator.next();
+    				iterator.set(new SpacePin(sg, controlPin.isWithinBody(), controlPin.getInputReg(), 
+    						controlPin.getOutputLinkType(), controlPin.getOutputReg()));
+    			} else {
+    				iterator.next();
+    				iterator.set(mkIdent());
+    				
+    				if(isPinBelow) {
+    					iterator.previous();
+    					while(iterator.hasPrevious()) {
+    						SolderedPin sp = iterator.previous();
+    						if(sp.isNotEmptySpace())
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				} else if(isPinAbove) {
+    					while(iterator.hasNext()) {
+    						SolderedPin sp = iterator.next();
+    						if(sp.isNotEmptySpace())
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				}
+    			}
+    		}
+    		protected void undoActionFunction() {
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowControl, columnControl);
+    			SolderedPin pinBeforeControl = iterator.next();
+    			SolderedPin gatePin = getSolderedPinAt(rowGateBody, columnControl);
+    			SolderedGate sg = gatePin.getSolderedGate();
+    			
+    			if(sg == pinBeforeControl.getSolderedGate()) {
+    				SpacePin sp = (SpacePin) pinBeforeControl;
+    				iterator.set(new SolderedControlPin(sg, rowControl == rowGateBody, controlStatus, 
+    						sp.getInputReg(), sp.getOutputLinkType(), sp.getOutputReg()));
+    			} else {
+    				iterator.set(new SolderedControlPin(sg, rowControl == rowGateBody, controlStatus));
+    				
+    				if(rowControl > rowGateBody) {
+        				iterator.previous();
+        				while(iterator.hasPrevious()) {
+        					SolderedPin sp = iterator.previous();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(new SpacePin(sg, false));
+        				}
+        			} else if(rowControl < rowGateBody) {
+        				while(iterator.hasNext()) {
+        					SolderedPin sp = iterator.next();
+    						if(sp.getSolderedGate() == sg)
+    							break;
+    						iterator.set(new SpacePin(sg, false));
+        				}
+        			}
+    			}
+    			
+    		};
+    	};
+    	return action;
+    }
+    
+    private Action removeLinkPinAction(int rowLink, int columnLink, boolean output) {
+    	Action action = new Action() {
+    		final int rowGateBody;
+    		final SpacePin savedLinkPin;
+    		
+    		{
+    			rowGateBody = findRowOfBody(rowLink, columnLink);
+    			savedLinkPin = (SpacePin) getSolderedPinAt(rowLink, columnLink);
+    		}
+    		
+    		@Override
+    		protected void applyActionFunction() {
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowLink, columnLink);
+    			SpacePin linkPin = (SpacePin) iterator.next();
+    			SolderedGate sg = linkPin.getSolderedGate();
+    			SolderedPin pinAbove = peakPinAbove(iterator);
+    			iterator.previous();
+    			SolderedPin pinBelow = peakPinBelow(iterator);
+    			boolean isPinBelow = pinBelow == null? false : pinBelow.getSolderedGate() == sg;
+    			boolean isPinAbove = pinAbove == null? false : pinAbove.getSolderedGate() == sg;
+    			boolean willPinStillOccupied = linkPin instanceof SolderedControlPin;
+    			willPinStillOccupied |= output?  linkPin.isInputLinked() : linkPin.isOutputLinked();
+    			
+    			if(isPinBelow && isPinAbove || willPinStillOccupied) {
+    				int inputReg = output? linkPin.getInputReg() : -1;
+    				int outputReg = output? -1 : linkPin.getOutputReg();
+    				OutputLinkType linkType = output? linkPin.getOutputLinkType() : OutputLinkType.CLASSICAL_LINK;
+    				
+    				iterator.next();
+    				if(linkPin instanceof SolderedControlPin) {
+    					SolderedControlPin solderedPin = (SolderedControlPin) linkPin;
+    					iterator.set(new SolderedControlPin(sg, linkPin.isWithinBody(), solderedPin.getControlStatus(), inputReg, linkType, outputReg));
+    				} else {
+    					iterator.set(new SpacePin(sg, linkPin.isWithinBody(), inputReg, linkType, outputReg));
+    				}
+    			} else {
+    				iterator.next();
+    				iterator.set(mkIdent());
+    				
+    				if(isPinBelow) {
+    					iterator.previous();
+    					while(iterator.hasPrevious()) {
+    						SolderedPin sp = iterator.previous();
+    						if(sp.isNotEmptySpace())
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				} else if(isPinAbove) {
+    					while(iterator.hasNext()) {
+    						SolderedPin sp = iterator.next();
+    						if(sp.isNotEmptySpace())
+    							break;
+    						iterator.set(mkIdent());
+    					}
+    				}
+    			}
+    		}
+    		protected void undoActionFunction() {
+    			ListIterator<SolderedPin> iterator = getRowIterator(rowLink, columnLink);
+    			SolderedPin pinBeforeLink = iterator.next();
+    			SolderedPin gatePin = getSolderedPinAt(rowGateBody, columnLink);
+    			SolderedGate sg = gatePin.getSolderedGate();
+    			
+    			int inputLinkReg = savedLinkPin.getInputReg();
+    			int outputLinkReg = savedLinkPin.getOutputReg();
+    			OutputLinkType linkType = savedLinkPin.getOutputLinkType();
+    			
+    			
+    			if(sg == pinBeforeLink.getSolderedGate() && pinBeforeLink instanceof SolderedControlPin) {
+    				SolderedControlPin cp = (SolderedControlPin) pinBeforeLink;
+    				iterator.set(new SolderedControlPin(sg, rowLink == rowGateBody, cp.getControlStatus(), inputLinkReg, linkType, outputLinkReg));
+    			} else {
+    				iterator.set(new SpacePin(sg, rowLink == rowGateBody, inputLinkReg, linkType, outputLinkReg));
+    			}
+    			
+    			if(rowLink > rowGateBody) {
+    				iterator.previous();
+    				while(iterator.hasPrevious()) {
+    					SolderedPin sp = iterator.previous();
+						if(sp.getSolderedGate() == sg)
+							break;
+						iterator.set(new SpacePin(sg, false));
+    				}
+    			} else if(rowLink < rowGateBody) {
+    				while(iterator.hasNext()) {
+    					SolderedPin sp = iterator.next();
+						if(sp.getSolderedGate() == sg)
+							break;
+						iterator.set(new SpacePin(sg, false));
+    				}
+    			}
+    			
+    		};
+    	};
+    	return action;
+    }
+    
+    
+    
+    
+    
+    
+    
+//    ---------------------------------------------------------------------------
+    
+    
+    
+    private CircuitBoardModel getInstance() {
+    	return this;
+    }
+    
+    
+    
+    
+    
+    private int[] getLocalToGlobalRegsFromGate(int rowBody, int columnBody) {
+    	Hashtable<Integer, Integer> localToGlobal = new Hashtable<>();
+    	ListIterator<SolderedPin> iterator = getRowIterator(rowBody, columnBody);
+    	SolderedPin sp = iterator.next();
+    	SolderedGate sg = sp.getSolderedGate();
+    	iterator.previous();
+    	
+    	while(iterator.hasNext()) {
+    		SolderedPin next = iterator.next();
+    		if(next.getSolderedGate() != sg)
+    			break;
+    		if(!next.isWithinBody())
+    			break;
+    		if(next instanceof SolderedRegister) { 
+    			SolderedRegister soldReg = (SolderedRegister) next;
+    			localToGlobal.put(soldReg.getSolderedGatePinNumber(), iterator.previousIndex());
+    		}
+    	}
+    	iterator = getRowIterator(rowBody, columnBody);
+    	while(iterator.hasPrevious()) {
+    		SolderedPin previous = iterator.previous();
+    		if(previous.getSolderedGate() != sg)
+    			break;
+    		if(!previous.isWithinBody())
+    			break;
+    		if(previous instanceof SolderedRegister) { 
+    			SolderedRegister soldReg = (SolderedRegister) previous;
+    			localToGlobal.put(soldReg.getSolderedGatePinNumber(), iterator.nextIndex());
+    		}
+    	}
+    	
+    	int[] regs = new int[localToGlobal.size()];
+    	for(int i = 0; i < regs.length; i++)
+    		regs[i] = localToGlobal.get(i);
+    	
+    	return regs;
+    }
+    
+    private Hashtable<Integer, Integer> getGlobalToLocalRegsFromGate(int rowBody, int columnBody) {
+    	Hashtable<Integer, Integer> globalToLocal = new Hashtable<>();
+    	ListIterator<SolderedPin> iterator = getRowIterator(rowBody, columnBody);
+    	SolderedPin sp = iterator.next();
+    	SolderedGate sg = sp.getSolderedGate();
+    	iterator.previous();
+    	
+    	while(iterator.hasNext()) {
+    		SolderedPin next = iterator.next();
+    		if(next.getSolderedGate() != sg)
+    			break;
+    		if(!next.isWithinBody())
+    			break;
+    		if(next instanceof SolderedRegister) { 
+    			SolderedRegister soldReg = (SolderedRegister) next;
+    			globalToLocal.put(iterator.previousIndex(), soldReg.getSolderedGatePinNumber());
+    		}
+    	}
+    	iterator = getRowIterator(rowBody, columnBody);
+    	while(iterator.hasPrevious()) {
+    		SolderedPin previous = iterator.previous();
+    		if(previous.getSolderedGate() != sg)
+    			break;
+    		if(!previous.isWithinBody())
+    			break;
+    		if(previous instanceof SolderedRegister) { 
+    			SolderedRegister soldReg = (SolderedRegister) previous;
+    			globalToLocal.put(iterator.nextIndex(), soldReg.getSolderedGatePinNumber());
+    		}
+    	}
+    	return globalToLocal;
+    }
+    
+    private int[] getGateSpaceBounds(int rowSpace, int columnSpace) {
+    	ListIterator<SolderedPin> iterator = getRowIterator(rowSpace, columnSpace);
+    	SolderedPin sp = iterator.next();
+    	SolderedGate sg = sp.getSolderedGate();
+    	
+    	int minimum = rowSpace;
+    	int maximum = rowSpace;
+    	
+    	while(iterator.hasNext()) {
+    		SolderedPin next = iterator.next();
+    		if(next.getSolderedGate() != sg)
+    			break;
+    		maximum++;
+    	}
+    	iterator = getRowIterator(rowSpace, columnSpace);
+    	while(iterator.hasPrevious()) {
+    		SolderedPin previous = iterator.previous();
+    		if(previous.getSolderedGate() != sg)
+    			break;
+    		minimum--;
+    	}
+    	return new int[]{minimum, maximum};
+    }
+    
+    private int[] getGateBodyBounds(int rowBody, int columnBody) {
+    	ListIterator<SolderedPin> iterator = getRowIterator(rowBody, columnBody);
+    	SolderedPin sp = iterator.next();
+    	SolderedGate sg = sp.getSolderedGate();
+    	
+    	int minimum = rowBody;
+    	int maximum = rowBody;
+    	
+    	while(iterator.hasNext()) {
+    		SolderedPin next = iterator.next();
+    		if(next.getSolderedGate() != sg)
+    			break;
+    		if(!next.isWithinBody())
+    			break;
+    		maximum++;
+    	}
+    	iterator = getRowIterator(rowBody, columnBody);
+    	while(iterator.hasPrevious()) {
+    		SolderedPin previous = iterator.previous();
+    		if(previous.getSolderedGate() != sg)
+    			break;
+    		if(!previous.isWithinBody())
+    			break;
+    		minimum--;
+    	}
+    	return new int[]{minimum, maximum};
+    }
+    
+    private int findRowOfBody(int rowSpace, int columnSpace) {
+    	ListIterator<SolderedPin> iterator = getRowIterator(rowSpace, columnSpace);
+    	SolderedPin sp = iterator.next();
+    	if(sp.isWithinBody())
+    		return rowSpace;
+    	SolderedGate sg = sp.getSolderedGate();
+    	
+    	while(iterator.hasNext()) {
+    		sp = iterator.next();
+    		if(sp.getSolderedGate() != sg)
+    			break;
+    		if(sp.isWithinBody())
+    			return iterator.previousIndex();
+    	}
+    	iterator = getRowIterator(rowSpace, columnSpace);
+    	while(iterator.hasPrevious()) {
+    		sp = iterator.previous();
+    		if(sp.getSolderedGate() != sg)
+    			break;
+    		if(sp.isWithinBody())
+    			return iterator.nextIndex();
+    	}
+    	return -1;
+    }
+    
+    private int getArbitraryGateRegisterLocation(int rowSpace, int columnSpace) {
+    	ListIterator<SolderedPin> iterator = getRowIterator(rowSpace, columnSpace);
+    	SolderedPin sp = iterator.next();
+    	SolderedGate sg = sp.getSolderedGate();
+    	iterator.previous();
+    	
+    	while(iterator.hasNext()) {
+    		sp = iterator.next();
+    		if(sp.getSolderedGate() != sg)
+    			break;
+    		if(sp instanceof SolderedRegister)
+    			return iterator.previousIndex();
+    	}
+    	iterator = getRowIterator(rowSpace, columnSpace);
+    	while(iterator.hasPrevious()) {
+    		sp = iterator.previous();
+    		if(sp.getSolderedGate() != sg)
+    			break;
+    		if(sp instanceof SolderedRegister)
+    			return iterator.nextIndex();
+    	}
+    	return -1;
+    }
+    
+    
+    private ListIterator<SolderedPin> getRowIterator(int row, int column) {
+    	return elements.get(column).listIterator(row);
+    }
+    
+    private Pair<Boolean, Boolean> isRowInsertedWithinGateBodyOrSpace(int row, int column) {
+    	ListIterator<SolderedPin> iterator = getRowIterator(row, column);
+    	SolderedPin above = peakPinAbove(iterator);
+    	SolderedPin below = peakPinBelow(iterator);
+    	
+    	boolean isWithinSpace = false;
+    	boolean isWithinBody = false;
+    	if(above != null && below != null && above.getSolderedGate() == below.getSolderedGate()) {
+    		isWithinSpace = true;
+    		isWithinBody = above.isWithinBody() && below.isWithinBody();
+    	}
+    	return new Pair<>(isWithinSpace, isWithinBody);
+    }
+    
+    private static SolderedPin peakPinAbove(ListIterator<SolderedPin> iterator) {
+    	if(iterator.hasNext()) {
+    		SolderedPin next = iterator.next();
+    		iterator.previous();
+    		return next;
+    	} else {
+    		return null;
+    	}
+    }
+    
+    private static SolderedPin peakPinBelow(ListIterator<SolderedPin> iterator) {
+    	if(iterator.hasPrevious()) {
+    		SolderedPin previous = iterator.previous();
+    		iterator.next();
+    		return previous;
+    	} else {
+    		return null;
+    	}
+    }
+    
+    private void placePin(SolderedPin sp, int row, int column) {
+    	elements.get(column).set(row, sp);
+    }
+    
+    @SuppressWarnings("rawtypes")
+	private SolderedRegister mkIdent() {
+		ManifestElementHandle handle = gateModelsUsed.add(PresetGateType.IDENTITY.getModel().getLocationString());
+		return new SolderedRegister(new SolderedGate(handle), 0);
+	}
+    
+    
+    private void addToManifest(SolderedGate sg) {
+    	sg.setManifestHandle(addToManifest(sg.getGateModelLocationString()));
+    }
+    
+    @SuppressWarnings("rawtypes")
+	private ManifestElementHandle addToManifest(String gateModelLocationString) {
+		return gateModelsUsed.add(gateModelLocationString);
+	}
+    
+    private void removeFromManifest(SolderedGate sg) {
+		gateModelsUsed.remove(sg.getGateModelLocationString());
+	}
+    
+    
+    private static int[] getRegBounds(int[] localToGlobalRegs) {
+    	int minimum = localToGlobalRegs[0];
+    	int maximum = localToGlobalRegs[0];
+    	
+    	for(int i = 0; i < localToGlobalRegs.length; i++) {
+    		int globalReg = localToGlobalRegs[i];
+    		if(globalReg < minimum)
+    			minimum = globalReg;
+    		if(globalReg > maximum)
+    			maximum = globalReg;
+    	}
+    	return new int[] {minimum, maximum};
+    }
+    
+	
+	@Override
+	public void checkScalarDefinition(ScalarDefinition definition, int i) {}
+
+	@Override
+	public void checkMatrixDefinition(MatrixDefinition definition, int i) throws DefinitionEvaluatorException {
+		throw new DefinitionEvaluatorException("Definition should not define a matrix", i);
+	}
+
+	@Override
+	public void checkArgDefinition(ArgDefinition definition, int i) throws DefinitionEvaluatorException {
+		if(definition.isMatrix())
+			throw new DefinitionEvaluatorException("Definition should not define a matrix", i);
+	}
+	
+	
+	
+	
+	public static class RowTypeList implements Serializable, Iterable<RowTypeElement> {
+		private static final long serialVersionUID = -64478525067138213L;
+		
+		private final LinkedList<RowTypeElement> rowTypes;
+		
+		private RowTypeList() {
+			this(new LinkedList<>());
+		}
+		
+		private RowTypeList(LinkedList<RowTypeElement> rowTypes) {
+			this.rowTypes = rowTypes;
+		}
+		
+		private void add(int index, LinkedList<RowType> elements) {
+			int noneStartAmt = countTypeAmtFrom(RowType.SPACE, 0, index);
+			int classicalStartAmt = countTypeAmtFrom(RowType.CLASSICAL, 0, index);
+			int quantumStartAmt = countTypeAmtFrom(RowType.QUANTUM, 0, index);
+			
+			int spaceAddedAmt = 0;
+			int classicalAddedAmt = 0;
+			int quantumAddedAmt = 0;
+			
+			ListIterator<RowType> addIterator = elements.listIterator();
+			ListIterator<RowTypeElement> listIterator = rowTypes.listIterator(index);
+			for(int i = 0; i < elements.size(); i++) {
+				RowType rowType = addIterator.next();
+				int reg = 0;
+				switch(rowType) {
+				case CLASSICAL:
+					reg = classicalStartAmt + classicalAddedAmt++;
+					break;
+				case SPACE:
+					reg = noneStartAmt + spaceAddedAmt++;
+					break;
+				case QUANTUM:
+					reg = quantumStartAmt + quantumAddedAmt++;
+					break;
+				default:
+					break;
+				}
+				listIterator.add(new RowTypeElement(reg, rowType));
+			}
+			while(listIterator.hasNext()) {
+				RowTypeElement rowTypeElement = listIterator.next();
+				switch(rowTypeElement.type) {
+				case CLASSICAL:
+					rowTypeElement.reg += classicalAddedAmt;
+					break;
+				case SPACE:
+					rowTypeElement.reg += spaceAddedAmt;
+					break;
+				case QUANTUM:
+					rowTypeElement.reg += quantumAddedAmt;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		
+		private void add(int index, RowType type, int amt) {
+			if(amt == 0) return;
+			
+			int amtBefore = countTypeAmtFrom(type, 0, index);
+			
+			ListIterator<RowTypeElement> iterator = rowTypes.listIterator(index); 
+			while(iterator.hasNext()) {
+				RowTypeElement element = iterator.next();
+				if(element.type == type)
+					element.reg += amt;
+			}
+			
+			iterator = rowTypes.listIterator(index);
+			for(int i = 0; i < amt; i++)
+				iterator.add(new RowTypeElement(amtBefore + i, type));
+		}
+		
+		LinkedList<RowType> getRowTypes(int startIndexInclusive, int endIndexExclusize) {
+			LinkedList<RowType> extractedRowTypes = new LinkedList<>();
+			ListIterator<RowTypeElement> iterator = rowTypes.listIterator(startIndexInclusive);
+			
+			for(int i = startIndexInclusive; i < endIndexExclusize; i++) {
+				RowTypeElement next = iterator.next();
+				extractedRowTypes.offerLast(next.type);
+			}
+			return extractedRowTypes;
+		}
+		
+		private void remove(int startIndexInclusive, int endIndexExclusize) {
+			if(endIndexExclusize - startIndexInclusive == 0) return;
+			
+			int spaceAmt = countTypeAmtFrom(RowType.SPACE, startIndexInclusive, endIndexExclusize);
+			int classicalAmt = countTypeAmtFrom(RowType.CLASSICAL, startIndexInclusive, endIndexExclusize);
+			int quantumAmt = countTypeAmtFrom(RowType.QUANTUM, startIndexInclusive, endIndexExclusize);
+			
+
+			ListIterator<RowTypeElement> iterator = rowTypes.listIterator(endIndexExclusize); 
+			for(int i = endIndexExclusize; i < rowTypes.size(); i++) {
+				RowTypeElement elem = iterator.next();
+				switch(elem.type) {
+				case CLASSICAL:
+					elem.reg -= classicalAmt;
+					break;
+				case SPACE:
+					elem.reg -= spaceAmt;
+					break;
+				case QUANTUM:
+					elem.reg -= quantumAmt;
+					break;
+				default:
+					break;
+				}
+			}
+			
+			iterator = rowTypes.listIterator(startIndexInclusive);
+			
+			for(int i = startIndexInclusive; i < endIndexExclusize; i++) {
+				iterator.next();
+				iterator.remove();
+			}
+			
+		}
+		
+		public RowType getTypeAtRow(int row) {
+			return rowTypes.get(row).type;
+		}
+		
+		public int getRegAtRow(int row) {
+			return rowTypes.get(row).reg;
+		}
+		
+		public int countTypeAmtFrom(RowType type, int indexStartInclusize, int indexEndExclusive) {
+			int amt = 0;
+			
+			Iterator<RowTypeElement> iterator = rowTypes.listIterator(indexStartInclusize); 
+			for(int i = indexStartInclusize; i < indexEndExclusive; i++)
+				if(iterator.next().type == type) amt ++;
+			return amt;
+		}
+		
+		public LinkedList<Pair<Integer, Integer>> getRangesOfType(RowType type) {
+			LinkedList<Pair<Integer, Integer>> linkedList = new LinkedList<>();
+			ListIterator<RowTypeElement> iterator = rowTypes.listIterator(); 
+			
+			int start = -1;
+			while(iterator.hasNext()) {
+				RowType current = iterator.next().type;
+				if(current == type) {
+					start = start == -1? iterator.previousIndex() : start;
+				} else {
+					if(start != -1) {
+						linkedList.add(new Pair<>(start, iterator.previousIndex()));
+						start = -1;
+					}
+				}
+			}
+			if(start != -1)
+				linkedList.add(new Pair<>(start, rowTypes.size()));
+			return linkedList;
+		}
+		
+		
+		public int size() {
+			return rowTypes.size();
+		}
+		
+		public RowTypeList deepCopy() {
+			LinkedList<RowTypeElement> newRowTypes = new LinkedList<>();
+			for(RowTypeElement elem : rowTypes)
+				newRowTypes.offerLast(new RowTypeElement(elem.reg, elem.type));
+			return new RowTypeList(newRowTypes);
+		}
+		
+		@Override
+		public ListIterator<RowTypeElement> iterator() {
+			return rowTypes.listIterator();
+		}
+		
+	}
+	
+	public static class RowTypeElement implements Serializable {
+		private static final long serialVersionUID = -7000406873793219391L;
+		
+		int reg;
+		RowType type;
+		
+		RowTypeElement(int reg, RowType type) {
+			this.reg = reg;
+			this.type = type;
+		}
+		
+		public int getReg() {
+			return reg;
+		}
+		
+		public RowType getType() {
+			return type;
 		}
 	}
 	
+	private class ExportableGateIterator implements Iterator<RawExportableGateData> {
+		private ListIterator<LinkedList<SolderedPin>> columns;
+		private LinkedList<SolderedPin> rowList;
+		private ListIterator<SolderedPin> rowIterator;
+		private ListIterator<RowTypeElement> rowTypeIterator;
+		private int gateRowBodyStart, gateRowBodyEnd;
+		SolderedPin currentPin;
+		RowTypeElement currentRowType;
+		
+		
+		
+		private LinkedList<RawExportControl> quantumControls;
+		private LinkedList<RawExportControl> classicalControls;
+		private LinkedList<RawExportOutputLink> outputLinks;
+		private LinkedList<RawExportLink> inputLinks;
+		private LinkedList<RawExportRegister> underneathQuantumIdentityGates;
+		private Hashtable<Integer, RawExportRegister> registers;
+		private boolean classicalReg = false;
+		
+		
+		public ExportableGateIterator(int index) {
+			columns = elements.listIterator(index);
+			nextColumn();
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return rowIterator.hasNext() || columns.hasNext();
+		}
+		
+		@Override
+		public RawExportableGateData next() {
+			if(!rowIterator.hasNext())
+				nextColumn();
+			
+			incrementRow();
+			
+			SolderedGate sg = currentPin.getSolderedGate();
+			SolderedGate current = sg;
+			
+			
+			quantumControls = new LinkedList<>();
+			classicalControls = new LinkedList<>();
+			outputLinks = new LinkedList<>();
+			inputLinks = new LinkedList<>();
+			underneathQuantumIdentityGates = new LinkedList<>();
+			registers = new Hashtable<>();
+			classicalReg = false;
+			
+			gateRowBodyStart = -1;
+			gateRowBodyEnd = -1;
+
+			int gateRowSpaceStart = getRow();
+			
+			addPinData();
+			
+			
+			boolean hitNoRowEnd;
+			while (hitNoRowEnd = rowIterator.hasNext()) {
+				incrementRow();
+				if(currentPin.getSolderedGate() != current)
+					break;
+				addPinData();
+			}
+			
+			
+			if(hitNoRowEnd)
+				decrementRow();
+			
+			return new RawExportableGateData(current, quantumControls, classicalControls, outputLinks, inputLinks,
+				underneathQuantumIdentityGates, registers, classicalReg, gateRowSpaceStart, getRow(), 
+				gateRowBodyStart, gateRowBodyEnd, getColumn());
+		}
+		
+		
+		private void incrementRow() {
+			currentPin = rowIterator.next();
+			currentRowType = rowTypeIterator.next();
+		}
+		
+		private void decrementRow() {
+			currentPin = rowIterator.previous();
+			currentRowType = rowTypeIterator.previous();
+		}
+		
+		private int getRow() {
+			return rowIterator.previousIndex();
+		}
+		
+		private int getColumn() {
+			return columns.previousIndex();
+		}
+		
+		private void addPinData() {
+			int r = getRow();
+			int globalReg = currentRowType.reg;
+			RowType type = currentRowType.type;
+			
+			if(currentPin instanceof SolderedRegister) {
+				SolderedRegister registerPin = (SolderedRegister) currentPin;
+				classicalReg = type == RowType.CLASSICAL;
+				RawExportRegister exportRegister = new RawExportRegister(globalReg, r);
+				registers.put(registerPin.getSolderedGatePinNumber(), exportRegister);
+				if(gateRowBodyStart == -1)
+					gateRowBodyStart = r;
+				gateRowBodyEnd = r;
+			} else {
+				SpacePin sp = (SpacePin) currentPin;
+				
+				if(sp.isInputLinked()) {
+					RawExportLink exportRegister = new RawExportLink(globalReg, r, sp.getInputReg());
+					inputLinks.offerLast(exportRegister);
+				}
+				if(sp.isOutputLinked()) {
+					RawExportOutputLink exportRegister = new RawExportOutputLink(globalReg, r, sp.getOutputReg(), sp.getOutputLinkType());
+					outputLinks.offerLast(exportRegister);
+				}
+				
+				if(sp instanceof SolderedControlPin) {
+					SolderedControlPin scp = (SolderedControlPin) sp;
+					RawExportControl exportRegister = new RawExportControl(globalReg, r, scp.getControlStatus());
+					if(type == RowType.CLASSICAL)
+						classicalControls.offerLast(exportRegister);
+					else
+						quantumControls.offerLast(exportRegister);
+				} else {
+					RawExportRegister exportRegister = new RawExportRegister(globalReg, r);
+					if(type == RowType.QUANTUM)
+						underneathQuantumIdentityGates.offerLast(exportRegister);
+				}
+				
+			}
+		}
+		
+		private void nextColumn() {
+			rowList = columns.next();
+			rowIterator = rowList.listIterator();
+			rowTypeIterator = rowTypes.iterator();
+		}
+		
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

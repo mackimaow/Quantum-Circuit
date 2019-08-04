@@ -2,6 +2,7 @@ package appFX.framework;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.stream.Stream;
 
 import appFX.appUI.MainScene;
 import appFX.appUI.appViews.BasicGateModelView;
@@ -14,19 +15,25 @@ import appFX.appUI.wizards.BasicGateModelEditWizard;
 import appFX.appUI.wizards.CircuitBoardPropertiesEditWizard;
 import appFX.appUI.wizards.CircuitBoardToPNGWizard;
 import appFX.appUI.wizards.Wizard;
+import appFX.framework.exportGates.ExportedGate;
+import appFX.framework.exportGates.GateManager;
+import appFX.framework.exportGates.GateManager.ExportException;
 import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
+import appFX.framework.gateModels.CircuitBoardModel.RowType;
 import appFX.framework.gateModels.GateModel;
-import appFX.framework.gateModels.OracleModel;
-import appFX.framework.solderedGates.SolderedControl;
+import appFX.framework.gateModels.GateModel.GateComputingType;
+import appFX.framework.gateModels.PresetGateType;
+import appFX.framework.solderedGates.SolderedControlPin;
 import appFX.framework.solderedGates.SolderedGate;
 import appFX.framework.solderedGates.SolderedPin;
 import appFX.framework.solderedGates.SolderedRegister;
-import appFX.framework.solderedGates.SpacerPin;
+import appFX.framework.solderedGates.SpacePin;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import sun.reflect.generics.visitor.Reifier;
 import utils.PrintStream;
 import utils.PrintStream.SystemPrintStream;
 import utils.customCollections.CommandParameterList;
@@ -56,10 +63,13 @@ public enum AppCommand {
 	SAVE_PROJECT_TO_FILESYSTEM,
 	SAVE_PROJECT,
 	
+	RESET_CURRENT_TOOL,
 	ADD_ROW_TO_FOCUSED_CB,
 	ADD_COLUMN_TO_FOCUSED_CB,
 	REMOVE_ROW_FROM_FOCUSED_CB,
 	REMOVE_COLUMN_FROM_FOCUSED_CB,
+	UNDO_FOCUSED_CB,
+	REDO_FOCUSED_CB,
 	
 	RUN_QUIL,
 	RUN_QASM,
@@ -88,6 +98,8 @@ public enum AppCommand {
 	
 	GET_GATE,
 	GET_GATE_INSTANCES,
+	
+	TEST_SIMULATION
 	
 	;
 	
@@ -130,7 +142,7 @@ public enum AppCommand {
 			CircuitBoardView  cbv = getFocusedCircuitBoardView(ms, commandResponse);
 			String circuitBoardName = "";
 			if(cbv != null)
-				circuitBoardName = cbv.getCircuitBoardModel().getFormalName();
+				circuitBoardName = cbv.getCircuitBoardModel().getLocationString();
 			wizard.openWizardAndGetElement(circuitBoardName);
 			break;
 		case EXPORT_TO_QASM:
@@ -173,6 +185,16 @@ public enum AppCommand {
 				status.setProjectSavedFlag();
 			break;
 
+			
+		case RESET_CURRENT_TOOL:
+			cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			
+			if(cbv == null)
+				return null;
+			
+			cbv.getToolActionManager().resetCurrentTool();
+			
+			break;
 			
 			
 		case REMOVE_COLUMN_FROM_FOCUSED_CB:
@@ -230,13 +252,39 @@ public enum AppCommand {
 			
 			cb = cbv.getCircuitBoardModel();
 			
+			RowType rowType;
+
+			if(cb.getComputingType() == GateComputingType.CLASSICAL) {
+				rowType = RowType.CLASSICAL;
+			} else {
+				rowType = RowType.QUANTUM;
+			}
+			
 			try {
-				cb.addRows(cb.getRows(), 1);
+				cb.addRows(cb.getRows(), 1, rowType);
 			} catch (IllegalArgumentException e) {
 				AppAlerts.showMessage(primaryStage, "Could not add Row", e.getMessage(), AlertType.ERROR);
 			}
 			
 			break;
+		case UNDO_FOCUSED_CB:
+			cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			
+			if(cbv == null)
+				return null;
+			
+			cb = cbv.getCircuitBoardModel();
+			cb.undo();
+			break;
+		case REDO_FOCUSED_CB:
+			cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			
+			if(cbv == null)
+				return null;
+			
+			cb = cbv.getCircuitBoardModel();
+			cb.redo();
+			break;	
 			
 			
 		
@@ -258,24 +306,24 @@ public enum AppCommand {
 		
 			
 		case RENAME_GATE:
-			String oldGate = parameters.getString(0);
-			String newGate = parameters.getString(1);
+			String oldGateLocationString = parameters.getString(0);
+			String newGateLocationString = parameters.getString(1);
 			
-			if(oldGate.equals(newGate)) {
+			if(oldGateLocationString.equals(newGateLocationString)) {
 				commandResponse.println("The old name and new name are the same. No refactoring took place."); 
 				return null;
 			}
 			
-			GateModel gmOld = currentProject.getGateModel(oldGate);
+			GateModel gmOld = currentProject.getGateModel(oldGateLocationString);
 			
-			if(!assertExists(oldGate, gmOld, commandResponse))
+			if(!assertExists(oldGateLocationString, gmOld, commandResponse))
 				return null;
 			
-			GateModel gmNew = currentProject.getGateModel(newGate);
+			GateModel gmNew = currentProject.getGateModel(newGateLocationString);
 			
 			if(gmNew != null) {
 				if(gmNew.isPreset()) {
-					commandResponse.printErrln("Gate \"" + newGate +  "\" is a preset gate and cannot be renamed");
+					commandResponse.printErrln("Gate \"" + newGateLocationString +  "\" is a preset gate and cannot be renamed");
 					AppAlerts.showMessage(primaryStage, "Cannot rename Gate", 
 							"The gate is renamed to preset Gate which cannot be modified", AlertType.ERROR);
 					return null;
@@ -290,6 +338,7 @@ public enum AppCommand {
 					return null;
 			}
 			
+			String newGateName = gmOld.getName();
 			String newGateSymbol = gmOld.getSymbol();
 			String newGateDescription = gmOld.getDescription();
 			
@@ -300,16 +349,14 @@ public enum AppCommand {
 			}
 
 			
-			GateModel replacement = gmOld.shallowCopyToNewName(newGate.split("\\.")[0], newGateSymbol, newGateDescription);
+			GateModel replacement = gmOld.shallowCopyToNewName(newGateLocationString, newGateName, newGateSymbol, newGateDescription);
 			
 			if(gmOld instanceof CircuitBoardModel) {
-				currentProject.getCircuitBoardModels().replace(oldGate, replacement);
-				CircuitBoardView.openCircuitBoard(newGate);
+				currentProject.getCircuitBoardModels().replace(oldGateLocationString, replacement);
+				CircuitBoardView.openCircuitBoard(newGateLocationString);
 			} else if (gmOld instanceof BasicGateModel) {
-				currentProject.getCustomGates().replace(oldGate, replacement);
+				currentProject.getCustomGates().replace(oldGateLocationString, replacement);
 				ms.getViewManager().addView(new BasicGateModelView((BasicGateModel)replacement));
-			} else if (gmOld instanceof OracleModel) {
-				currentProject.getCustomOracles().replace(oldGate, replacement);
 			} else {
 				return null;
 			}
@@ -330,8 +377,6 @@ public enum AppCommand {
 					BasicGateModelEditWizard.createNewGate(name);
 				} else if (ext.equals(CircuitBoardModel.CIRCUIT_BOARD_EXTENSION)) {
 					CircuitBoardPropertiesEditWizard.createNewGate(name);
-				} else if (ext.equals(OracleModel.ORACLE_MODEL_EXTENSION)) {
-					
 				}
 			}
 			break;
@@ -352,11 +397,9 @@ public enum AppCommand {
 					continue;
 				
 				if(gm instanceof BasicGateModel) {
-					BasicGateModelEditWizard.editAsNewGate(gm.getFormalName());
+					BasicGateModelEditWizard.editAsNewGate(gm.getLocationString());
 				} else if (gm instanceof CircuitBoardModel) {
-					CircuitBoardPropertiesEditWizard.editAsNewGate(gm.getFormalName());
-				} else if (gm instanceof OracleModel) {
-					
+					CircuitBoardPropertiesEditWizard.editAsNewGate(gm.getLocationString());
 				}
 			}
 			break;
@@ -372,11 +415,9 @@ public enum AppCommand {
 				}
 				
 				if(gm instanceof BasicGateModel) {
-					BasicGateModelEditWizard.editGate(gm.getFormalName());
+					BasicGateModelEditWizard.editGate(gm.getLocationString());
 				} else if (gm instanceof CircuitBoardModel) {
-					CircuitBoardPropertiesEditWizard.editGate(gm.getFormalName());
-				} else if (gm instanceof OracleModel) {
-					
+					CircuitBoardPropertiesEditWizard.editGate(gm.getLocationString());
 				}
 			}
 			break;
@@ -399,11 +440,9 @@ public enum AppCommand {
 					return null;
 				
 				if(gm instanceof BasicGateModel) {
-					currentProject.getCustomGates().remove(gm.getFormalName());
+					currentProject.getCustomGates().remove(gm.getLocationString());
 				} else if (gm instanceof CircuitBoardModel) {
-					currentProject.getCircuitBoardModels().remove(gm.getFormalName());
-				} else if ( gm instanceof OracleModel ) {
-					currentProject.getCustomOracles().remove(gm.getFormalName());
+					currentProject.getCircuitBoardModels().remove(gm.getLocationString());
 				}
 			}
 			break;
@@ -417,7 +456,7 @@ public enum AppCommand {
 				if(gm instanceof BasicGateModel) {
 					ms.getViewManager().addView(new BasicGateModelView((BasicGateModel) gm));
 				} else if (gm instanceof CircuitBoardModel) {
-					CircuitBoardView.openCircuitBoard(gm.getFormalName());
+					CircuitBoardView.openCircuitBoard(gm.getLocationString());
 				}
 			}
 			break;
@@ -443,7 +482,7 @@ public enum AppCommand {
 				return null;
 			
 			if(gm instanceof CircuitBoardModel) {
-				if(gm.getFormalName().equals(currentProject.getTopLevelCircuitName())) {
+				if(gm.getLocationString().equals(currentProject.getTopLevelCircuitLocationString())) {
 					commandResponse.println("Circuit Board \"" + parameters.get(0) + "\" is already top level");
 					return null;
 				} else {
@@ -455,7 +494,7 @@ public enum AppCommand {
 			break;
 			
 		case REMOVE_TOP_LEVEL:
-			if(currentProject.getTopLevelCircuitName() == null) {
+			if(currentProject.getTopLevelCircuitLocationString() == null) {
 				commandResponse.println("There is no circuit board set as top level");
 				return null;
 			}
@@ -502,10 +541,6 @@ public enum AppCommand {
 
 			commandResponse.println("\nProject Custom Gates:", Color.BLUE);
 			for(String modelName : currentProject.getCustomGates().getGateNameIterable())
-				commandResponse.println(modelName);
-
-			commandResponse.println("\nProject Custom Oracles:", Color.BLUE);
-			for(String modelName : currentProject.getCustomOracles().getGateNameIterable())
 				commandResponse.println(modelName);
 			break;
 			
@@ -603,14 +638,23 @@ public enum AppCommand {
 			
 			for(int c = 0; c < model.getColumns(); c++) {
 				for(int r = 0; r < model.getRows(); r++) {
-					SolderedPin sp = model.getSolderPinAt(r, c);
+					SolderedPin sp = model.getSolderedPinAt(r, c);
 					String type = "";
 					if(sp instanceof SolderedRegister) {
 						type = Integer.toString(((SolderedRegister)sp).getSolderedGatePinNumber());
-					} else if(sp instanceof SolderedControl) {
-						type = ((SolderedControl)sp).getControlStatus() ? "T" : "F";
-					} else if(sp instanceof SpacerPin) {
-						type = "_";
+					} else if(sp instanceof SpacePin) {
+						SpacePin spacePin = (SpacePin) sp;
+						type = "(";
+						if(spacePin.isInputLinked())
+							type += spacePin.getInputReg();
+						if(sp instanceof SolderedControlPin) {
+							type += ((SolderedControlPin)sp).getControlStatus() ? "T" : "F";
+						} else {
+							type += "_";
+						}
+						if(spacePin.isOutputLinked())
+							type += spacePin.getOutputReg();
+						type += ")";
 					}
 					SolderedGate next  = sp.getSolderedGate();
 					if(next != sg) {
@@ -618,9 +662,14 @@ public enum AppCommand {
 						solderID++;
 					}
 					
-					String firstCharName = sg.getGateModelFormalName().substring(0, 1);
+					String inBodyString = sp.isWithinBody()? "I" : "O";
 					
-					debugS[c][r] = firstCharName + type + "," + solderID;
+					String firstCharName = sg.getGateModelLocationString().substring(0, 1);
+					gm = AppStatus.get().getFocusedProject().getGateModel(sg.getGateModelLocationString());
+					if(gm != null)
+						firstCharName = gm.getSymbol();
+					
+					debugS[c][r] = firstCharName + type + "->(" + inBodyString + solderID + ")";
 					
 					largestSpaces[c] = largestSpaces[c] > debugS[c][r].length() ? largestSpaces[c] : debugS[c][r].length();
 				}
@@ -635,6 +684,30 @@ public enum AppCommand {
 					commandResponse.print(offsetFix);
 				}
 				commandResponse.println("");
+			}
+			
+			break;
+		case TEST_SIMULATION:
+			try {
+				Stream<ExportedGate> exportedGates = GateManager.exportGates(currentProject);
+				exportedGates = exportedGates.filter((gate) -> {
+					if(gate.isPresetGate()) {
+						PresetGateType type = gate.getPresetGateType();
+						if(type == PresetGateType.IDENTITY)
+							return false;
+					}
+					return true;
+				});
+				exportedGates.forEach((gate) -> {
+					System.out.println("New Gate");
+					int[] registers = gate.getGateRegister();
+					for(int i = 0; i < registers.length; i++)
+						System.out.print(registers[i] + " ");
+					System.out.println("");
+				});
+				exportedGates.close();
+			} catch (ExportException e) {
+				e.printStackTrace();
 			}
 			
 			break;

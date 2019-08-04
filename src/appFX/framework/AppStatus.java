@@ -150,8 +150,8 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 		this.project.setReceiver(notifier);
 		setProjectSavedFlag();
 		
-		if(project.getTopLevelCircuitName() != null)
-			AppCommand.doAction(AppCommand.OPEN_GATE, project.getTopLevelCircuitName());
+		if(project.getTopLevelCircuitLocationString() != null)
+			AppCommand.doAction(AppCommand.OPEN_GATE, project.getTopLevelCircuitLocationString());
 	}
 	
 	
@@ -224,7 +224,6 @@ public final class AppStatus implements EventHandler<WindowEvent> {
 		AppViewManager viewManager = AppStatus.get().getMainScene().getViewManager();
 		AppPreferences.Booleans.CONSOLE_OPEN.set(viewManager.containtsView(ConcreteView.CONSOLE));
 		AppPreferences.Booleans.CUSTOM_GATES_OPEN.set(viewManager.containtsView(ConcreteView.CUSTOM_GATES_VIEW));
-		AppPreferences.Booleans.CUSTOM_ORACLES_OPEN.set(viewManager.containtsView(ConcreteView.CUSTOM_ORACLES_VIEW));
 		AppPreferences.Booleans.PRESET_GATES_OPEN.set(viewManager.containtsView(ConcreteView.PRESET_GATES_VIEW));
 		AppPreferences.Booleans.CIRCUITBOARDS_OPEN.set(viewManager.containtsView(ConcreteView.CIRCUITBOARD_VIEW));
 		AppPreferences.Booleans.PROJECT_HIERARCHY_OPEN.set(viewManager.containtsView(ConcreteView.PROJECT_HIERARCHY));

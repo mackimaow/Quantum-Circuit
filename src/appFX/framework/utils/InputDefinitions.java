@@ -1,10 +1,11 @@
-package appFX.framework;
+package appFX.framework.utils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import appFX.framework.MathDefinitions;
 import language.compiler.ParseTree;
 import language.compiler.ParseTree.ParseBranch;
 import language.compiler.ParseTree.ParseLeaf;

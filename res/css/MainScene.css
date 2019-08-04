@@ -113,14 +113,38 @@ ToolBar ToggleButton {
 	-fx-background-color: #009688;
 }
 
+ToolBar Button {
+	-fx-background-color: #009688;
+	-fx-padding: 0;
+}
+
 ToolBar .toggle-button:hover {
 	-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 0);
+	-fx-padding: 0;
+}
+
+ToolBar .button:hover {
+	-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 0);
+	-fx-padding: 0;
+}
+
+ToolBar .button:pressed {
+	-fx-background-color: #00796B;
+	-fx-border-radius: 10 10 10 10;
+	-fx-background-radius: 10 10 10 10;
+	-fx-padding: 0;
 }
 
 ToolBar .toggle-button:selected {
 	-fx-background-color: #00796B;
 	-fx-border-radius: 10 10 10 10;
 	-fx-background-radius: 10 10 10 10;
+}
+
+
+.tooltip {
+	-fx-show-delay: 100ms;
+	-fx-show-duration: 10000ms;
 }
 
 

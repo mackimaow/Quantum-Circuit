@@ -13,13 +13,16 @@ import appFX.framework.Project;
 import appFX.framework.Project.ProjectHashtable;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
+import appFX.framework.gateModels.GateModel.GateComputingType;
 import appFX.framework.gateModels.GateModel.NameTakenException;
 import appFX.framework.gateModels.PresetGateType;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
@@ -100,9 +103,11 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 	
 	private class FirstElementPane extends SequencePaneElement implements SequencePaneFinish<CircuitBoardModel> {
 		
-		@FXML private TextField name, symbol;
+		@FXML private TextField fileLocation, name, symbol;
 		@FXML private TextArea description;
 		@FXML private VBox parameters;
+		@FXML private ComboBox<GateComputingType> gateType;
+		
 		
 		private RearrangableParameterListPaneWrapper parameterSelection;
 		
@@ -113,44 +118,55 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 		@Override
 		public void initialize() {
 			parameterSelection = new RearrangableParameterListPaneWrapper(parameters);
+			ObservableList<GateComputingType> strings = gateType.getItems();
+			strings.add(GateComputingType.CLASSICAL);
+			strings.add(GateComputingType.QUANTUM);
 		}
 		
 		@Override
 		public void setStartingFieldData(PaneFieldDataList fieldData) {
+			String fileLocationString = "";
 			String nameString = "";
 			String symbolString = "";
 			String descriptionString = "";
+			GateComputingType chosenType = GateComputingType.CLASSICAL;
 			
 			if(referencedCb != null) {
+				fileLocationString = referencedCb.getLocationString();
 				nameString = referencedCb.getName();
 				symbolString = referencedCb.getSymbol();
 				descriptionString = referencedCb.getDescription();
+				chosenType = referencedCb.getComputingType();
 			}
 			
+			fieldData.add(fileLocation, fileLocationString);
 			fieldData.add(name, nameString);
 			fieldData.add(symbol, symbolString);
 			fieldData.add(description, descriptionString);
 			
+			String[] args = {""};
+			
 			if(referencedCb != null) {
-				ImmutableArray<String> argsList = referencedCb.getArguments();
-				String[] args = new String[argsList.size()];
+				ImmutableArray<String> argsList = referencedCb.getParameters();
+				args = new String[argsList.size()];
 				argsList.toArray(args);
-				fieldData.add(parameterSelection, (Object[]) args);
 			}
+			fieldData.add(parameterSelection, (Object[]) args);
+			fieldData.add(gateType, chosenType);
 		}
 		
 		@Override
 		public boolean checkFinish() {
-			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
-			if(checkTextFieldError(getStage(), name, !name.getText().matches(GateModel.NAME_REGEX), "Inproper name scheme", GateModel.IMPROPER_NAME_SCHEME_MSG)) return false;
 			boolean isPreset = false;
 			try {
-				PresetGateType.checkName(name.getText());
+				PresetGateType.checkLocationString(fileLocation.getText());
 			} catch (NameTakenException e) {
 				isPreset = true;
 			}
-			if(checkTextFieldError(getStage(), name, isPreset, "Cannot used the specified name", "The name chosen is exclusive to a Preset Gate")) return false;
+			if(checkTextFieldError(getStage(), fileLocation, isPreset, "Cannot used the specified file location", "The file location chosen is exclusive to a Preset Gate")) return false;
 			
+			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
+			if(checkTextFieldError(getStage(), name, !name.getText().matches(GateModel.NAME_REGEX), "Inproper name scheme", GateModel.IMPROPER_NAME_SCHEME_MSG)) return false;
 
 			if(checkTextFieldError(getStage(), symbol, symbol.getText() == null, "Unfilled prompts", "Symbol must be defined")) return false;
 			if(checkTextFieldError(getStage(), symbol, !symbol.getText().matches(GateModel.SYMBOL_REGEX), "Inproper symbol scheme", GateModel.IMPROPER_SYMBOL_SCHEME_MSG)) return false;
@@ -172,9 +188,11 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 			}
 			
 			if(referencedCb == null)
-				newCb = new CircuitBoardModel(name.getText(), symbol.getText(), description.getText(), 5, 5, params);
+				newCb = new CircuitBoardModel(fileLocation.getText() ,name.getText(), symbol.getText(),
+						description.getText(), gateType.getValue(), 5, 5, params);
 			else
-				newCb = referencedCb.createDeepCopyToNewName(name.getText(), symbol.getText(), description.getText(), params);
+				newCb = referencedCb.createDeepCopyToNewName(fileLocation.getText(), name.getText(), symbol.getText(),
+						description.getText(), gateType.getValue(), params);
 			
 			return addCircuitBoardToProject(getStage(), referencedCb, newCb, editAsNew);
 		}
@@ -200,7 +218,15 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 							+ "All instances of the previous circuit board model in this project will be changed to the new implementation.", AlertType.WARNING);
 			if(buttonType == ButtonType.CANCEL)
 				return false;
-			if(!newCb.getName().equals(referencedCb.getName()) && p.containsGateModel(newCb.getFormalName())) {
+			
+			if(referencedCb.getComputingType() == GateComputingType.QUANTUM && newCb.getComputingType() == GateComputingType.CLASSICAL) {
+				buttonType = AppAlerts.showMessage(stage, "Gate Type set to be changed", "The circuit board is changing from a quantum board to a classical board."
+						+ " All quantum registers will be removed with this action. Do you wish to continue?", AlertType.WARNING);
+				if(buttonType == ButtonType.CANCEL)
+					return false;
+			}
+			
+			if(!newCb.getName().equals(referencedCb.getName()) && p.containsGateModel(newCb.getLocationString())) {
 				buttonType = AppAlerts.showMessage(stage, "Override circuit board model " + newCb.getName(), 
 						"A circuit board model with the name \"" + newCb.getName() + "\" already exists, "
 								+ "do you want to override this circuit board model?"
@@ -210,12 +236,18 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 					return false;
 			}
 			
-			if(buttonType == ButtonType.CANCEL)
-				return false;
-			
-			pht.replace(referencedCb.getFormalName(), newCb);
+			pht.replace(referencedCb.getLocationString(), newCb);
 		} else {
-			if(pht.containsGateModel(newCb.getFormalName())) {
+			if(referencedCb != null) {
+				if(referencedCb.getComputingType() == GateComputingType.QUANTUM && newCb.getComputingType() == GateComputingType.CLASSICAL) {
+					ButtonType buttonType = AppAlerts.showMessage(stage, "Gate Type set to be changed", "The circuit board is changing from a quantum board to a classical board."
+							+ " All quantum registers will be removed with this action. Do you wish to continue?", AlertType.WARNING);
+					if(buttonType == ButtonType.CANCEL)
+						return false;
+				}
+			}
+			
+			if(pht.containsGateModel(newCb.getLocationString())) {
 				ButtonType buttonType = AppAlerts.showMessage(stage, "Override circuit board model " + newCb.getName(), 
 						"A circuit board model with the name \"" + newCb.getName() + "\" already exists, "
 								+ "do you want to override this circuit board model?"
@@ -228,7 +260,7 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 			pht.put(newCb);
 		}
 		
-		AppCommand.doAction(AppCommand.OPEN_GATE, newCb.getFormalName());
+		AppCommand.doAction(AppCommand.OPEN_GATE, newCb.getLocationString());
 		
 		return true;
 	}

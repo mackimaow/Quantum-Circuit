@@ -34,7 +34,7 @@ public class ToolActionRenderLayer extends RenderLayer {
 	
 	public synchronized void calculateBounds() {
 		CircuitBoardRenderer renderer = cbv.getRenderer();
-		calculateBounds(renderer.getGridData());
+		calculateBounds(renderer.getGridData(), renderer.getRowTypeList());
 	}
 	
 	

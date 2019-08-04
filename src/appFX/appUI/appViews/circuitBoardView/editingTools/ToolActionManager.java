@@ -4,6 +4,7 @@ import appFX.appUI.MainScene;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
 import appFX.appUI.utils.AppToolManager;
+import appFX.appUI.utils.AppToolManager.AppTool;
 import appFX.framework.AppStatus;
 import appFX.framework.exportGates.Control;
 import graphicsWrapper.FocusData;
@@ -66,27 +67,35 @@ public class ToolActionManager implements EventHandler<MouseEvent> {
 		MainScene ms = AppStatus.get().getMainScene();
 		AppToolManager toolManager = ms.getToolManager();
 		
-		if(toggle == toolManager.getToolButton(AppToolManager.SELECT_TOOL_BUTTON)) {
+		if(toggle == toolManager.getToolButton(AppTool.SELECT_TOOL)) {
 			return new SelectToolAction(cbv);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.SOLDER_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.SOLDER_TOOL)) {
 			return new SolderRegionToolAction(cbv);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.EDIT_TOOL_BUTTON)) {
-		} else if(toggle == toolManager.getToolButton(AppToolManager.CONTROL_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.PRY_TOOL)) {
+			return new PryToolAction(cbv);
+		} else if(toggle == toolManager.getToolButton(AppTool.EDIT_TOOL)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.LINK_TOOL)) {
+			return new LinkToolAction(cbv);
+		} else if(toggle == toolManager.getToolButton(AppTool.CONTROL_TOOL)) {
 			return new ControlToolAction(cbv, Control.CONTROL_TRUE);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.CONTROL_NOT_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.CONTROL_NOT_TOOL)) {
 			return new ControlToolAction(cbv, Control.CONTROL_FALSE);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.ADD_COLUMN_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.ADD_COLUMN_TOOL)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.ADD, RowColumnToolAction.COLUMN);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.REMOVE_COLUMN_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.REMOVE_COLUMN_TOOL)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.REMOVE, RowColumnToolAction.COLUMN);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.ADD_ROW_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.ADD_ROW_TOOL)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.ADD, RowColumnToolAction.ROW);
-		} else if(toggle == toolManager.getToolButton(AppToolManager.REMOVE_ROW_TOOL_BUTTON)) {
+		} else if(toggle == toolManager.getToolButton(AppTool.REMOVE_ROW_TOOL)) {
 			return new RowColumnToolAction(cbv, RowColumnToolAction.REMOVE, RowColumnToolAction.ROW);
 		}
 		return doNothing;
 	}
 
+	public void resetCurrentTool() {
+		currentToolAction.reset();
+	}
+	
 	public ChangeListener<Toggle> getToolChangedListener() {
 		return toolChanged;
 	}

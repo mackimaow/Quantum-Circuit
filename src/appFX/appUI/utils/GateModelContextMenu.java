@@ -26,12 +26,12 @@ public class GateModelContextMenu extends ContextMenu {
 	}
 	
 	public static void addToElements(GateModel gm, ObservableList<MenuItem> elements, Project p) {
-		String gateModel = gm.getFormalName();
+		String gateModelLocationString = gm.getLocationString();
 		
 		if(p != null && gm instanceof CircuitBoardModel) {
-			String topLevel = p.getTopLevelCircuitName();
+			String topLevelLocationString = p.getTopLevelCircuitLocationString();
 			
-			if(topLevel != null && topLevel.equals(gateModel)) {
+			if(topLevelLocationString != null && topLevelLocationString.equals(gateModelLocationString)) {
 				MenuItem removeFromTopLevel = new MenuItem("Remove From Top-Level");
 				removeFromTopLevel.setOnAction((e) -> AppCommand.doAction(AppCommand.REMOVE_TOP_LEVEL));
 				elements.add(removeFromTopLevel);
@@ -39,7 +39,7 @@ public class GateModelContextMenu extends ContextMenu {
 				
 			} else {
 				MenuItem mkTopLevel = new MenuItem("Set as Top-Level");
-				mkTopLevel.setOnAction((e) -> AppCommand.doAction(AppCommand.SET_AS_TOP_LEVEL, gateModel));
+				mkTopLevel.setOnAction((e) -> AppCommand.doAction(AppCommand.SET_AS_TOP_LEVEL, gateModelLocationString));
 				elements.add(mkTopLevel);
 				elements.add(new SeparatorMenuItem());
 			}
@@ -49,7 +49,7 @@ public class GateModelContextMenu extends ContextMenu {
 		MenuItem open = new MenuItem("Open");
 		MenuItem editAsNew = new MenuItem("Edit as New");
 		
-		open.setOnAction((e) -> AppCommand.doAction(AppCommand.OPEN_GATE, gateModel));
+		open.setOnAction((e) -> AppCommand.doAction(AppCommand.OPEN_GATE, gateModelLocationString));
 		elements.add(open);
 		if(!gm.isPreset()) {
 			MenuItem rename = new MenuItem("Rename");
@@ -95,18 +95,18 @@ public class GateModelContextMenu extends ContextMenu {
 				Optional<ButtonType> options = prompt.showAndWait();
 				
 				if(options.get() == ButtonType.APPLY)
-					AppCommand.doAction(AppCommand.RENAME_GATE, gateModel, prompt.getReply() + "." +  gm.getExtString());
+					AppCommand.doAction(AppCommand.RENAME_GATE, gateModelLocationString, prompt.getReply() + "." +  gm.getExtString());
 			});
 			elements.add(rename);
 			MenuItem edit = new MenuItem("Edit");
-			edit.setOnAction((e) -> AppCommand.doAction(AppCommand.EDIT_GATE, gateModel));
+			edit.setOnAction((e) -> AppCommand.doAction(AppCommand.EDIT_GATE, gateModelLocationString));
 			elements.add(edit);
 		}
-		editAsNew.setOnAction((e) -> AppCommand.doAction(AppCommand.EDIT_AS_NEW_GATE, gateModel));
+		editAsNew.setOnAction((e) -> AppCommand.doAction(AppCommand.EDIT_AS_NEW_GATE, gateModelLocationString));
 		elements.add(editAsNew);
 		if(!gm.isPreset()) {
 			MenuItem remove = new MenuItem("Remove");
-			remove.setOnAction((e) -> AppCommand.doAction(AppCommand.REMOVE_GATE, gateModel));
+			remove.setOnAction((e) -> AppCommand.doAction(AppCommand.REMOVE_GATE, gateModelLocationString));
 			elements.add(remove);
 		}
 	}

@@ -2,14 +2,19 @@ package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
+import appFX.appUI.prompts.RowTypeAddPrompt;
 import appFX.appUI.utils.AppAlerts;
 import appFX.framework.AppStatus;
+import appFX.framework.gateModels.CircuitBoardModel;
+import appFX.framework.gateModels.CircuitBoardModel.RowType;
+import appFX.framework.gateModels.GateModel.GateComputingType;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.Graphics;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import utils.customCollections.Pair;
 
 public class RowColumnToolAction extends ToolAction {
 	
@@ -43,16 +48,33 @@ public class RowColumnToolAction extends ToolAction {
 		
 		try {
 			CircuitBoardView cbv = getCircuitBoardView();
+			CircuitBoardModel cbm = cbv.getCircuitBoardModel();
+			
 			if(rowColumn == ROW) {
-				if(addRemove == ADD)
-					cbv.getCircuitBoardModel().addRows(rowInt + (row - rowInt < .5d? 0 : 1) , 1);
-				else
-					cbv.getCircuitBoardModel().removeRows(rowInt, rowInt + 1);
+				if(addRemove == ADD) {
+					RowType[] validTypes;
+					int rowTypeSelect;
+					if(cbm.getComputingType() == GateComputingType.CLASSICAL) {
+						validTypes = new RowType[] {RowType.SPACE, RowType.CLASSICAL};
+						rowTypeSelect = 1;
+					} else {
+						validTypes = new RowType[] {RowType.SPACE, RowType.CLASSICAL, RowType.QUANTUM};
+						rowTypeSelect = 2;
+					}
+						
+					RowTypeAddPrompt prompt = new RowTypeAddPrompt(rowTypeSelect, validTypes);
+					Pair<RowType, Integer> element = prompt.openPromptAndGetElement();
+					
+					if(element != null)
+						cbm.addRows(rowInt + (row - rowInt < .5d? 0 : 1) , element.second(), element.first());
+				} else {
+					cbm.removeRows(rowInt, rowInt + 1);
+				}
 			} else {
 				if(addRemove == ADD)
-					cbv.getCircuitBoardModel().addColumns(columnInt + (column - columnInt < .5d? 0 : 1), 1);
+					cbm.addColumns(columnInt + (column - columnInt < .5d? 0 : 1), 1);
 				else
-					cbv.getCircuitBoardModel().removeColumns(columnInt, columnInt + 1);
+					cbm.removeColumns(columnInt, columnInt + 1);
 			}
 		} catch(IllegalArgumentException iae) {
 			AppAlerts.showMessage(AppStatus.get().getPrimaryStage(), 

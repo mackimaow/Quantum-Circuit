@@ -33,7 +33,7 @@ public class SolderableIcon extends AppFXMLComponent implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		symbol.setText(s.getSymbol());
 		
-		ImmutableArray<String> paramLatex = s.getArguments();
+		ImmutableArray<String> paramLatex = s.getParameters();
 		
 		if(!paramLatex.isEmpty()) {
 			String paramString = "\\( ( " + paramLatex.get(0);
