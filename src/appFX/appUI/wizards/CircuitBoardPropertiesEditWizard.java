@@ -166,10 +166,10 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 			if(checkTextFieldError(getStage(), fileLocation, isPreset, "Cannot used the specified file location", "The file location chosen is exclusive to a Preset Gate")) return false;
 			
 			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
-			if(checkTextFieldError(getStage(), name, !name.getText().matches(GateModel.NAME_REGEX), "Inproper name scheme", GateModel.IMPROPER_NAME_SCHEME_MSG)) return false;
+			if(checkTextFieldError(getStage(), name, name.getText().matches("\\s+"), "Inproper name scheme", "Name should not be empty spaces")) return false;
 
 			if(checkTextFieldError(getStage(), symbol, symbol.getText() == null, "Unfilled prompts", "Symbol must be defined")) return false;
-			if(checkTextFieldError(getStage(), symbol, !symbol.getText().matches(GateModel.SYMBOL_REGEX), "Inproper symbol scheme", GateModel.IMPROPER_SYMBOL_SCHEME_MSG)) return false;
+			if(checkTextFieldError(getStage(), symbol, symbol.getText().matches("\\s+"), "Inproper symbol scheme", "Symbol should not be empty spaces")) return false;
 			
 			HashSet<String> paramSet = new HashSet<>();
 			Iterator<Node> nodeIterator = parameterSelection.nodeIterator();

@@ -5,10 +5,11 @@ import java.util.Hashtable;
 import java.util.Set;
 
 import appFX.framework.gateModels.BasicGateModel;
-import appFX.framework.gateModels.BasicGateModel.BasicGateModelType;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.PresetGateType;
 import appFX.framework.gateModels.PresetGateType.PresetGateModel;
+import appFX.framework.gateModels.QuantumGateDefinition;
+import appFX.framework.gateModels.QuantumGateDefinition.QuantumGateType;
 import appFX.framework.utils.InputDefinitions.MatrixDefinition;
 import mathLib.Complex;
 import mathLib.Matrix;
@@ -26,7 +27,8 @@ public class ExportedGate {
 	@SuppressWarnings("unchecked")
 	public static ExportedGate mkIdentAt(int register, boolean isClassical) {
 		BasicGateModel gm = PresetGateType.IDENTITY.getModel();
-		Matrix<Complex> m = ((MatrixDefinition) gm.getDefinitions().get(0)).getMatrix();
+		QuantumGateDefinition definition = gm.getQuantumGateDefinition();
+		Matrix<Complex> m = ((MatrixDefinition) definition.getDefinitions().get(0)).getMatrix();
 		
 		return new ExportedGate(gm, new Hashtable<>(), new int[] {register}, isClassical, new Control[0], new Control[0], new Matrix[] { m });
 	}
@@ -80,9 +82,12 @@ public class ExportedGate {
 		else return null;
 	}
 	
-	public BasicGateModelType getGateType() {
+	public QuantumGateType getQuantumGateType() {
 		if(gateModel instanceof BasicGateModel) {
-			return ((BasicGateModel)gateModel).getGateModelType();
+			if(gateModel.isQuantum()) {
+				QuantumGateDefinition definition = ((BasicGateModel) gateModel).getQuantumGateDefinition();
+				return definition.getQuantumGateType();
+			}
 		}
 		return null;
 	}

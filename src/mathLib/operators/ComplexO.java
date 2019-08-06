@@ -34,6 +34,11 @@ public final class ComplexO implements OperatorSet<Complex> {
 	public Complex exp(Complex num1, Complex num2) {
 		return num1.exp(num2);
 	}
+	
+	@Override
+	public Complex conjugate(Complex num) {
+		return num.conjugate();
+	}
 
 	@Override
 	public Complex get1() {

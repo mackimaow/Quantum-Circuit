@@ -31,7 +31,7 @@ public final class DoubleO implements OperatorSet<Double>{
 			comps[i] = 0d;
 		return comps;
 	}
-
+	
 	@Override
 	public Double add(Double num1, Double num2) {
 		return num1 + num2;
@@ -62,4 +62,9 @@ public final class DoubleO implements OperatorSet<Double>{
 		return Math.pow(num , .5);
 	}
 
+	@Override
+	public Double conjugate(Double num) {
+		return num;
+	}
+	
 }

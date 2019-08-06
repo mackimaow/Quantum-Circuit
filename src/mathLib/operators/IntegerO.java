@@ -59,5 +59,10 @@ public final class IntegerO implements OperatorSet<Integer>{
 	public Integer sqrt(Integer num) {
 		return (int) Math.round(Math.pow(num , .5));
 	}
+
+	@Override
+	public Integer conjugate(Integer num) {
+		return num;
+	}
 	
 }

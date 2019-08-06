@@ -58,9 +58,9 @@ public class GateModelContextMenu extends ContextMenu {
 						"Rename", "Rename \"" + gm.getName() + "\"", gm.getName(), 250, 120);
 				
 				AcceptInputRunnable runnable = (s) -> {
-					if(!s.matches(GateModel.NAME_REGEX)) {
+					if(s.matches("\\s+")) {
 						AppAlerts.showMessage(prompt.getPromptWindow(), "Improper name scheme", 
-								GateModel.IMPROPER_NAME_SCHEME_MSG, AlertType.ERROR);
+								"Name cannot be just spaces", AlertType.ERROR);
 						return false;
 					}
 					

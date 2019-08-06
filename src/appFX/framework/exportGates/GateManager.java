@@ -231,7 +231,7 @@ public class GateManager {
 		GateModel gm = leaf.gm;
 		Hashtable<String, Complex> argParamTable = leaf.parameters;
 		BasicGateModel dg = (BasicGateModel) gm;
-		ImmutableArray<MathObject> definitions = dg.getDefinitions();
+		ImmutableArray<MathObject> definitions = dg.getQuantumGateDefinition().getDefinitions();
 		Matrix<Complex>[] matrixes = new Matrix[definitions.size()];
 		
 		for (int i = 0 ; i < matrixes.length; i++) {

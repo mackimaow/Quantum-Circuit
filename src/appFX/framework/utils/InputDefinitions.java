@@ -23,6 +23,7 @@ import mathLib.expression.Function.LatexFormat;
 import mathLib.expression.MathSet;
 import mathLib.expression.Variable;
 import mathLib.expression.Variable.ConcreteVariable;
+import utils.customCollections.IterableArrayWrapper;
 import utils.customCollections.immutableLists.ImmutableArray;
 
 public class InputDefinitions implements Serializable {
@@ -38,9 +39,12 @@ public class InputDefinitions implements Serializable {
 		return evaluateInput(runnable, null, rawUserInput); 
 	}
 	
-	
 	public static GroupDefinition evaluateInput(CheckDefinitionRunnable runnable, String[] onlyVariables, String ... rawUserInput) throws DefinitionEvaluatorException {
-		Definition[] definitions = new Definition[rawUserInput.length];
+		return evaluateInput(runnable, onlyVariables, rawUserInput.length, new IterableArrayWrapper<>(rawUserInput));
+	}
+	
+	public static GroupDefinition evaluateInput(CheckDefinitionRunnable runnable, String[] onlyVariables, int numberOfDefintions, Iterable<String> rawUserInput) throws DefinitionEvaluatorException {
+		Definition[] definitions = new Definition[numberOfDefintions];
 		
 		int i = 0;
 		for(String input : rawUserInput) {
@@ -77,10 +81,6 @@ public class InputDefinitions implements Serializable {
 		
 		return new GroupDefinition(definitions);
 	}
-	
-	
-	
-	
 	
 	
 	public static Definition evaluateInput (String rawUserInput) throws EquationParseException, EvaluateExpressionException {
