@@ -429,8 +429,8 @@ public class GateRenderer {
 		case TOFFOLI:
 			renderAllControls(graphics, palette, classicalControls, quantumControls, rowBounds, column);
 			renderControl(graphics, palette, regs.get(0).row, column, Control.CONTROL_TRUE, 0);
-			renderSwapHead(graphics, palette, regs.get(1).row, column);
-			renderSwapHead(graphics, palette, regs.get(2).row, column);
+			renderControl(graphics, palette, regs.get(1).row, column, Control.CONTROL_TRUE, 0);
+			renderCNotHead(graphics, palette, regs.get(2).row, column);
 			break;
 		case MEASUREMENT:
 			graphics.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);

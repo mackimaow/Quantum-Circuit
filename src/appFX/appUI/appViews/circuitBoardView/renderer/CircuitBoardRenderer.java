@@ -3,8 +3,6 @@ package appFX.appUI.appViews.circuitBoardView.renderer;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.sun.rowset.providers.RIOptimisticProvider;
-
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GateRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.GridRenderLayer;
