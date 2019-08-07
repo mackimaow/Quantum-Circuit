@@ -12,8 +12,8 @@ public class Matrix<T> extends MathValue {
 	private static final long serialVersionUID = -5950565947565116041L;
 	
 //	Single Array is faster Overall
-	private final T[] comps;
-	private final int rows, columns;
+	protected final T[] comps;
+	protected final int rows, columns;
 	protected final OperatorSet<T> o;
 	
 	@SuppressWarnings("unchecked")
@@ -185,6 +185,14 @@ public class Matrix<T> extends MathValue {
 		for(int r = 0; r < rows; r++)
 			for(int c = 0; c < columns; c++)
 				temp.r(v(r, c), c, r);
+		return temp;
+	}
+	
+	public Matrix<T> conjugateTranspose() {
+		Matrix<T> temp = new Matrix<T>(o, columns, rows, o.mkZeroArray(columns * rows));
+		for(int r = 0; r < rows; r++)
+			for(int c = 0; c < columns; c++)
+				temp.r(o.conjugate(v(r, c)), c, r);
 		return temp;
 	}
 	

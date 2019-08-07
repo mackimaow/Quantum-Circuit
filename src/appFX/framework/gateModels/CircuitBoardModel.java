@@ -14,7 +14,6 @@ import appFX.framework.exportGates.RawExportableGateData.RawExportControl;
 import appFX.framework.exportGates.RawExportableGateData.RawExportLink;
 import appFX.framework.exportGates.RawExportableGateData.RawExportOutputLink;
 import appFX.framework.exportGates.RawExportableGateData.RawExportRegister;
-import appFX.framework.gateModels.BasicGateModel.BasicGateModelType;
 import appFX.framework.solderedGates.SolderedControlPin;
 import appFX.framework.solderedGates.SolderedGate;
 import appFX.framework.solderedGates.SolderedPin;
@@ -424,6 +423,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
     	if(rowControl < 0 || rowControl > getRows() || rowSpace < 0 || rowSpace > getRows())
 			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	
     	RowType controlRowType = rowTypes.getTypeAtRow(rowControl);
     	if(controlRowType == RowType.SPACE)
 			throw new IllegalArgumentException("Control can not be placed on an empty row");
@@ -443,6 +443,15 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	GateModel gm = AppStatus.get().getFocusedProject().getGateModel(gateLocationString);
 		if(gm == null)
 			throw new IllegalArgumentException("Gate: \"" + gateLocationString + "\"does not exist");
+		if(gm instanceof BasicGateModel) {
+			BasicGateModel bgm = (BasicGateModel) gm;
+			if(gm.isQuantum()) {
+				QuantumGateDefinition def = bgm.getQuantumGateDefinition();
+				if(def.isMeasurement() && controlRowType == RowType.QUANTUM)
+					throw new IllegalArgumentException("Cannot place quantum controls on measurement gates");
+			}
+		}
+		
 		
     	notifier.sendChange(this, "placeControl", rowControl, rowSpace, columnSpace, controlStatus);
     	Action action = addControlAction(rowControl, rowSpace, columnSpace, controlStatus);
@@ -525,19 +534,20 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
     	if(rowLink < 0 || rowLink > getRows() || rowSpace < 0 || rowSpace > getRows())
 			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
+    	
     	RowType rowType = rowTypes.getTypeAtRow(rowLink);
-    	if(rowType == RowType.SPACE)
+    	if(rowType == RowType.SPACE) // link placed on space row
 			throw new IllegalArgumentException("Output link can not be placed on an empty row");
-    	if(rowType == RowType.QUANTUM)
+    	if(rowType == RowType.QUANTUM) // link placed on quantum row
 			throw new IllegalArgumentException("Output link can not be placed on an quantum register");
 		rowType = rowTypes.getTypeAtRow(rowSpace);
     	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
 		SolderedGate sg = sp.getSolderedGate();
-    	if(rowType == RowType.SPACE && sg.isIdentity())
+    	if(rowType == RowType.SPACE && sg.isIdentity()) // link's soldered gate is a space row
 			throw new IllegalArgumentException("Output link can not be attached on an empty row");
     	int regRow = getArbitraryGateRegisterLocation(rowSpace, columnSpace);
     	RowType gateType = rowTypes.getTypeAtRow(regRow);
-    	if(gateType == RowType.CLASSICAL)
+    	if(gateType == RowType.CLASSICAL) // link's soldered gate is a classical gate
     		throw new IllegalArgumentException("Output link can not be attached to an already classical gate");
 		sp = getSolderedPinAt(rowLink, columnSpace);
     	if(sp.getSolderedGate() == sg && sp instanceof SolderedRegister)
@@ -548,12 +558,19 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		String gateModelLocationString = sg.getGateModelLocationString();
 		GateModel gm = project.getGateModel(gateModelLocationString);
 		
-		if(gm == null)
+		if(gm == null) // link's soldered gate's gate model does not exist
 			throw new IllegalArgumentException("Gate Model: \"" + gateModelLocationString + "\" does not exist within the project");
+		if(!gm.isQuantum())
+			throw new IllegalArgumentException("Cannot place output classical links from non-quantum gates");
 		if(gm instanceof BasicGateModel) {
 			BasicGateModel bgm = (BasicGateModel) gm;
-			if(bgm.getGateModelType() != BasicGateModelType.POVM && bgm.getGateModelType() != BasicGateModelType.KRAUS_OPERATORS)
+			if(gm.isQuantum()) {
+				QuantumGateDefinition def = bgm.getQuantumGateDefinition();
+				if(!def.isMeasurement())
+					throw new IllegalArgumentException("Cannot place output classical registers from non-measurement gates");
+			}  else {
 				throw new IllegalArgumentException("Cannot place output classical registers from non-circuitboard or non-measurement gates");
+			}
 		}
 		
 		int inputReg = -1;
@@ -999,7 +1016,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	return action;
     }
     
-    private Action addLinkAction(int rowControl, int rowSpace, int columnSpace, int inputLinkReg,
+    private Action addLinkAction(int rowLink, int rowSpace, int columnSpace, int inputLinkReg,
     		OutputLinkType outputLinkType, int outputLinkReg) {
     	Action action = new MultipleAction() {
     		@Override
@@ -1019,16 +1036,16 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	    				}
 	    			}
     			}
-    			if(rowControl < bounds[0]) {
-    				Action clearRows = clearAreaAction(rowControl, bounds[0] - 1, columnSpace, true);
+    			if(rowLink < bounds[0]) {
+    				Action clearRows = clearAreaAction(rowLink, bounds[0] - 1, columnSpace, true);
     				actions.offerLast(clearRows);
-    			} else if (rowControl > bounds[1]) {
-    				Action clearRows = clearAreaAction(bounds[1] + 1, rowControl, columnSpace, true);
+    			} else if (rowLink > bounds[1]) {
+    				Action clearRows = clearAreaAction(bounds[1] + 1, rowLink, columnSpace, true);
     				actions.offerLast(clearRows);
     			}
-    			Action addControl = addLinkOnClearedAreaAction(rowControl, rowSpace, columnSpace, inputLinkReg,
+    			Action addLink = addLinkOnClearedAreaAction(rowLink, rowSpace, columnSpace, inputLinkReg,
     		    		outputLinkType, outputLinkReg);
-    			actions.offerLast(addControl);
+    			actions.offerLast(addLink);
     		}
     	};
     	return action;
@@ -1087,7 +1104,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     			ListIterator<SolderedPin> iterator = getRowIterator(rowLink, columnSpace);
     			SolderedPin sp = iterator.next();
     			
-    			if(sp.getSolderedGate() == sg) {
+    			if(pinBeforePlacement.getSolderedGate() == sg) {
     				if(pinBeforePlacement instanceof SolderedControlPin) {
     					SolderedControlPin controlPinBeforePlacement = (SolderedControlPin) pinBeforePlacement;
         				iterator.set(new SolderedControlPin(sg, controlPinBeforePlacement.isWithinBody(), controlPinBeforePlacement.getControlStatus(), 
@@ -1182,34 +1199,57 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
     private Action clearAreaAction(int rowStart, int rowEnd, int column, boolean removeWhenInsideGate) {
     	Action action = new MultipleAction() {
-
+    			
 			@Override
 			public void initActionQueue(LinkedList<Action> actions) {
     			ListIterator<SolderedPin> iterator = getRowIterator(rowStart, column); 
     			
-    			SolderedGate currentGate = null;
+    			Queue<Integer> controls = new Queue<>();
+        		Queue<Integer> inputLinks = new Queue<>();
+        		Queue<Integer> outputLinks = new Queue<>();
+    			
+    			SolderedPin sp = iterator.next();
+				iterator.previous();
+    			SolderedGate currentGate = sp.getSolderedGate();
+    			int start = rowStart;
     			
     			
-    			Queue<Integer> controlsToRemoveQueue = new Queue<>();
-    			Queue<Integer> inputLinksToRemoveQueue = new Queue<>();
-    			Queue<Integer> outputLinksToRemoveQueue = new Queue<>();
+    			if(removeWhenInsideGate && !currentGate.isIdentity() && !sp.isWithinBody()) {
+					int rowBody = getArbitraryGateRegisterLocation(rowStart, column);
+					
+					if(rowStart < rowBody ) {
+						ListIterator<SolderedPin> backIterator = getRowIterator(rowStart, column); 
+						while(backIterator.hasPrevious()) {
+							SolderedPin previousPin = backIterator.previous();
+							if(previousPin.getSolderedGate() != currentGate)
+								break;
+							addNonEmptySpacePin((SpacePin) previousPin, backIterator.nextIndex(), controls, inputLinks, outputLinks);
+						}
+					} else {
+						while(iterator.hasNext()) {
+							sp = iterator.next();
+							if(sp.getSolderedGate() != currentGate)
+								break;
+							addNonEmptySpacePin((SpacePin) sp, iterator.previousIndex(), controls, inputLinks, outputLinks);
+						}
+						if(sp.getSolderedGate() != currentGate)
+							iterator.previous();
+						start = iterator.nextIndex();
+					}
+    			}
     			
-    			for(int i = rowStart; i <= rowEnd; i++) {
-    				SolderedPin sp = iterator.next();
-    				
-    				if(currentGate == null)
-    					currentGate = sp.getSolderedGate();
+    			
+    			for(int i = start; i <= rowEnd; i++) {
+    				sp = iterator.next();
     				
     				if(checkIfRemoveGate(sp)) {
     					
     					if(sp.getSolderedGate() != currentGate) {
-    						addActions(actions, controlsToRemoveQueue, inputLinksToRemoveQueue, outputLinksToRemoveQueue);
+    						addActions(actions, controls, inputLinks, outputLinks);
     						currentGate = sp.getSolderedGate();
     					}
-    						
-    					controlsToRemoveQueue.clear();
-    					inputLinksToRemoveQueue.clear();
-    					outputLinksToRemoveQueue.clear();
+
+						clearQueues(controls, inputLinks, outputLinks);
     					
         				if(!sp.getSolderedGate().isIdentity()) { 
     	    				Action removeGate = removeEntireGateAction(iterator.previousIndex(), column);
@@ -1231,25 +1271,31 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
         			} else {
         				
         				if(sp.getSolderedGate() != currentGate) {
-    						addActions(actions, controlsToRemoveQueue, inputLinksToRemoveQueue, outputLinksToRemoveQueue);
-    						controlsToRemoveQueue.clear();
-	    					inputLinksToRemoveQueue.clear();
-	    					outputLinksToRemoveQueue.clear();
+    						addActions(actions, controls, inputLinks, outputLinks);
+    						clearQueues(controls, inputLinks, outputLinks);
 	    					currentGate = sp.getSolderedGate();
         				}
     					
-        				if(sp instanceof SpacePin) {
-    						SpacePin spacePin = (SpacePin) sp;
-    						if(sp instanceof SolderedControlPin)
-    							controlsToRemoveQueue.enqueue(iterator.previousIndex());
-    						if(spacePin.isInputLinked())
-    							inputLinksToRemoveQueue.enqueue(iterator.previousIndex());
-    						if(spacePin.isOutputLinked())
-    							outputLinksToRemoveQueue.enqueue(iterator.previousIndex());
-    					}
+        				if(sp instanceof SpacePin)
+    						addNonEmptySpacePin((SpacePin) sp, iterator.previousIndex(), controls, inputLinks, outputLinks);
         			}
     			}
-    			addActions(actions, controlsToRemoveQueue, inputLinksToRemoveQueue, outputLinksToRemoveQueue);
+    			addActions(actions, controls, inputLinks, outputLinks);
+			}
+			
+			private void clearQueues(Queue<Integer> controls, Queue<Integer> inputLinks, Queue<Integer> outputLinks) {
+				controls.clear();
+				inputLinks.clear();
+				outputLinks.clear();
+			}
+			
+			private void addNonEmptySpacePin(SpacePin sp, int index, Queue<Integer> controls, Queue<Integer> inputLinks, Queue<Integer> outputLinks) {
+				if(sp instanceof SolderedControlPin)
+					controls.enqueue(index);
+				if(sp.isInputLinked())
+					inputLinks.enqueue(index);
+				if(sp.isOutputLinked())
+					outputLinks.enqueue(index);
 			}
 			
 			private boolean checkIfRemoveGate(SolderedPin sp) {
@@ -1259,16 +1305,16 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 					return sp instanceof SolderedRegister;
 			}
 			
-			private void addActions(LinkedList<Action> actions, Queue<Integer> controlsQueue, Queue<Integer> inputLinksQueue, Queue<Integer> outputLinksQueue) {
-				for(int i : controlsQueue) {
+			private void addActions(LinkedList<Action> actions, Queue<Integer> controls, Queue<Integer> inputLinks, Queue<Integer> outputLinks) {
+				for(int i : controls) {
     				Action removeControl = removeControlPinAction(i, column);
 					actions.offerLast(removeControl);
     			}
-    			for(int i : inputLinksQueue) {
+    			for(int i : inputLinks) {
     				Action removeLink = removeLinkPinAction(i, column, false);
 					actions.offerLast(removeLink);
     			}
-    			for(int i : outputLinksQueue) {
+    			for(int i : outputLinks) {
     				Action removeLink =  removeLinkPinAction(i, column, true);
 					actions.offerLast(removeLink);
     			}

@@ -11,25 +11,16 @@ package utils.customCollections;
  * @param <T>
  * @param <E>
  */
-public class Pair <T, E> {
-	private T first;
+public class Pair <T, E> extends Single<T> {
 	private E second;
 	
 	public Pair(T first, E second) {
-		setBoth(first, second);
+		super(first);
+		setSecond(second);
 	}
 	
 	public Pair () {
 		this (null, null);
-	}
-	
-	
-	/**
-	 * 
-	 * @return first element
-	 */
-	public T first () {
-		return first;
 	}
 	
 	/**
@@ -40,17 +31,12 @@ public class Pair <T, E> {
 		return second;
 	}
 	
-	
-	public void setFirst (T first) {
-		this.first = first;
-	}
-	
 	public void setSecond (E second) {
 		this.second = second;
 	}
 	
 	public void setBoth (T first, E second) {
-		this.first = first;
+		setFirst(first);
 		this.second = second;
 	}
 }

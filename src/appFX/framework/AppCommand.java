@@ -33,7 +33,6 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-
 import utils.PrintStream;
 import utils.PrintStream.SystemPrintStream;
 import utils.customCollections.CommandParameterList;
@@ -545,83 +544,9 @@ public enum AppCommand {
 			break;
 			
 		case SHOW_RENDERED_LATEX_FOR_GATE:
-			gm = currentProject.getGateModel(parameters.getString(0));
-			
-			if(!assertExists(parameters.getString(0), gm, commandResponse))
-				return null;
-			
-			if(!(gm instanceof BasicGateModel)) {
-				commandResponse.printErrln("Gate \"" + parameters.getString(0) +  "\" must be a basic gate");
-				return null;
-			}
-			
-			BasicGateModel bg = (BasicGateModel) gm;
-			
-			if(parameters.size() > 1) {
-				for (int i = 1; i < parameters.size(); i++) {Object value = parameters.get(i);
-					int index = -1;
-					if(value instanceof String) {
-						try {
-							index = Integer.parseInt((String) value);
-						} catch (NumberFormatException nfe) {
-							commandResponse.printErrln("Parameter " + i + " is not a integer");
-							continue;
-						}
-					} else {
-						index = (int) parameters.get(i);
-					}
-					if(index < 0 || index >= bg.getLatex().size()) {
-						commandResponse.printErrln("Parameter " + i + " is not a sufficent index.");
-						continue;
-					}
-					
-					
-					commandResponse.printLatexln("$$" + bg.getLatex().get(index) + "$$");
-				}
-			} else {
-				for(int i = 0; i < bg.getLatex().size(); i++)
-					commandResponse.printLatexln("$$" + bg.getLatex().get(i) + "$$");
-			}
 			break;
 			
 		case SHOW_LATEX_STRING_FOR_GATE:
-			gm = currentProject.getGateModel(parameters.getString(0));
-			
-			if(!assertExists(parameters.getString(0), gm, commandResponse))
-				return null;
-			
-			if(!(gm instanceof BasicGateModel)) {
-				commandResponse.printErrln("Gate \"" + parameters.getString(0) +  "\" must be a basic gate");
-				return null;
-			}
-			
-			bg = (BasicGateModel) gm;
-			
-			if(parameters.size() > 1) {
-				for (int i = 1; i < parameters.size(); i++) {
-					Object value = parameters.get(i);
-					int index = -1;
-					if(value instanceof String) {
-						try {
-							index = Integer.parseInt((String) value);
-						} catch (NumberFormatException nfe) {
-							commandResponse.printErrln("Parameter " + i + " is not a integer");
-							continue;
-						}
-					} else {
-						index = (int) parameters.get(i);
-					}
-					if(index < 0 || index >= bg.getLatex().size()) {
-						commandResponse.printErrln("Parameter " + i + " is not a sufficent index.");
-						continue;
-					}
-					
-					commandResponse.println(bg.getLatex().get(index));
-				}
-			} else {
-				for(int i = 0; i < bg.getLatex().size(); i++)
-					commandResponse.println(bg.getLatex().get(i));
-			}
 			break;
 			
 		case DEBUG_CIRCUIT_BOARD:

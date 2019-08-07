@@ -10,6 +10,7 @@ public interface OperatorSet<T> extends Serializable {
 	public T div(T num1, T num2);
 	public T exp(T num1, T num2);
 	public T sqrt(T num);
+	public T conjugate(T num);
 	
 	public T get1();
 	public T getn1();

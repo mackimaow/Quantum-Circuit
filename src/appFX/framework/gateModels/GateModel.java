@@ -35,13 +35,7 @@ public abstract class GateModel implements Serializable {
 		}
 	}
 	
-	
-	public static final String NAME_REGEX = "[a-zA-Z][\\w]*";
-	public static final String SYMBOL_REGEX = "[a-zA-Z][\\w\\s]*";
 	public static final String PARAMETER_REGEX = "\\\\?[a-zA-Z][\\w]*";
-	
-	public static final String IMPROPER_NAME_SCHEME_MSG = "Name must be a letter followed by letters, digits, or underscores";
-	public static final String IMPROPER_SYMBOL_SCHEME_MSG = "Symbol name must be a letter followed by letters, digits, or underscores";
 	public static final String IMPROPER_PARAMETER_SCHEME_MSG = "Parameter name must be a letter followed "
 			+ "by letters, digits, or underscores. For special mathematical symbols, the \"\\\" character"
 			+ "can be used to escape the name to use the proper mathematical symbol";
@@ -54,22 +48,13 @@ public abstract class GateModel implements Serializable {
 	private final String[] parameters;
 	
 	public GateModel (String location, String name, String symbol, String description, GateComputingType gateComputingType, String ... parameters) {
+		if(!isPreset())
+			PresetGateType.checkLocationString(location);
+		
 		if(location == null) {
 			throw new ImproperNameSchemeException("Location must be defined");
 		} else if (!location.trim().endsWith("." + getExtString())) {
 			throw new ImproperNameSchemeException("Location extension must be " + "." + getExtString());
-		}
-		
-		if(name == null) {
-			throw new ImproperNameSchemeException("Name must be defined");
-		} else if(!name.matches(NAME_REGEX)) {
-			throw new ImproperNameSchemeException(IMPROPER_NAME_SCHEME_MSG);
-		}
-		
-		if(symbol == null) {
-			throw new ImproperNameSchemeException("Symbol must be defined");
-		} else if(!symbol.matches(SYMBOL_REGEX)) {
-			throw new ImproperNameSchemeException(IMPROPER_SYMBOL_SCHEME_MSG);
 		}
 		
 		this.location = location.trim();
@@ -105,6 +90,14 @@ public abstract class GateModel implements Serializable {
 	
 	public ImmutableArray<String> getParameters() {
 		return new ImmutableArray<>(parameters);
+	}
+	
+	public boolean isClassical() {
+		return gateComputingType.isClassical;
+	}
+	
+	public boolean isQuantum() {
+		return gateComputingType.isQuantum();
 	}
 	
 	public String getLocationString() {

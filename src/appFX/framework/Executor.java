@@ -10,8 +10,8 @@ import java.util.stream.Stream;
 
 import appFX.framework.exportGates.ExportedGate;
 import appFX.framework.exportGates.GateManager;
-import appFX.framework.gateModels.BasicGateModel;
 import appFX.framework.gateModels.CircuitBoardModel;
+import appFX.framework.gateModels.QuantumGateDefinition.QuantumGateType;
 import mathLib.Complex;
 import mathLib.Matrix;
 import mathLib.Vector;
@@ -71,7 +71,7 @@ public class Executor {
                   break addCols;
                 }
                 ExportedGate eg = itr.next();
-                if(eg.getGateType().equals(BasicGateModel.BasicGateModelType.POVM))
+                if(eg.getQuantumGateType().equals(QuantumGateType.KRAUS_OPERATORS))
                     return executeMixedState(p);
                 i += eg.getGateRegister().length;
                 column.add(eg);
@@ -326,8 +326,8 @@ public class Executor {
             if(eg.getGateModel().getName().equalsIgnoreCase("Identity")) {
                 toPrint += "Identity\n";
             } else {
-                toPrint += eg.getGateType().toString() + "\n";
-                if(eg.getGateType().equals(BasicGateModel.BasicGateModelType.POVM))
+                toPrint += eg.getQuantumGateType().toString() + "\n";
+                if(eg.getQuantumGateType().equals(QuantumGateType.KRAUS_OPERATORS))
                     printArray(eg.getInputMatrixes());
             }
         }
@@ -359,7 +359,7 @@ public class Executor {
         kraus.add(column);
         while(!egs.isEmpty()) {
             ExportedGate gate = egs.remove(0);
-            switch(gate.getGateType()) {
+            switch(gate.getQuantumGateType()) {
                 case UNIVERSAL:
                     for(int i = 0; i < kraus.size(); ++i) {
                         kraus.set(i,kraus.get(i).kronecker(gate.getInputMatrixes()[0]));

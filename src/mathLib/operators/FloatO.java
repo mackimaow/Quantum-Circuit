@@ -60,4 +60,9 @@ public final class FloatO implements OperatorSet<Float>{
 		return (float) Math.pow(num , .5d);
 	}
 	
+	@Override
+	public Float conjugate(Float num) {
+		return num;
+	}
+	
 }

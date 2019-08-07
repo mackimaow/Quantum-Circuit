@@ -51,7 +51,7 @@ public class Translator {
       if(eg == null) {
          return null;
       }
-      switch(eg.getGateType()) {
+      switch(eg.getQuantumGateType()) {
          case UNIVERSAL:
             if(eg.isPresetGate()) {
                PresetGateType pgt = eg.getPresetGateType();

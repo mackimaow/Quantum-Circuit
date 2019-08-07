@@ -12,7 +12,6 @@ import appFX.appUI.MainScene;
 import appFX.appUI.utils.AppFileIO;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
-import appFX.framework.gateModels.PresetGateType;
 import appSW.appUI.Window;
 import appSW.framework.DefaultGate;
 import appSW.framework.SolderedRegister;
@@ -56,8 +55,6 @@ public class Main extends Application implements AppPreferences {
     	}
     	
     	if ( DEBUG_MODE ) {
-    		
-    		System.out.println(PresetGateType.TOFFOLI.getModel().getLatex().get(0));
     		
     	}
     	
