@@ -187,13 +187,17 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 				params[i++] = param;
 			}
 			
-			if(referencedCb == null)
-				newCb = new CircuitBoardModel(fileLocation.getText() ,name.getText(), symbol.getText(),
-						description.getText(), gateType.getValue(), 5, 5, params);
-			else
-				newCb = referencedCb.createDeepCopyToNewName(fileLocation.getText(), name.getText(), symbol.getText(),
-						description.getText(), gateType.getValue(), params);
-			
+			try {
+				if(referencedCb == null)
+					newCb = new CircuitBoardModel(fileLocation.getText() ,name.getText(), symbol.getText(),
+							description.getText(), gateType.getValue(), 5, 5, params);
+				else
+					newCb = referencedCb.createDeepCopyToNewName(fileLocation.getText(), name.getText(), symbol.getText(),
+							description.getText(), gateType.getValue(), params);
+			} catch (Exception e) {
+				AppAlerts.showMessage(getStage(), "Invalid File name", "File must end in .cb", AlertType.ERROR);
+				return false;
+			}
 			return addCircuitBoardToProject(getStage(), referencedCb, newCb, editAsNew);
 		}
 
