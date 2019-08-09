@@ -1,10 +1,10 @@
 package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
-import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
 import appFX.appUI.prompts.Prompt;
 import appFX.appUI.prompts.PryRemovePrompt;
+import appFX.appUI.utils.CustomFXGraphics;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.solderedGates.SolderedControlPin;
 import appFX.framework.solderedGates.SolderedPin;

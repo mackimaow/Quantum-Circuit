@@ -9,20 +9,19 @@ import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.NotificationRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.ToolActionRenderLayer;
 import appFX.appUI.appViews.gateChooser.AbstractGateChooserView;
+import appFX.appUI.utils.GateIcon;
 import appFX.appUI.utils.LatexNode;
-import appFX.appUI.utils.SolderableIcon;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
-import appFX.framework.gateModels.GateModel.GateComputingType;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
@@ -125,8 +124,8 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		gateType.setText(circuitBoard.getComputingType().toString());
 		gateType.setEditable(false);
 		
-		Node solderableIcon = SolderableIcon.mkIcon(circuitBoard);
-		circuitBoardIcon.setLeft(solderableIcon);
+		ImageView imageView = GateIcon.gateModelToIconNode(circuitBoard);
+		circuitBoardIcon.setCenter(imageView);
 		
 		
 		description.setContent(new LatexNode(circuitBoard.getDescription()));

@@ -130,7 +130,7 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 			String symbolString = "";
 			String descriptionString = "";
 			String[] args = {};
-			GateComputingType chosenType = GateComputingType.CLASSICAL;
+			GateComputingType chosenType = GateComputingType.QUANTUM;
 			
 			if(referencedCb != null) {
 				fileLocationString = referencedCb.getLocationString();

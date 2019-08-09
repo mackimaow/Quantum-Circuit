@@ -64,7 +64,7 @@ public class CircuitBoardToPNGWizard extends Wizard<Pair<BufferedImage, File>> {
 		@Override
 		public void setStartingFieldData(PaneFieldDataList controlData) {
 			controlData.add(circuitBoardNameTextField, "");
-			controlData.add(sizeTextField, "");
+			controlData.add(sizeTextField, "1");
 			controlData.add(locationTextField, "");
 		}
 		

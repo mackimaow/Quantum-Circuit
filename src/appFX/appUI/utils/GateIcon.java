@@ -1,206 +1,319 @@
 package appFX.appUI.utils;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 import appFX.framework.gateModels.GateModel;
+import appFX.framework.gateModels.PresetGateType;
 import appFX.framework.gateModels.PresetGateType.PresetGateModel;
-import appSW.appUI.CircuitBoardRenderContext;
+import graphicsWrapper.AxisBound.GridBound;
+import graphicsWrapper.AxisBound.RimBound;
+import graphicsWrapper.CompiledGraphics;
+import graphicsWrapper.FocusData;
+import graphicsWrapper.Graphics;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.Node;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
+import utils.customCollections.immutableLists.ImmutableArray;
 
-public class GateIcon  {
-
-	public static final BasicStroke THICK = new BasicStroke(5, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER);
-	public static final BasicStroke THIN = new BasicStroke(2, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER);
+public class GateIcon {
 	
-	public static final Polygon ARROW_HEAD = new Polygon(); 
-	public static final Image MEASUREMENT = getMeasureIconWithNoLine();
+	public static final int DEFAULT_ICON_SIZE = 35;
+	public static final double DEFAULT_LINE_WIDTH = .5d;
 	
 	
-	static {
-		ARROW_HEAD.addPoint( 0, 0);
-		ARROW_HEAD.addPoint( -2, -5);
-		ARROW_HEAD.addPoint( 2,-5);
+	
+	public static ImageView gateModelToIconNode(GateModel gm) {
+		WritableImage wi = GateIcon.gateModelToFxIcon(gm, 1.75d);
+		ImageView im = new ImageView(wi);
+		return im;
 	}
 	
-	public static GateIcon getGateIcon(GateModel s) {
-		if(s instanceof PresetGateModel) {
-			PresetGateModel pgm = (PresetGateModel) s;
-			
-			switch(pgm.getPresetGateType()) {
-			case CNOT:
-				return getCNotIcon();
-			case MEASUREMENT:
-				return getMeasureIcon();
-			case SWAP:
-				return getSwapIcon();
-			case TOFFOLI:
-				return getToffoliIcon();
-			default:
-			}
+	
+	
+	public static BufferedImage gateModelToIcon(GateModel gm, double size) {
+		if(gm.isPreset()) {
+			PresetGateModel pgm = (PresetGateModel) gm;
+			return presetGateToIcon(pgm.getPresetGateType(), size);
+		} else {
+			return mkDefaultIcon(gm, size);
 		}
-		return new GateIcon(s);
-	}
-	
-	private Node icon;
-	private static final int PADDING = 10;
-	private static final int LINE_LENGTH = 5;
-	
-	private GateIcon(GateModel s) {
-		icon = SolderableIcon.mkIcon(s);
-	}
-	
-	private GateIcon(BufferedImage bi) {
-		Image image = SwingFXUtils.toFXImage(bi, null);
-		icon = new ImageView(image);
-	}
-	
-	public Node getView () {
-		return icon;
 	}
 	
 	
 	
+	public static WritableImage gateModelToFxIcon(GateModel gm, double size) {
+		return toFxImage(gateModelToIcon(gm, size));
+	}
 	
 	
-	private static Image getMeasureIconWithNoLine() {
-		int height = 20;
-		int width = 20;
+	
+	public static BufferedImage presetGateToIcon(PresetGateType pgt, double size) {
+		switch(pgt) {
+		case CNOT:
+			return mkCnotIcon(size);
+		case IDENTITY:
+			return mkIdentityIcon(size);
+		case MEASUREMENT:
+			return mkMearsurementIcon(size);
+		case SWAP:
+			return mkSwap(size);
+		case TOFFOLI:
+			return mkToffoliIcon(size);
+		default:
+			return mkDefaultIcon(pgt.getModel(), size);
+		}
+	}
+	
+	
+	
+	public static WritableImage presetGateToFxIcon(PresetGateType pgt, double size) {
+		return toFxImage(presetGateToIcon(pgt, size));
+	}
+	
+	
+	
+	public static BufferedImage mkDefaultIcon(GateModel gm, double size) {
+		RenderPalette<Image, Font, Color> palette = CustomSWTGraphics.RENDER_PALETTE;
 		
-		BufferedImage bi = new BufferedImage(2 * (PADDING) + width,
-				2 * PADDING + height, BufferedImage.TYPE_4BYTE_ABGR);
+		CompiledGraphics<Image, Font, Color> compiledGraphics = Graphics.<Image, Font, Color>compileGraphicalBluePrint((g, a)->{
+			g.setColor(Color.BLACK);
+			g.setLineWidth(DEFAULT_LINE_WIDTH);
+			g.setFont(palette.getDefault(), 11d);
+			g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+			g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+			g.setFocus(new RimBound(5, 5, true, true), new RimBound(0, 0, true, true)); {
+				g.setColor(Color.WHITE);
+				g.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+				g.setColor(Color.BLACK);
+				g.drawRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+				g.setFocus(new RimBound(5, 5, true, true), new RimBound(5, 5, true, true));{
+					g.setColor(Color.BLACK);
+					ImmutableArray<String> paramLatex = gm.getParameters();
+					String paramString = "\\( \\text{" + gm.getSymbol() + "}";
+					
+					if(!paramLatex.isEmpty()) {
+						paramString += "( " + paramLatex.get(0);
+						
+						for(int i = 1; i < paramLatex.size(); i++)
+							paramString += " , " + paramLatex.get(i);
+						
+						paramString += " ) ";
+					}
+					paramString +=  "\\)";
+					g.drawLatex(paramString, 0, 0);
+				} g.escapeFocus();
+			} g.escapeFocus();
+		});
 		
-		Graphics2D g2d = (Graphics2D) bi.getGraphics();
-    	g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g2d.setColor(Color.WHITE);
-		g2d.fillRect(0, 0, bi.getWidth() - 1, bi.getHeight() - 1);
-		g2d.setColor(Color.BLACK);
-		g2d.drawRect(0, 0, bi.getWidth() - 1, bi.getHeight() - 1);
+		return createImage(compiledGraphics, size);
+	}
+	
+	
+	
+	public static BufferedImage mkCnotIcon(double size) {
+		RenderPalette<Image, Font, Color> palette = CustomSWTGraphics.RENDER_PALETTE;
 		
-		g2d.drawLine(0, bi.getHeight() / 2, 0, bi.getHeight() / 2);
-		g2d.drawLine(bi.getWidth() - 1, bi.getHeight() / 2, bi.getWidth() - 1, bi.getHeight() / 2);
+		CompiledGraphics<Image, Font, Color> compiledGraphics = Graphics.<Image, Font, Color>compileGraphicalBluePrint((g, a)->{
+			g.setFont(palette.getDefault(), 11d);
+			g.setColor(Color.BLACK);
+			g.setLineWidth(DEFAULT_LINE_WIDTH);
+			goInFocus(g, 0, DEFAULT_ICON_SIZE / 2d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawLowerVerticalLineInFocus(g);
+				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 7d);
+			} g.escapeFocus();
+			goInFocus(g, 1, DEFAULT_ICON_SIZE / 2d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawUpperVerticalLineInFocus(g);
+				drawCnotHeadIconInFocus(g, DEFAULT_ICON_SIZE / 3d);
+			} g.escapeFocus();
+		});
 		
-		g2d.drawArc(PADDING/2, PADDING, width + PADDING, height + PADDING, 0, 180);
-		CircuitBoardRenderContext.drawArrow(g2d, ARROW_HEAD, PADDING + width / 2, 
-				(int)(1.5f * PADDING) + height / 2, bi.getWidth() - 5, 5);
+		return createImage(compiledGraphics, size);
+	}
+	
+	
+	
+	public static BufferedImage mkToffoliIcon(double size) {
+		RenderPalette<Image, Font, Color> palette = CustomSWTGraphics.RENDER_PALETTE;
 		
-		g2d.dispose();
+		CompiledGraphics<Image, Font, Color> compiledGraphics = Graphics.<Image, Font, Color>compileGraphicalBluePrint((g, a)->{
+			g.setFont(palette.getDefault(), 11d);
+			g.setColor(Color.BLACK);
+			g.setLineWidth(DEFAULT_LINE_WIDTH);
+			goInFocus(g, 0, DEFAULT_ICON_SIZE / 3d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawLowerVerticalLineInFocus(g);
+				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 7d);
+			} g.escapeFocus();
+			goInFocus(g, 1, DEFAULT_ICON_SIZE / 3d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawVerticalLineInFocus(g);
+				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 7d);
+			} g.escapeFocus();
+			goInFocus(g, 2, DEFAULT_ICON_SIZE / 3d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawUpperVerticalLineInFocus(g);
+				drawCnotHeadIconInFocus(g, DEFAULT_ICON_SIZE / 3d);
+			} g.escapeFocus();
+		});
+		
+		return createImage(compiledGraphics, size);
+	}
+	
+	
+	
+	public static BufferedImage mkIdentityIcon(double size) {
+		RenderPalette<Image, Font, Color> palette = CustomSWTGraphics.RENDER_PALETTE;
+		
+		CompiledGraphics<Image, Font, Color> compiledGraphics = Graphics.<Image, Font, Color>compileGraphicalBluePrint((g, a)->{
+			g.setFont(palette.getDefault(), 11d);
+			g.setColor(Color.BLACK);
+			g.setLineWidth(DEFAULT_LINE_WIDTH);
+			g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+			g.setFocus(new RimBound(0, 0, true, true), new RimBound(0, 0, true, true), DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+			} g.escapeFocus();
+		});
+		return createImage(compiledGraphics, size);
+	}
+	
+	
+	
+	public static BufferedImage mkSwap(double size) {
+		RenderPalette<Image, Font, Color> palette = CustomSWTGraphics.RENDER_PALETTE;
+		
+		CompiledGraphics<Image, Font, Color> compiledGraphics = Graphics.<Image, Font, Color>compileGraphicalBluePrint((g, a)->{
+			g.setFont(palette.getDefault(), 11d);
+			g.setColor(Color.BLACK);
+			g.setLineWidth(DEFAULT_LINE_WIDTH);
+			goInFocus(g, 1, DEFAULT_ICON_SIZE / 3d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawLowerVerticalLineInFocus(g);
+				drawSwapHeadInFocus(g, DEFAULT_ICON_SIZE / 3d);
+			} g.escapeFocus();
+			goInFocus(g, 2, DEFAULT_ICON_SIZE / 3d); {
+				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				drawUpperVerticalLineInFocus(g);
+				drawSwapHeadInFocus(g, DEFAULT_ICON_SIZE / 3d);
+			} g.escapeFocus();
+		});
+		return createImage(compiledGraphics, size);
+	}
+	
+	
+	
+	public static BufferedImage mkMearsurementIcon(double size) {
+		RenderPalette<Image, Font, Color> palette = CustomSWTGraphics.RENDER_PALETTE;
+		
+		CompiledGraphics<Image, Font, Color> compiledGraphics = Graphics.<Image, Font, Color>compileGraphicalBluePrint((g, a)->{
+			g.setColor(Color.BLACK);
+			g.setLineWidth(DEFAULT_LINE_WIDTH);
+			g.setFont(palette.getDefault(), 11d);
+			g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+			g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+			g.setFocus(new RimBound(5, 5, true, true), new RimBound(0, 0, true, true)); {
+				g.setColor(Color.WHITE);
+				g.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+				g.setColor(Color.BLACK);
+				g.drawRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
+				g.setFocus(new RimBound(5, 5, true, true), new RimBound(5, 5, true, true));{
+					g.setColor(Color.BLACK);
+					g.setLayout(Graphics.LEFT_ALIGN, Graphics.TOP_ALIGN);
+					g.drawArc(0, 5, DEFAULT_ICON_SIZE * .4d, DEFAULT_ICON_SIZE * .4d, 0, 180);
+					g.drawLine(DEFAULT_ICON_SIZE * .2d, 2, DEFAULT_ICON_SIZE * .2d, DEFAULT_ICON_SIZE * .4d - 7, false);
+				} g.escapeFocus();
+			} g.escapeFocus();
+		});
+		
+		return createImage(compiledGraphics, size);
+	}
+	
+	
+	public static WritableImage toFxImage(BufferedImage bi) {
 		return SwingFXUtils.toFXImage(bi, null);
 	}
 	
 	
-	
-	
-	
-	
-	
-	private static GateIcon getMeasureIcon() {
-		int height = 20;
-		int width = 20;
-		
-		BufferedImage bi = new BufferedImage(2 * (PADDING + LINE_LENGTH) + width,
-				2 * PADDING + height, BufferedImage.TYPE_4BYTE_ABGR);
-		Graphics2D g2d = (Graphics2D) bi.getGraphics();
-    	g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		
-    	g2d.setColor(Color.WHITE);
-		g2d.fillRect(LINE_LENGTH, 0, bi.getWidth() - 2*LINE_LENGTH, bi.getHeight() - 1);
-		g2d.setColor(Color.BLACK);
-		g2d.drawRect(LINE_LENGTH, 0, bi.getWidth() - 2*LINE_LENGTH, bi.getHeight() - 1);
-		
-		g2d.drawLine(0, bi.getHeight() / 2, LINE_LENGTH, bi.getHeight() / 2);
-		g2d.drawLine(bi.getWidth() - LINE_LENGTH, bi.getHeight() / 2, bi.getWidth(), bi.getHeight() / 2);
-		
-		g2d.drawArc(LINE_LENGTH + PADDING/2, PADDING, width + PADDING, height + PADDING, 0, 180);
-		CircuitBoardRenderContext.drawArrow(g2d, ARROW_HEAD, LINE_LENGTH + PADDING + width / 2, 
-				(int)(1.5f * PADDING) + height / 2, bi.getWidth() - LINE_LENGTH - 5, 5);
-		
-		g2d.dispose();
-		return new GateIcon(bi);
+	public static void goInFocus(Graphics<Image, Font, Color> g, int row, double rowHeight) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+		g.setFocus(new RimBound(0, 0, true, true), new GridBound(row), DEFAULT_ICON_SIZE, rowHeight);
 	}
 	
-	private static GateIcon getSwapIcon() {
-		final int vertLineLength = 25;
-		final int xRadius = 10;
-		final int lineLength = PADDING + LINE_LENGTH;
-		final int vertPadding = 2;
-		
-		BufferedImage bi = new BufferedImage(2 * (lineLength + xRadius),
-				2 * vertPadding + vertLineLength + 2 * xRadius, BufferedImage.TYPE_4BYTE_ABGR);
-		Graphics2D g2d = (Graphics2D) bi.getGraphics();
-    	g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g2d.setColor(Color.BLACK);
-		
-        g2d.drawLine(0, vertPadding + xRadius, bi.getWidth(), vertPadding + xRadius);
-        g2d.drawLine(0, bi.getHeight() - vertPadding - xRadius, bi.getWidth(), bi.getHeight() - vertPadding - xRadius);
-        
-    	g2d.setStroke(THIN);
-    	g2d.drawLine(lineLength, bi.getHeight() - vertPadding - 2 * xRadius, bi.getWidth() - lineLength, bi.getHeight() - vertPadding);
-    	g2d.drawLine(lineLength, bi.getHeight() - vertPadding, bi.getWidth() - lineLength, bi.getHeight() - vertPadding - 2 * xRadius);
-    	g2d.drawLine(lineLength, vertPadding, bi.getWidth() - lineLength, vertPadding + 2 * xRadius);
-    	g2d.drawLine(lineLength, vertPadding + 2 * xRadius, bi.getWidth() - lineLength, vertPadding);
-    	g2d.drawLine(lineLength + xRadius, bi.getHeight() - vertPadding - xRadius, lineLength + xRadius, vertPadding + xRadius);
-    	g2d.dispose();
-    	return new GateIcon(bi);
+	
+	
+	public static void drawVerticalLineInFocus(Graphics<Image, Font, Color> g) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+		g.drawLine(0, 0, 0, Graphics.FOCUS_HEIGHT, true);
 	}
 	
-	private static GateIcon getCNotIcon() {
-		final int vertLineLength = 25;
-		final int circleRadius = 10;
-		final int smallCircleRadius = 3;
-		final int lineLength = PADDING + LINE_LENGTH;
-		final int vertPadding = 2;
-		
-		BufferedImage bi = new BufferedImage(2 * (lineLength + circleRadius),
-				2 * vertPadding + vertLineLength + 2 * circleRadius, BufferedImage.TYPE_4BYTE_ABGR);
-		Graphics2D g2d = (Graphics2D) bi.getGraphics();
-    	g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g2d.setColor(Color.BLACK);
-		
-        g2d.drawLine(0, vertPadding + circleRadius, bi.getWidth(), vertPadding + circleRadius);
-        g2d.drawLine(0, bi.getHeight() - vertPadding - circleRadius, bi.getWidth(), bi.getHeight() - vertPadding - circleRadius);
-        
-    	g2d.setStroke(THIN);
-    	g2d.drawOval(lineLength, bi.getHeight() - vertPadding - 2 * circleRadius, 2 * circleRadius, 2 * circleRadius);
-    	g2d.drawLine(lineLength, bi.getHeight() - vertPadding - circleRadius, lineLength + 2 * circleRadius, bi.getHeight() - vertPadding - circleRadius);
-    	g2d.drawLine(lineLength + circleRadius, bi.getHeight() - vertPadding, lineLength + circleRadius, vertPadding + circleRadius);
-    	g2d.fillOval(lineLength + circleRadius - smallCircleRadius, vertPadding + circleRadius - smallCircleRadius, 2 * smallCircleRadius, 2 * smallCircleRadius);
-    	g2d.dispose();
-    	return new GateIcon(bi);
+	
+	
+	public static void drawUpperVerticalLineInFocus(Graphics<Image, Font, Color> g) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.TOP_ALIGN);
+		g.drawLine(0, 0, 0, Graphics.getFocusHeight(.5d), true);
 	}
 	
-	private static GateIcon getToffoliIcon() {
-		final int vertLineLength = 25;
-		final int circleRadius = 6;
-		final int smallCircleRadius = 3;
-		final int lineLength = PADDING + LINE_LENGTH;
-		final int vertPadding = 2;
-		
-		BufferedImage bi = new BufferedImage(2 * (lineLength + circleRadius),
-				2 * vertPadding + vertLineLength + 2 * circleRadius, BufferedImage.TYPE_4BYTE_ABGR);
-		Graphics2D g2d = (Graphics2D) bi.getGraphics();
-    	g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g2d.setColor(Color.BLACK);
-		
-        g2d.drawLine(0, vertPadding + circleRadius, bi.getWidth(), vertPadding + circleRadius);
-        g2d.drawLine(0, bi.getHeight() / 2, bi.getWidth(), bi.getHeight() / 2);
-        g2d.drawLine(0, bi.getHeight() - vertPadding - circleRadius, bi.getWidth(), bi.getHeight() - vertPadding - circleRadius);
-        
-    	g2d.setStroke(THIN);
-    	g2d.drawOval(lineLength, bi.getHeight() - vertPadding - 2 * circleRadius, 2 * circleRadius, 2 * circleRadius);
-    	g2d.drawLine(lineLength, bi.getHeight() - vertPadding - circleRadius, lineLength + 2 * circleRadius, bi.getHeight() - vertPadding - circleRadius);
-    	g2d.drawLine(lineLength + circleRadius, bi.getHeight() - vertPadding, lineLength + circleRadius, vertPadding + circleRadius);
-    	g2d.fillOval(lineLength + circleRadius - smallCircleRadius, vertPadding + circleRadius - smallCircleRadius, 2 * smallCircleRadius, 2 * smallCircleRadius);
-    	g2d.fillOval(lineLength + circleRadius - smallCircleRadius, bi.getHeight() / 2 - smallCircleRadius, 2 * smallCircleRadius, 2 * smallCircleRadius);
-    	g2d.dispose();
-    	return new GateIcon(bi);
+	
+	
+	public static void drawLowerVerticalLineInFocus(Graphics<Image, Font, Color> g) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.BOTTOM_ALIGN);
+		g.drawLine(0, 0, 0, Graphics.getFocusHeight(.5d), true);
 	}
+	
+	
+	
+	public static void drawCnotHeadIconInFocus(Graphics<Image, Font, Color> g, double size) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+		g.drawOval(0, 0, size, size);
+		g.drawLine(0, 0, 0, size, true);
+		g.drawLine(0, 0, size, 0, true);
+	}
+	
+	
+	
+	public static void drawSwapHeadInFocus(Graphics<Image, Font, Color> g, double size) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+		g.drawLine(0, 0, size, size, true);
+		g.drawLine(0, 0, size, size, false);
+	}
+	
+	
+	
+	public static void drawControlHeadInFocus(Graphics<Image, Font, Color> g, double size) {
+		g.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
+		g.fillOval(0, 0, size, size);
+	}
+	
+	
+	
+	private static BufferedImage createImage(CompiledGraphics<Image, Font, Color> compiledGraphics, double size) {
+		FocusData fd = compiledGraphics.getFocusData().getElement();
+		
+		int width = (int) Math.round((fd.getWidth()+1) * size);
+		int height = (int) Math.round((fd.getHeight()+1) * size);
+		
+		BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
+		Graphics2D g2d = (Graphics2D) bi.getGraphics();
+		g2d.setRenderingHint(
+			    RenderingHints.KEY_ANTIALIASING,
+			    RenderingHints.VALUE_ANTIALIAS_ON);
+		g2d.setRenderingHint(
+		    RenderingHints.KEY_TEXT_ANTIALIASING,
+		    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		CustomSWTGraphics customGraphics = new CustomSWTGraphics(g2d);
+		Graphics.graphicsDraw(0, 0, size, compiledGraphics, customGraphics);
+		
+		return bi;
+	}
+	
+	
+	
+	
 	
 }

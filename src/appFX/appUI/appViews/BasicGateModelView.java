@@ -18,6 +18,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -119,9 +121,10 @@ public class BasicGateModelView extends AppView {
 		
 		iconSpace.getChildren().clear();
 		
-		GateIcon gi = GateIcon.getGateIcon(gm);
+
+		ImageView imageView = GateIcon.gateModelToIconNode(gm);
 		
-		iconSpace.setCenter(gi.getView());
+		iconSpace.setCenter(imageView);
 		
 		GateComputingType type = gm.getComputingType();
 		if(type.isQuantum()) {
