@@ -113,8 +113,17 @@ public enum PresetGateType {
 			+ "0, 0] ",
 			
 			  "[0, 0; "
-			+ " 0, 1] ")), 
+			+ " 0, 1] ")),
 	
+	
+	CLASSICAL_SET_0 ("Set_0", "0", 
+			new ClassicalGateDefinition("b[0] = 0"),
+			null),
+	
+	
+	CLASSICAL_SET_1 ("Set_1", "1", 
+			new ClassicalGateDefinition("b[0] = 1"),
+			null), 
 	
 	
 	

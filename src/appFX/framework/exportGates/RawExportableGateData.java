@@ -14,13 +14,13 @@ public class RawExportableGateData {
 	private final LinkedList<RawExportLink> inputLinks;
 	private final LinkedList<RawExportRegister> underneathQuantumIdentityGates;
 	private final Hashtable<Integer, RawExportRegister> registers;
-	private final boolean classicalReg;
+	private final boolean classicalReg, quantumReg;
 	private final int gateRowSpaceStart, gateRowSpaceEnd, gateRowBodyStart, gateRowBodyEnd, column;
 	
 	public RawExportableGateData(SolderedGate sg, LinkedList<RawExportControl> quantumControls,
 		LinkedList<RawExportControl> classicalControls, LinkedList<RawExportOutputLink> outputLinks,
 		LinkedList<RawExportLink> inputLinks, LinkedList<RawExportRegister> underneathQuantumIdentityGates,
-		Hashtable<Integer, RawExportRegister> registers, boolean classicalReg, int gateRowSpaceStart, 
+		Hashtable<Integer, RawExportRegister> registers, boolean classicalReg, boolean quantumReg, int gateRowSpaceStart, 
 		int gateRowSpaceEnd, int gateRowBodyStart, int gateRowBodyEnd, int column) {
 		
 		this.sg = sg;
@@ -31,6 +31,7 @@ public class RawExportableGateData {
 		this.underneathQuantumIdentityGates = underneathQuantumIdentityGates;
 		this.registers = registers;
 		this.classicalReg = classicalReg;
+		this.quantumReg = quantumReg;
 		this.gateRowSpaceStart = gateRowSpaceStart;
 		this.gateRowSpaceEnd = gateRowSpaceEnd;
 		this.gateRowBodyStart = gateRowBodyStart;
@@ -43,7 +44,15 @@ public class RawExportableGateData {
 	}
 
 	public boolean isQuantum() {
-		return !classicalReg;
+		return quantumReg;
+	}
+	
+	public boolean isClassical() {
+		return classicalReg;
+	}
+	
+	public boolean isClassicalAndQuantum() {
+		return classicalReg && quantumReg;
 	}
 	
 	public Hashtable<Integer, RawExportRegister> getRegisters() {
@@ -63,6 +72,10 @@ public class RawExportableGateData {
 	}
 	
 	public LinkedList<RawExportControl> getQuantumControls() {
+		return quantumControls;
+	}
+	
+	public LinkedList<RawExportControl> getClassicalQuantumHybridControls() {
 		return quantumControls;
 	}
 

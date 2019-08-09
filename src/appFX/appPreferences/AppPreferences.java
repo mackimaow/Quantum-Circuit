@@ -306,6 +306,8 @@ public interface AppPreferences {
 		RUN_QUIL(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN)),
 		RUN_QASM(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN)),
 		RUN_SIMULATION(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)),
+		ZOOM_IN(new KeyCodeCombination(KeyCode.EQUALS, KeyCombination.CONTROL_DOWN)),
+		ZOOM_OUT(new KeyCodeCombination(KeyCode.MINUS, KeyCombination.CONTROL_DOWN)),
 		
 		
 		;

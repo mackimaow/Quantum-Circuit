@@ -79,7 +79,7 @@ public class BooleanEquationParser {
 	
 	private ParseNode parseSet() throws BooleanEquationParseException {
 		latexString = "";
-		BitLeaf variable = parseBit();
+		BitLeaf variable = parseBit(true);
 		runnable.setOutputBitIndex(variable.bitIndex);
 		matchNext(SET);
 		latexString += " = ";
@@ -139,6 +139,7 @@ public class BooleanEquationParser {
 			return parseAndE(and);
 		} else if(token != OR && token != XOR && token != CPAR) {
 			latexString += " ";
+			placeBack();
 			ParseNode right = parseAnd();
 			ParseBranch and = new ParseBranch(AND_NT);
 			and.addChild(pb);
@@ -153,7 +154,7 @@ public class BooleanEquationParser {
 	private ParseNode parseFactor(boolean outerIsNot) throws BooleanEquationParseException {
 		getNext();
 		if(token == NOT) {
-			latexString += " \\bar{";
+			latexString += " \\overline{";
 			ParseNode center = parseFactor(true);
 			ParseBranch negate = new ParseBranch(NOT_NT);
 			negate.addChild(center);
@@ -168,11 +169,12 @@ public class BooleanEquationParser {
 				latexString += " ) ";
 			return center;
 		} else if(token == INTEGER){
+			latexString += lexeme;
 			int i = Integer.parseInt(lexeme);
 			return new BoolLeaf(i);
 		} else if(token == BIT) {
 			placeBack();
-			BitLeaf bit = parseBit();
+			BitLeaf bit = parseBit(false);
 			runnable.addInputBitIndex(bit.bitIndex);
 			return bit;
 		} else {
@@ -180,13 +182,13 @@ public class BooleanEquationParser {
 		}
 	}
 	
-	private BitLeaf parseBit() throws BooleanEquationParseException {
+	private BitLeaf parseBit(boolean output) throws BooleanEquationParseException {
 		matchNext(BIT);
 		matchNext(OBRA);
 		matchNext(INTEGER);
 		int i = Integer.parseInt(lexeme);
 		matchNext(CBRA);
-		latexString += " b_{" + i + "} ";
+		latexString += " b" + (output? "'" : "") + "_{" + i + "} ";
 		return new BitLeaf(i);
 	}
 	

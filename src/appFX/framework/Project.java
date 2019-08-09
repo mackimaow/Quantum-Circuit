@@ -13,8 +13,8 @@ import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.GateModel.GateComputingType;
 import appFX.framework.gateModels.PresetGateType;
+import utils.Notifier;
 import utils.customCollections.Pair;
-import utils.customCollections.eventTracableCollections.Notifier;
 
 
 /**

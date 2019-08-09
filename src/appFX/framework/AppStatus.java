@@ -14,9 +14,9 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import utils.Notifier;
+import utils.Notifier.ReceivedEvent;
 import utils.customCollections.LagArrayList;
-import utils.customCollections.eventTracableCollections.Notifier;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
 
 /**

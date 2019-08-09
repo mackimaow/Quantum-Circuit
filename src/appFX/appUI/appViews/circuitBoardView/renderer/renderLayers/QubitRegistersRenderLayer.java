@@ -18,7 +18,7 @@ public class QubitRegistersRenderLayer extends RenderLayer {
 	
 	@Override
 	public synchronized void render(double startX, double startY, double zoom) {
-		startX -= GateRenderer.GRID_SIZE;
+		startX -= GateRenderer.QUBIT_REGS_SIZE;
 		super.render(startX < 0? 0d : startX, startY, zoom);
 	}
 

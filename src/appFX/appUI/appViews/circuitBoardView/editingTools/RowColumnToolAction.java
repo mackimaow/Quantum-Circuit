@@ -54,12 +54,16 @@ public class RowColumnToolAction extends ToolAction {
 				if(addRemove == ADD) {
 					RowType[] validTypes;
 					int rowTypeSelect;
-					if(cbm.getComputingType() == GateComputingType.CLASSICAL) {
+					GateComputingType type = cbm.getComputingType();
+					if(type == GateComputingType.CLASSICAL) {
 						validTypes = new RowType[] {RowType.SPACE, RowType.CLASSICAL};
 						rowTypeSelect = 1;
-					} else {
+					} else if(type == GateComputingType.QUANTUM) {
 						validTypes = new RowType[] {RowType.SPACE, RowType.CLASSICAL, RowType.QUANTUM};
 						rowTypeSelect = 2;
+					} else {
+						validTypes = new RowType[] {RowType.SPACE, RowType.CLASSICAL_AND_QUANTUM};
+						rowTypeSelect = 1;
 					}
 						
 					RowTypeAddPrompt prompt = new RowTypeAddPrompt(rowTypeSelect, validTypes);

@@ -1,6 +1,8 @@
 package utils.customCollections;
 
 public class Triple<A,B,C> extends Pair<A,B> {
+	private static final long serialVersionUID = -5842585376585820649L;
+	
 	private C third;
 	
 	public Triple(A first, B second, C third) {

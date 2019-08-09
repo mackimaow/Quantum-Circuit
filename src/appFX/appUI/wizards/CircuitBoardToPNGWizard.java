@@ -101,5 +101,10 @@ public class CircuitBoardToPNGWizard extends Wizard<Pair<BufferedImage, File>> {
 			fileChooserTools.writeProject(bimg, f);
 			return new Pair<>(bimg, f);
 		}
+
+		@Override
+		public boolean hasFinish() {
+			return true;
+		}
 	}
 }

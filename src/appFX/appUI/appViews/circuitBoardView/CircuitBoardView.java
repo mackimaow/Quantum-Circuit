@@ -28,7 +28,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
+import utils.Notifier.ReceivedEvent;
 import utils.customCollections.immutableLists.ImmutableArray;
 
 public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener, AppViewOnSelectedListener {

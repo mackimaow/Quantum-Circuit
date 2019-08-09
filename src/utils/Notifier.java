@@ -1,4 +1,4 @@
-package utils.customCollections.eventTracableCollections;
+package utils;
 
 import java.io.Serializable;
 

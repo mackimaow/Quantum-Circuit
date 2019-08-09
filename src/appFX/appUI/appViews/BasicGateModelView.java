@@ -33,7 +33,7 @@ public class BasicGateModelView extends AppView {
 	
 	//quantum stuff
 	@FXML private Separator quantumSeparator;
-	@FXML private Label quantumDefinitionLabel;
+	@FXML private Label quantumDefinitionLabel, quantumModelTypeLabel;
 	@FXML private TextField modelType;
 	@FXML private HBox definitionStatement;
 	@FXML private VBox definition;
@@ -46,7 +46,6 @@ public class BasicGateModelView extends AppView {
 	
 	
 	private boolean initialized = false;
-	
 	
 	private BasicGateModel gm;
 	
@@ -185,14 +184,18 @@ public class BasicGateModelView extends AppView {
 			}
 		} else {
 			quantumDefinitionLabel.setVisible(false);
+			quantumModelTypeLabel.setVisible(false);
 			modelType.setVisible(false);
 			definitionStatement.setVisible(false);
 			definition.setVisible(false);
+			quantumSeparator.setVisible(false);
 			
 			quantumDefinitionLabel.setManaged(false);
+			quantumModelTypeLabel.setManaged(false);
 			modelType.setManaged(false);
 			definitionStatement.setManaged(false);
 			definition.setManaged(false);
+			quantumSeparator.setManaged(false);
 		}
 		
 		if(type.isClassical()) {

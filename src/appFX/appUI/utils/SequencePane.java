@@ -50,9 +50,24 @@ public class SequencePane<T> extends AppFXMLComponent implements Initializable {
 	
 	private void setNextComponent(SequencePaneElement nextComponent) {
 		currentComponent = nextComponent;
-		previousButton.setDisable(!(currentComponent instanceof SequencePanePrevious));
-		nextButton.setDisable(!(currentComponent instanceof SequencePaneNext));
-		finishButton.setDisable(!(currentComponent instanceof SequencePaneFinish));
+		if(currentComponent instanceof SequencePanePrevious) {
+			SequencePanePrevious component = (SequencePanePrevious) currentComponent;
+			previousButton.setDisable(!component.hasPrevious());
+		} else {
+			previousButton.setDisable(true);
+		}
+		if(currentComponent instanceof SequencePaneNext) {
+			SequencePaneNext component = (SequencePaneNext) currentComponent;
+			nextButton.setDisable(!component.hasNext());
+		} else {
+			nextButton.setDisable(true);
+		}
+		if(currentComponent instanceof SequencePaneFinish) {
+			SequencePaneFinish<?> component = (SequencePaneFinish<?>) currentComponent;
+			finishButton.setDisable(!component.hasFinish());
+		} else {
+			finishButton.setDisable(true);
+		}
 		contentPane.setContent(currentComponent.getNode());
 	}
 	

@@ -20,7 +20,7 @@
             <GridPane hgap="10.0" vgap="10.0">
               <columnConstraints>
                 <ColumnConstraints hgrow="NEVER" maxWidth="-Infinity" minWidth="-Infinity" />
-                <ColumnConstraints hgrow="SOMETIMES" minWidth="-Infinity" />
+                <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
                   <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
                   <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
               </columnConstraints>
@@ -73,10 +73,10 @@
                         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                      </padding>
                   </Label>
-                  <BorderPane fx:id="iconSpace" GridPane.columnIndex="3" GridPane.rowIndex="2" GridPane.rowSpan="2" />
-                  <Separator orientation="VERTICAL" GridPane.columnIndex="2" GridPane.rowIndex="2" GridPane.rowSpan="2" />
+                  <BorderPane fx:id="iconSpace" GridPane.columnIndex="3" GridPane.rowIndex="1" GridPane.rowSpan="3" />
+                  <Separator orientation="VERTICAL" GridPane.columnIndex="2" GridPane.rowIndex="1" GridPane.rowSpan="3" />
                   <Separator GridPane.columnSpan="2147483647" GridPane.rowIndex="5" />
-                  <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="Model Definition" underline="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6">
+                  <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="Addition Information" underline="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6">
                      <padding>
                         <Insets bottom="10.0" left="10.0" />
                      </padding>

@@ -86,17 +86,21 @@ public abstract class SequencePaneElement extends AppFXMLComponent implements In
 	public abstract void setStartingFieldData(PaneFieldDataList fieldData);
 	public abstract void initialize();
 	
+	
 	public interface SequencePaneNext {
+		public abstract boolean hasNext();
 		public abstract Object[] giveNext();
 		public abstract boolean checkNext();
 		public abstract SequencePaneElement getNext();
 	}
 	
 	public interface SequencePanePrevious {
+		public abstract boolean hasPrevious();
 		public abstract boolean checkPrevious();
 	}
 	
 	public interface SequencePaneFinish<T> {
+		public abstract boolean hasFinish();
 		public abstract boolean checkFinish();
 		public abstract T getFinish();
 	}

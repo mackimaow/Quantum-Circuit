@@ -20,7 +20,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
 import main.Main;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
+import utils.Notifier.ReceivedEvent;
 
 public class MainScene extends AppFXMLComponent implements Initializable, AppPreferences, ReceivedEvent {
 	

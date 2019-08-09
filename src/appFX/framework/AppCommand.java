@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 import appFX.appUI.MainScene;
 import appFX.appUI.appViews.BasicGateModelView;
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
+import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
 import appFX.appUI.utils.AppAlerts;
 import appFX.appUI.utils.AppFXMLComponent;
 import appFX.appUI.utils.AppFileIO;
@@ -69,6 +70,8 @@ public enum AppCommand {
 	REMOVE_COLUMN_FROM_FOCUSED_CB,
 	UNDO_FOCUSED_CB,
 	REDO_FOCUSED_CB,
+	ZOOM_IN_FOCUSED_CB,
+	ZOOM_OUT_FOCUSED_CB,
 	
 	RUN_QUIL,
 	RUN_QASM,
@@ -252,11 +255,14 @@ public enum AppCommand {
 			cb = cbv.getCircuitBoardModel();
 			
 			RowType rowType;
-
-			if(cb.getComputingType() == GateComputingType.CLASSICAL) {
+			
+			GateComputingType computingType = cb.getComputingType();
+			if(computingType == GateComputingType.CLASSICAL) {
 				rowType = RowType.CLASSICAL;
-			} else {
+			} else if (computingType == GateComputingType.QUANTUM){
 				rowType = RowType.QUANTUM;
+			} else {
+				rowType = RowType.CLASSICAL_AND_QUANTUM;
 			}
 			
 			try {
@@ -277,14 +283,30 @@ public enum AppCommand {
 			break;
 		case REDO_FOCUSED_CB:
 			cbv = getFocusedCircuitBoardView(ms, commandResponse);
-			
 			if(cbv == null)
 				return null;
 			
 			cb = cbv.getCircuitBoardModel();
 			cb.redo();
-			break;	
+			break;
+		case ZOOM_IN_FOCUSED_CB:
+			cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			if(cbv == null)
+				return null;
 			
+			cb = cbv.getCircuitBoardModel();
+			CircuitBoardRenderer renderer = cbv.getRenderer();
+			renderer.zoom(renderer.getZoom() + .1d);
+			break;
+		case ZOOM_OUT_FOCUSED_CB:
+			cbv = getFocusedCircuitBoardView(ms, commandResponse);
+			if(cbv == null)
+				return null;
+			
+			cb = cbv.getCircuitBoardModel();
+			renderer = cbv.getRenderer();
+			renderer.zoom(renderer.getZoom() - .1d);
+			break;
 			
 		
 		case RUN_QASM:

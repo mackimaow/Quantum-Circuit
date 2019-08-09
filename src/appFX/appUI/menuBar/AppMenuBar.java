@@ -51,6 +51,8 @@ public class AppMenuBar implements AppPreferences{
 			addItemToMenu(menu, mkItem("Run QASM", AppCommand.RUN_QASM, KeyShortCuts.RUN_QASM));
 		} menus.add(menu);
 		menu = new Menu("View"); {
+			addItemToMenu(menu, mkItem("Zoom In", AppCommand.ZOOM_IN_FOCUSED_CB, KeyShortCuts.ZOOM_IN));
+			addItemToMenu(menu, mkItem("Zoom Out", AppCommand.ZOOM_OUT_FOCUSED_CB, KeyShortCuts.ZOOM_OUT));
 			for( ConcreteView ctv : ConcreteView.values())
 				addItemToMenu(menu, mkViewItem("Show " + ctv.getView().getName(), mainScene, ctv));
 		} menus.add(menu);

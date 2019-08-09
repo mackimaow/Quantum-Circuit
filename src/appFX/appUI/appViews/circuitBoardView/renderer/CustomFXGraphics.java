@@ -11,6 +11,7 @@ import graphicsWrapper.FontWrapper;
 import graphicsWrapper.GraphicalDrawTools;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.BoxBlur;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;

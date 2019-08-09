@@ -45,9 +45,9 @@
             <Insets left="10.0" top="10.0" />
          </padding>
       </Label>
-      <TextField fx:id="fileLocation" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="200.0" promptText="Hadmard2.gm" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-      <TextField fx:id="name" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="200.0" promptText="Hadmard" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-      <TextField fx:id="symbol" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="200.0" promptText="H" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+      <TextField fx:id="fileLocation" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="200.0" promptText="teleport.cb" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+      <TextField fx:id="name" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="200.0" promptText="teleport" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+      <TextField fx:id="symbol" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="200.0" promptText="Tele" GridPane.columnIndex="1" GridPane.rowIndex="3" />
       <TextArea fx:id="description" maxHeight="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="100.0" prefWidth="400.0" promptText="Latex here" GridPane.columnIndex="1" GridPane.columnSpan="2147483647" GridPane.rowIndex="4" />
       <Label text="Circuit Board Properties" underline="true" GridPane.columnSpan="2147483647">
          <padding>
