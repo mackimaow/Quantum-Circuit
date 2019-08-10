@@ -215,6 +215,13 @@ public class CircuitBoardRenderer {
 		verticalGridFocused = -1;
 	}
 	
+	public synchronized void scrollToGrid(double row, double column, double zoom) {
+		horizontalGridFocused = column;
+		verticalGridFocused = row;
+		this.zoom = zoom;
+		render();
+	}
+	
 	public synchronized void scrollToGrid(double row, double column) {
 		horizontalGridFocused = column;
 		verticalGridFocused = row;

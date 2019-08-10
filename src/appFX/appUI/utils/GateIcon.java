@@ -125,7 +125,7 @@ public class GateIcon {
 			goInFocus(g, 0, DEFAULT_ICON_SIZE / 2d); {
 				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
 				drawLowerVerticalLineInFocus(g);
-				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 7d);
+				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 8d);
 			} g.escapeFocus();
 			goInFocus(g, 1, DEFAULT_ICON_SIZE / 2d); {
 				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
@@ -149,12 +149,12 @@ public class GateIcon {
 			goInFocus(g, 0, DEFAULT_ICON_SIZE / 3d); {
 				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
 				drawLowerVerticalLineInFocus(g);
-				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 7d);
+				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 8d);
 			} g.escapeFocus();
 			goInFocus(g, 1, DEFAULT_ICON_SIZE / 3d); {
 				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
 				drawVerticalLineInFocus(g);
-				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 7d);
+				drawControlHeadInFocus(g, DEFAULT_ICON_SIZE / 8d);
 			} g.escapeFocus();
 			goInFocus(g, 2, DEFAULT_ICON_SIZE / 3d); {
 				g.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);

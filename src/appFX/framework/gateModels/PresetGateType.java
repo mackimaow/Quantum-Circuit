@@ -8,7 +8,7 @@ import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
 public enum PresetGateType {
 	
 	IDENTITY ("Identity", "I", 
-			null, 
+			new ClassicalGateDefinition("b[0] = b[0]"), 
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			 "[1, 0; "
 			+ "0, 1] ")),

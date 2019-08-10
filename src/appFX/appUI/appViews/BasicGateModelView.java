@@ -27,10 +27,10 @@ import utils.customCollections.immutableLists.ImmutableArray;
 
 public class BasicGateModelView extends AppView {
 	
-	@FXML private TextField fileLocation, name, symbol, registers, computingType;
+	@FXML private TextField fileLocation, name, registers, computingType;
 	@FXML private ScrollPane description;
 	@FXML private BorderPane iconSpace;
-	@FXML private HBox parameters, editBar;
+	@FXML private HBox symbol, parameters, editBar;
 	@FXML private Button editButton, editNewButton;
 	
 	//quantum stuff
@@ -89,7 +89,6 @@ public class BasicGateModelView extends AppView {
 	private void updateDefinitionUI() {
 		fileLocation.setEditable(false);
 		name.setEditable(false);
-		symbol.setEditable(false);
 		registers.setEditable(false);
 		computingType.setEditable(false);
 		
@@ -98,7 +97,7 @@ public class BasicGateModelView extends AppView {
 		
 		fileLocation.setText(gm.getLocationString());
 		name.setText(gm.getName());
-		symbol.setText(gm.getSymbol());
+		symbol.getChildren().add(new LatexNode(gm.getSymbol(), 20));
 		computingType.setText(gm.getComputingType().toString());
 		
 		Node n = new LatexNode(gm.getDescription(), 20);

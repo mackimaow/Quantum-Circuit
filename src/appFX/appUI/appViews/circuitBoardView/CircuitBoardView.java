@@ -33,8 +33,8 @@ import utils.customCollections.immutableLists.ImmutableArray;
 public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener, AppViewOnSelectedListener {
 	
 	@FXML private ScrollPane description;
-	@FXML private TextField fileLocation, name, symbol, gateType;
-	@FXML private HBox parameters;
+	@FXML private TextField fileLocation, name, gateType;
+	@FXML private HBox parameters, symbol;
 	@FXML private CheckBox grid;
 	@FXML private BorderPane circuitBoardIcon;
 	@FXML private Pane contentPane;
@@ -118,8 +118,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		name.setText(circuitBoard.getName());
 		name.setEditable(false);
 		
-		symbol.setText(circuitBoard.getSymbol());
-		symbol.setEditable(false);
+		symbol.getChildren().add(new LatexNode(circuitBoard.getSymbol(), 20));
 		
 		gateType.setText(circuitBoard.getComputingType().toString());
 		gateType.setEditable(false);
@@ -227,7 +226,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		rl.calculateDrawErrorBounds(rowStart, rowEnd, column, renderer.getGridData(), renderer.getRowTypeList());
 		double moveX = column + .5d;
 		double moveY = rowStart + (rowEnd - rowStart) / 2d + .5d;
-		renderer.scrollToGrid(moveY, moveX);
+		renderer.scrollToGrid(moveY, moveX, 1d);
 	}
 	
 	@Override
