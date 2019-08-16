@@ -4,10 +4,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.stream.Stream;
 
+import appFX.framework.exportGates.*;
 import appFX.framework.exportGates.ExportedGate;
 import appFX.framework.exportGates.GateManager;
 import appFX.framework.gateModels.CircuitBoardModel;
@@ -52,41 +54,66 @@ public class Executor {
      * @return A string of the resulting wavefunction after execution
      */
     static String executeInternal(Project p) {
+    	boolean debugShow = true;
+    	
         Stream<ExportedGate> exps = null;
         try {
             exps = GateManager.exportGates(p);
-            System.out.println("Gate stream created");
+            System.out.println("Gate stream created = " + exps);
         } catch (GateManager.ExportException e) {
         	e.showExportErrorSource();
             return "";
         }
+        
         CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitLocationString());
         int colHeight = cb.getNumberOfRegisters();
-        System.out.println(colHeight);
+        //System.out.println("Column height = " + colHeight);
+        
+        int columnIndex = 0;
         ArrayList<Matrix<Complex>> columns = new ArrayList<>();
         addCols: for(Iterator<ExportedGate> itr = exps.iterator(); itr.hasNext();) {
             ArrayList<ExportedGate> column = new ArrayList<>();
-            for(int i = 0; i < colHeight;) {
-                if(!itr.hasNext()) {
-                  break addCols;
-                }
-                ExportedGate eg = itr.next();
-                if(eg.getQuantumGateType().equals(QuantumGateType.KRAUS_OPERATORS))
-                    return executeMixedState(p);
-                i += eg.getGateRegister().length;
-                column.add(eg);
+            int i = 0;
+            while (i < colHeight) {
+                /*if(!itr.hasNext()) {
+                	System.out.println("itr has no next");
+                	break addCols;
+                }*/
+            	if (itr.hasNext()) {
+            		ExportedGate eg = itr.next();
+            		if(eg.getQuantumGateType().equals(QuantumGateType.KRAUS_OPERATORS)) {
+            			System.out.println("(WARNING) MIXED-SUPPORT: mixed");
+            			return executeMixedState(p);
+            		}
+            		i += eg.getGateRegister().length;
+            		column.add(eg);
+            	}
+            	else break;
             }
-            columns.add(buildColumnMatrix(column,colHeight));
+            if (debugShow) { System.out.println("executeInternal(): buildColumnMatrix: " + columnIndex++); }
+            
+            Matrix<Complex> columnMatrix = buildColumnMatrix(column, colHeight);
+            
+            //System.out.println("exectureInternal(): columnMatrix = ");
+            //System.out.println(columnMatrix.toString());
+            
+            columns.add(columnMatrix);
         } //Columns built
+        
         Matrix<Complex> in = getInVector(colHeight);
-        System.out.println("Beginning input vector multiplication");
+        System.out.println("executeInternal(): Beginning input vector multiplication");
         for(Matrix<Complex> m : columns) {
-            System.out.println(m);
-            System.out.println(m.getColumns());
-            System.out.println(in);
+        	if (debugShow) {
+        		System.out.println("m = "); System.out.println(m);
+        		System.out.println("m.columns = " + m.getColumns());
+        		System.out.println("in = "); System.out.println(in);
+        	}
             in = m.mult(in);
         }
-        return in.toString();
+        Matrix<Complex> finalOutput = in;
+        if (debugShow) { System.out.println("out = "); System.out.println(finalOutput); }
+        
+        return finalOutput.toString();
     }
 
     static Matrix<Complex> getInVector(int numregs) {
@@ -102,23 +129,152 @@ public class Executor {
 
     /**
      * Assumes a pure-quantum state and builds the resulting matrix for a column of gates in the circuit
-     * @param column An arraylist of exportables representing a column in the circuit
-     * @return The matrix of the column
+     * @param column An ArrayList of exportables representing a column in the circuit
+     * @param colheight The number of registers (wires) associated with this column
+     * @return The matrix (tensor product of all gates and identities for unuses wires) for the column
      */
    static Matrix<Complex> buildColumnMatrix(ArrayList<ExportedGate> column, int colheight) {
-       //Assumes no overlapping circuit components
-       //Perhaps place swap gates to ensure this automatically?
-       Matrix<Complex> mat = null;
-       Matrix<Complex> colmat = null;
+	   
+	   boolean debugShow = true;
+	   
+	   // CTT: constant identity 2x2
+	   Matrix<Complex> PauliI = Matrix.identity(Complex.ZERO(), 2);
+	   
+	   // CTT: Pauli-X from scratch.
+	   Matrix<Complex> PauliX = Matrix.identity(Complex.ZERO(), 2);
+	   PauliX.r(Complex.ZERO(),0,0);
+	   PauliX.r(Complex.ONE(),0,1);
+	   PauliX.r(Complex.ONE(),1,0);
+	   PauliX.r(Complex.ZERO(),1,1);
+	   
+       // ASSUMPTION I: NO OVERLAPPING CIRCUIT COMPONENTS
+       //  perhaps place swap gates to ensure this automatically?
+	   // CTT: ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
+	   // CTT: ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
+	   // CTT: ASSUMPTION IV: CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
+	   // CTT: ASSUMPTION V: CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
+	   
+	   if (debugShow) { System.out.println("buildColumnMatrix(): colheight = " + colheight); }
+	   
+       Matrix<Complex> mat = null;		// matrix for entire column
+       Matrix<Complex> colmat = null;	// matrix related to current gate (and its controls)
        Matrix<Complex> swapBuffer = Matrix.identity(Complex.ZERO(),1<<colheight);
+       
        int itr = 0; //itr is the gate we are processing, i is the register we are processing
        for (int i = 0; i < colheight; itr++) {
-           ExportedGate eg = column.get(itr);
-           colmat = eg.getInputMatrixes()[0];
-           int span = 1+getMaxElement(eg.getGateRegister())-getMinElement(eg.getGateRegister());
-           if (eg.getQuantumControls().length != 0) {
+    	   if (debugShow) { System.out.println("[itr=" + itr + "; i=" + i + "]"); }
+    	   
+    	   if (itr >= column.size()) {
+    		   	break;
+    	   }
+    	   
+           ExportedGate eg = column.get(itr);	// get current quantum gate
+           colmat = eg.getInputMatrixes()[0];	// get its matrix
+           
+           if (debugShow) { System.out.println("Current colmat = "); System.out.println(colmat.toString()); } 
 
+       	   int minControlIndex = -1;	// where is the first control register (if any).
+       	   int minRegIndex = -1; 		// where is the first register for the gate.
+       	   int maxRegIndex = -1;		// where is the last register for the gate.
+       	   int span = -1;				// the number of registers involved in the (controlled or not) gate.
+       	   int startIndex = -1;			// where is first register for the (controlled or not) gate.
+       	   								//   this is the minimum of minControlIndex and minRegIndex.
+       	   
+    	   // determine the registers that the gate depends on (by Assumption I, this is disjoint from neighboring gates)
+       	   int numInputs = eg.getGateRegister().length;
+    	   minRegIndex = getMinElement(eg.getGateRegister());
+    	   maxRegIndex = getMaxElement(eg.getGateRegister());           
+    	   
+           // check if gate is controlled    	   
+           if (eg.getQuantumControls().length > 0) {
+       
+        	   // base case value for truthAdjuster: constant 1
+           	   Matrix<Complex> truthAdjuster = Matrix.identity(Complex.ZERO(), 1);
+        	   
+        	   // CTT: truthAdjuster is created to reduce to *STANDARD* controls (FALSE-based).
+        	   int prevIndex, currIndex;
+        	   Control[] myControls = eg.getQuantumControls();
+        	   int numControls = myControls.length;
+        	   minControlIndex = colheight;	// artificial max
+        	   
+        	   if (debugShow) { System.out.print("Controls=["); }
+        	   // CTT: Assume control registers are sorted but not contiguous.
+        	   prevIndex = -1;
+        	   for (int j=0; j<numControls; j++) {
+        		   currIndex = myControls[j].getRegister();
+        		   if (debugShow) { System.out.print(currIndex + ":"); }
+        		   // fill gaps between prevIndex and currIndex with identities
+        		   /*if (prevIndex > -1) {
+        			   for (int k=prevIndex; k<currIndex; k++) {
+        				   System.out.println("STRETCHING TRUTH ADJUSTER");
+        				   truthAdjuster = truthAdjuster.kronecker(PauliI);
+        			   }
+        		   }*/
+        		   if (myControls[j].getControlStatus()) {
+        			   truthAdjuster = truthAdjuster.kronecker(PauliX);
+        			   if (debugShow) { System.out.print("T"); }
+        		   }
+        		   else {
+        			   truthAdjuster = truthAdjuster.kronecker(PauliI);
+        			   if (debugShow) { System.out.print("F"); }
+        		   }
+        		   if (currIndex < minControlIndex) { 
+        			   // CTT: useful only if myControls are not sorted.
+        			   minControlIndex = currIndex;
+        		   }
+        		   if (debugShow) { System.out.print("|"); }
+        		   prevIndex = currIndex;
+        	   }
+        	   if (debugShow) { System.out.println("]"); }
+        	   
+        	   truthAdjuster = truthAdjuster.kronecker(Matrix.identity(Complex.ZERO(), 1<<numInputs));
+        	   if (debugShow) { System.out.println("truthAdjuster = "); System.out.println(truthAdjuster.toString()); }
+        	   
+        	   // CTT: Compute nonstandard controlled gate (FALSE based).
+        	   // CTT: This is a direct sum of identity (of appropriate size) and colmat (or reversed).
+        	   if (debugShow) { System.out.print("numControls[" + numControls); System.out.println("] numInputs[" + numInputs + "]"); }
+        	   
+        	   Matrix<Complex> directSum = Matrix.identity(Complex.ZERO(), 1<<(numControls+numInputs));
+        	   directSum = directSum.setSlice(0, colmat.getRows()-1, 0, colmat.getColumns()-1, colmat);
+        	   colmat = directSum;
+        	   
+        	   //if (debugShow) { System.out.println("colmat = "); System.out.println(colmat.toString()); }
+        	   
+        	   // conjugate with truthAdjuster to account for Controls on FALSE.
+        	   colmat = truthAdjuster.mult(colmat.mult(truthAdjuster));
+        	   
+        	   //if (debugShow) { System.out.println("truthAdjusted colmat = "); System.out.println(colmat.toString()); }
+        	   
+        	   startIndex = minControlIndex;
+        	   span = 1 + maxRegIndex - minControlIndex;
            }
+           else { // CTT: case of uncontrolled gate          
+        	   startIndex = minRegIndex;
+        	   span = 1 + maxRegIndex - minRegIndex;
+           }
+           
+           if (debugShow) {
+        	   System.out.print("span[" + span);
+        	   System.out.print("] minRegIndex[" + minRegIndex);
+        	   System.out.print("] maxRegIndex[" + maxRegIndex);
+        	   System.out.print("] minControlIndex[" + minControlIndex);
+        	   System.out.println("] range{" + Arrays.toString(eg.getGateRegister()) + "}");
+           }
+           
+           if (i < startIndex) { // need to pad by tensoring with identities
+        	   if (mat == null) { // this is the first gate in this column
+        		   mat = Matrix.identity(Complex.ZERO(), 1 << (startIndex-i));
+        	   }
+        	   else { // there were previous gates in this column
+        		   mat = mat.kronecker(Matrix.identity(Complex.ZERO(), 1 << (startIndex-i)));
+        	   }
+           }
+           
+           // advance index to first register used by the gate
+           i = startIndex;
+           
+
+           // CTT: No shuffling supported for now.
            //Shuffle eg to be contiguous and in order, then pad with identity
            /*
            So if there is a gate with registers
@@ -133,56 +289,70 @@ public class Executor {
            -
            With a swap buffer
             */
-           if (eg.getGateRegister().length != 1) {
-               swapBuffer = swapBuffer.mult(getSwapMat(eg.getGateRegister(),colheight));
+           boolean allowShuffle = false;
+           if (allowShuffle && eg.getGateRegister().length != 1) { 
+        	   /* CTT: is this checking for strictly greater than 1 or just not 1? */
+               // DEBUG suppress for now: swapBuffer = swapBuffer.mult(getSwapMat(eg.getGateRegister(),colheight));
                System.out.println("buildColumnMatrix: swapBuffer is of size " + swapBuffer.getRows());
                System.out.println(swapBuffer);
                Matrix<Complex> adjustedColmat = colmat.kronecker(Matrix.identity(Complex.ZERO(),1<<(span-eg.getGateRegister().length)));
                System.out.println("buildColumnMatrix: Adjusted colmat is of size " + adjustedColmat.getRows());
                System.out.println(adjustedColmat);
-               colmat = adjustedColmat;
+               // DEBUG suppress for now: colmat = adjustedColmat;
            }
+           
+           
            if(mat == null) {
+        	   // this is the first quantum gate acting on first register
                mat = colmat;
            } else {
+        	   // there were previous gates or identities on unaffected registers
                mat = mat.kronecker(colmat);
            }
+           
+           // CTT: advance to the start of the next possible gate.
            i += span;
-           itr += span-eg.getGateRegister().length;
+           
+           // CTT: unclear
+           // The following code seems redundant as itr is increment in the FOR loop.
+           // itr += span-eg.getGateRegister().length;
        }
-       System.out.println("Column matrix size: " + mat.getRows());
-       System.out.println("Swap buffer size: " + swapBuffer.getRows());
+       
+       if (debugShow) { System.out.println("buildColumnMatrix(): return = "); System.out.println(mat.toString()); }
+       
        return swapBuffer.mult(mat).mult(swapBuffer.transpose());
    }
+   
 
-    private static int getMaxElement(int[] arr) {
-        if(arr.length==0) {
-            return -1;
-        }
-        int max = arr[0];
-        for(int i = 1; i < arr.length; ++i) {
-            if(max < arr[i]) {
-                max = arr[i];
-            }
-        }
-        return max;
-    }
-    private static int getMinElement(int[] arr) {
-       if(arr.length==0){
-           return -1;
-       }
-       int min = arr[0];
-       for(int i = 1; i < arr.length; ++i) {
-           if(min > arr[i]) {
-               min = arr[i];
-           }
-       }
-       return min;
-    }
+   private static int getMaxElement(int[] arr) {
+	   if(arr.length==0) {
+		   return -1;
+	   }
+	   int max = arr[0];
+	   for(int i = 1; i < arr.length; ++i) {
+		   if(max < arr[i]) {
+			   max = arr[i];
+		   }
+	   }
+	   return max;
+   }
+   private static int getMinElement(int[] arr) {
+	   if(arr.length==0){
+		   return -1;
+	   }
+	   int min = arr[0];
+	   for(int i = 1; i < arr.length; ++i) {
+		   if(min > arr[i]) {
+			   min = arr[i];
+		   }
+	   }
+	   return min;
+   }
 
 
     private static Matrix<Complex> getSwapMat(int[] regs, int columnHeight) {
         int len = regs.length;
+        /* CTT: swapMat is defined by never used? */
         Matrix<Complex> swapMat = Matrix.identity(Complex.ZERO(),4);
         swapMat.r(Complex.ZERO(),1,1);
         swapMat.r(Complex.ZERO(),2,2);
@@ -212,8 +382,10 @@ public class Executor {
         swapMat.r(Complex.ONE(),2,1);
         swapMat.r(Complex.ONE(),1,2);
 
+        /* CTT: farSwap is the function name and the returned matrix itself? */
         Matrix<Complex> farSwap = Matrix.identity(Complex.ZERO(),1<<columnHeight);
         if(p1 == p2) {
+        	System.out.println("farSwap[p1==p2] = " + farSwap);
             return farSwap;
         }
         if(p1 < p2) {

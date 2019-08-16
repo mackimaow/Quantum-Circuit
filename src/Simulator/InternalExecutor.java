@@ -132,7 +132,7 @@ public class InternalExecutor {
 
             @Override
             public void columnEndEvent(int column) {
-                System.err.println("Column: " + column);
+                System.out.println("Column: " + column);
                 if (column >= 0)
                     gates.add(InternalExecutor.column);
                 InternalExecutor.column = null;
