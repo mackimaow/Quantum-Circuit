@@ -79,7 +79,7 @@ class GraphicsDraw<ImageType, FontType, ColorType> extends Graphics<ImageType, F
 				nextBounds[boundsIndexOffset + 2] = nextBounds[boundsIndexOffset] + childLength;
 			} else if(layout == HIGH_ALIGN) {
 				nextBounds[boundsIndexOffset + 2] = parentBounds[boundsIndexOffset + 2] - rimBound.highMargin;
-				nextBounds[boundsIndexOffset] = nextBounds[boundsIndexOffset] - childLength;
+				nextBounds[boundsIndexOffset] = nextBounds[boundsIndexOffset + 2] - childLength;
 			}
 		} else {
 			GridBound gridBound = (GridBound) axisBound;

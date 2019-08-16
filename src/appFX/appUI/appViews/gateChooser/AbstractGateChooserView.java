@@ -17,6 +17,8 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.TilePane;
@@ -121,9 +123,9 @@ public abstract class AbstractGateChooserView extends AppView implements Initial
 		
 		public GateToggleButton (GateModel gateModel) {
 			this.gateModel = gateModel;
-			GateIcon gi = GateIcon.getGateIcon(gateModel);
+			ImageView imageView = GateIcon.gateModelToIconNode(gateModel);
+			setGraphic(imageView);
 			setTooltip(new Tooltip(gateModel.getName()));
-			setGraphic(gi.getView());
 			setOnMouseClicked((mouseEvent) -> {
 				if(mouseEvent.getButton().equals(MouseButton.PRIMARY))
 		            if(mouseEvent.getClickCount() == 2)

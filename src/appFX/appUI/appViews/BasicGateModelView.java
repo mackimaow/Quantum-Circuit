@@ -18,6 +18,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -25,15 +27,15 @@ import utils.customCollections.immutableLists.ImmutableArray;
 
 public class BasicGateModelView extends AppView {
 	
-	@FXML private TextField fileLocation, name, symbol, registers, computingType;
+	@FXML private TextField fileLocation, name, registers, computingType;
 	@FXML private ScrollPane description;
 	@FXML private BorderPane iconSpace;
-	@FXML private HBox parameters, editBar;
+	@FXML private HBox symbol, parameters, editBar;
 	@FXML private Button editButton, editNewButton;
 	
 	//quantum stuff
 	@FXML private Separator quantumSeparator;
-	@FXML private Label quantumDefinitionLabel;
+	@FXML private Label quantumDefinitionLabel, quantumModelTypeLabel;
 	@FXML private TextField modelType;
 	@FXML private HBox definitionStatement;
 	@FXML private VBox definition;
@@ -46,7 +48,6 @@ public class BasicGateModelView extends AppView {
 	
 	
 	private boolean initialized = false;
-	
 	
 	private BasicGateModel gm;
 	
@@ -88,7 +89,6 @@ public class BasicGateModelView extends AppView {
 	private void updateDefinitionUI() {
 		fileLocation.setEditable(false);
 		name.setEditable(false);
-		symbol.setEditable(false);
 		registers.setEditable(false);
 		computingType.setEditable(false);
 		
@@ -97,7 +97,7 @@ public class BasicGateModelView extends AppView {
 		
 		fileLocation.setText(gm.getLocationString());
 		name.setText(gm.getName());
-		symbol.setText(gm.getSymbol());
+		symbol.getChildren().add(new LatexNode(gm.getSymbol(), 20));
 		computingType.setText(gm.getComputingType().toString());
 		
 		Node n = new LatexNode(gm.getDescription(), 20);
@@ -120,9 +120,10 @@ public class BasicGateModelView extends AppView {
 		
 		iconSpace.getChildren().clear();
 		
-		GateIcon gi = GateIcon.getGateIcon(gm);
+
+		ImageView imageView = GateIcon.gateModelToIconNode(gm);
 		
-		iconSpace.setCenter(gi.getView());
+		iconSpace.setCenter(imageView);
 		
 		GateComputingType type = gm.getComputingType();
 		if(type.isQuantum()) {
@@ -185,14 +186,18 @@ public class BasicGateModelView extends AppView {
 			}
 		} else {
 			quantumDefinitionLabel.setVisible(false);
+			quantumModelTypeLabel.setVisible(false);
 			modelType.setVisible(false);
 			definitionStatement.setVisible(false);
 			definition.setVisible(false);
+			quantumSeparator.setVisible(false);
 			
 			quantumDefinitionLabel.setManaged(false);
+			quantumModelTypeLabel.setManaged(false);
 			modelType.setManaged(false);
 			definitionStatement.setManaged(false);
 			definition.setManaged(false);
+			quantumSeparator.setManaged(false);
 		}
 		
 		if(type.isClassical()) {

@@ -41,8 +41,8 @@ public class ClassicalGateDefinition extends GateDefinition implements Serializa
 				definitions[i] = new BooleanEquation(userInput.get(i), listener);
 				latexStrings[i] = definitions[i].getLatexString();
 				int outputBitIndex = definitions[i].getOutputBitIndex();
-				if(outputBitIndex > largestInput.first())
-					largestInput.setFirst(outputBitIndex);
+				if(outputBitIndex + 1 > largestInput.first())
+					largestInput.setFirst(outputBitIndex + 1);
 				if(!outputs.add(outputBitIndex))
 					throw new BooleanEquationParseException("Multiple definitions for the output bit \"" + outputBitIndex +  "\"");
 			} catch(LexemeNotRecognizedException | LexicalAnaylizerIOException| BooleanEquationParseException exception) {

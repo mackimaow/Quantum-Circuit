@@ -215,6 +215,13 @@ public class CircuitBoardRenderer {
 		verticalGridFocused = -1;
 	}
 	
+	public synchronized void scrollToGrid(double row, double column, double zoom) {
+		horizontalGridFocused = column;
+		verticalGridFocused = row;
+		this.zoom = zoom;
+		render();
+	}
+	
 	public synchronized void scrollToGrid(double row, double column) {
 		horizontalGridFocused = column;
 		verticalGridFocused = row;
@@ -230,6 +237,15 @@ public class CircuitBoardRenderer {
 		double[] yGridLocation = getYGridLocation(centerPosition[1]);
 		
 		return new double[] {xGridLocation[0], xGridLocation[1], yGridLocation[0], yGridLocation[1]};
+	}
+	
+	public synchronized void zoom(double zoom) {
+		if(zoom < ZOOM_LOWER_BOUND)
+			zoom = ZOOM_LOWER_BOUND;
+		else if(zoom > ZOOM_UPPER_BOUND)
+			zoom = ZOOM_UPPER_BOUND;
+		this.zoom = zoom;
+		render();
 	}
 	
 	public synchronized void zoom(double zoom, double mouseX, double mouseY) {

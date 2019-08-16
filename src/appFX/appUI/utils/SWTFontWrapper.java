@@ -1,4 +1,4 @@
-package appFX.appUI.appViews.circuitBoardView.renderer;
+package appFX.appUI.utils;
 
 import java.awt.Font;
 import java.awt.FontMetrics;

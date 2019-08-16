@@ -3,7 +3,7 @@ package appFX.appUI.appViews;
 import appFX.appUI.utils.AppFXMLComponent;
 import appFX.appUI.utils.AppTab;
 import appFX.framework.AppStatus;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
+import utils.Notifier.ReceivedEvent;
 
 public abstract class AppView extends AppFXMLComponent implements ReceivedEvent {
 	

@@ -55,7 +55,7 @@
          </padding>
       </Label>
       <Separator prefWidth="200.0" GridPane.columnSpan="2147483647" GridPane.rowIndex="5" />
-      <Label text="Gate Type and Parameters" underline="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6">
+      <Label text="Additional Information" underline="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6">
          <padding>
             <Insets bottom="10.0" left="10.0" />
          </padding>

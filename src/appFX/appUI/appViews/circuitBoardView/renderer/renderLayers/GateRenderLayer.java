@@ -1,7 +1,7 @@
 package appFX.appUI.appViews.circuitBoardView.renderer.renderLayers;
 
-import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
 import appFX.appUI.appViews.circuitBoardView.renderer.GateRenderer;
+import appFX.appUI.utils.CustomFXGraphics;
 import appFX.framework.gateModels.CircuitBoardModel;
 import graphicsWrapper.Graphics;
 import javafx.scene.image.Image;

@@ -118,9 +118,9 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 		@Override
 		public void initialize() {
 			parameterSelection = new RearrangableParameterListPaneWrapper(parameters);
-			ObservableList<GateComputingType> strings = gateType.getItems();
-			strings.add(GateComputingType.CLASSICAL);
-			strings.add(GateComputingType.QUANTUM);
+			ObservableList<GateComputingType> types = gateType.getItems();
+			for(GateComputingType type : GateComputingType.values())
+				types.add(type);
 		}
 		
 		@Override
@@ -129,7 +129,8 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 			String nameString = "";
 			String symbolString = "";
 			String descriptionString = "";
-			GateComputingType chosenType = GateComputingType.CLASSICAL;
+			String[] args = {};
+			GateComputingType chosenType = GateComputingType.QUANTUM;
 			
 			if(referencedCb != null) {
 				fileLocationString = referencedCb.getLocationString();
@@ -137,33 +138,29 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 				symbolString = referencedCb.getSymbol();
 				descriptionString = referencedCb.getDescription();
 				chosenType = referencedCb.getComputingType();
+				ImmutableArray<String> argsList = referencedCb.getParameters();
+				args = new String[argsList.size()];
+				argsList.toArray(args);
 			}
 			
 			fieldData.add(fileLocation, fileLocationString);
 			fieldData.add(name, nameString);
 			fieldData.add(symbol, symbolString);
 			fieldData.add(description, descriptionString);
-			
-			String[] args = {""};
-			
-			if(referencedCb != null) {
-				ImmutableArray<String> argsList = referencedCb.getParameters();
-				args = new String[argsList.size()];
-				argsList.toArray(args);
-			}
 			fieldData.add(parameterSelection, (Object[]) args);
 			fieldData.add(gateType, chosenType);
 		}
 		
 		@Override
 		public boolean checkFinish() {
-			boolean isPreset = false;
+			String fileNameErrorMsg = null;
 			try {
-				PresetGateType.checkLocationString(fileLocation.getText());
-			} catch (NameTakenException e) {
-				isPreset = true;
+				GateModel.checkLocationString(fileLocation.getText(), false, CircuitBoardModel.CIRCUIT_BOARD_EXTENSION);
+			} catch (Exception e) {
+				fileNameErrorMsg = e.getMessage();
 			}
-			if(checkTextFieldError(getStage(), fileLocation, isPreset, "Cannot used the specified file location", "The file location chosen is exclusive to a Preset Gate")) return false;
+			
+			if(checkTextFieldError(getStage(), fileLocation, fileNameErrorMsg != null, "Cannot used the specified file location", fileNameErrorMsg)) return false;
 			
 			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
 			if(checkTextFieldError(getStage(), name, name.getText().matches("\\s+"), "Inproper name scheme", "Name should not be empty spaces")) return false;
@@ -195,7 +192,7 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 					newCb = referencedCb.createDeepCopyToNewName(fileLocation.getText(), name.getText(), symbol.getText(),
 							description.getText(), gateType.getValue(), params);
 			} catch (Exception e) {
-				AppAlerts.showMessage(getStage(), "Invalid File name", "File must end in .cb", AlertType.ERROR);
+				AppAlerts.showMessage(getStage(), "Could not make board", "Please check fields for and error", AlertType.ERROR);
 				return false;
 			}
 			return addCircuitBoardToProject(getStage(), referencedCb, newCb, editAsNew);
@@ -208,6 +205,11 @@ public class CircuitBoardPropertiesEditWizard extends Wizard<CircuitBoardModel> 
 		
 		@FXML private void addParameter(ActionEvent ae) {
 			parameterSelection.addElementToEnd("");
+		}
+
+		@Override
+		public boolean hasFinish() {
+			return true;
 		}
 	}
 	

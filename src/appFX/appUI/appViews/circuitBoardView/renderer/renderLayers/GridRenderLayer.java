@@ -1,6 +1,6 @@
 package appFX.appUI.appViews.circuitBoardView.renderer.renderLayers;
 
-import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
+import appFX.appUI.utils.CustomFXGraphics;
 import graphicsWrapper.FocusData;
 import graphicsWrapper.Graphics;
 import graphicsWrapper.AxisBound.RimBound;

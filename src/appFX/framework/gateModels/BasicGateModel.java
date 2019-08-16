@@ -22,7 +22,7 @@ public class BasicGateModel extends GateModel {
     private static GateComputingType getComputingType(ClassicalGateDefinition classicalDefinition, QuantumGateDefinition quantumDefinition) {
     	if(classicalDefinition != null) {
     		if(quantumDefinition != null)
-    			return GateComputingType.CLASSICAL_OR_QUANTUM;
+    			return GateComputingType.CLASSICAL_AND_QUANTUM;
     		return GateComputingType.CLASSICAL;
     	}
     	return GateComputingType.QUANTUM;

@@ -5,6 +5,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.function.Predicate;
 
 import appFX.appPreferences.AppPreferences;
 import appFX.framework.AppStatus;
@@ -29,13 +30,13 @@ import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
 import appFX.framework.utils.InputDefinitions.GroupDefinition;
 import appFX.framework.utils.InputDefinitions.MatrixDefinition;
 import appFX.framework.utils.InputDefinitions.ScalarDefinition;
+import utils.Notifier;
+import utils.Notifier.ReceivedEvent;
 import utils.customCollections.Manifest;
 import utils.customCollections.Manifest.ManifestElementHandle;
 import utils.customCollections.Pair;
 import utils.customCollections.Queue;
 import utils.customCollections.Stack;
-import utils.customCollections.eventTracableCollections.Notifier;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
 
 /**
  * This is a 2D grid of gates that represents a quantum protocol within design (often referred to as a sub-circuit or top-level) <br>
@@ -55,7 +56,7 @@ import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
  * 
  * 
  * 
- * @author quantumresearch
+ * @author Massimiliano Cutugno
  *
  */
 public class CircuitBoardModel extends GateModel implements  Iterable<RawExportableGateData>, CheckDefinitionRunnable, AppPreferences {
@@ -64,7 +65,8 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	public static enum RowType {
 		SPACE("Space"),
 		CLASSICAL("Classical"),
-		QUANTUM("Quantum");
+		QUANTUM("Quantum"),
+		CLASSICAL_AND_QUANTUM("Classical and Quantum");
 		
 		private final String name;
 		private RowType(String name) {
@@ -74,6 +76,18 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		@Override
 		public String toString() {
 			return name;
+		}
+		
+		public static RowType getRowType(GateComputingType computingType) {
+			switch(computingType) {
+			case CLASSICAL:
+				return CLASSICAL;
+			case CLASSICAL_AND_QUANTUM:
+				return CLASSICAL_AND_QUANTUM;
+			case QUANTUM:
+				return QUANTUM;
+			}
+			return SPACE;
 		}
 	}
 	
@@ -92,18 +106,13 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
     private final Manifest<String> gateModelsUsed;
     
-    {
-    	if(getComputingType() == GateComputingType.CLASSICAL_OR_QUANTUM)
-			throw new IllegalArgumentException("A Circuit board cannot act as both a quantum operation and a classical operation");
+    private CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, String[] parameters, CircuitBoardModel oldModel) {
+    	this(locationString, name, symbol, description, computingType, oldModel.getComputingType(), parameters, oldModel.elements, oldModel.gateModelsUsed, oldModel.rowTypes);
     }
     
-    private CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, String[] arguments, CircuitBoardModel oldModel) {
-    	this(locationString, name, symbol, description, computingType, arguments, oldModel.elements, oldModel.gateModelsUsed, oldModel.rowTypes);
-    }
-    
-    private CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, String[] arguments, LinkedList<LinkedList<SolderedPin>> elements,
+    private CircuitBoardModel(String locationString, String name, String symbol, String description, GateComputingType computingType, GateComputingType oldComputingType, String[] parameters, LinkedList<LinkedList<SolderedPin>> elements,
     		Manifest<String> gateModelsUsed, RowTypeList rowTypes) {
-    	super(locationString, name, symbol, description, computingType, arguments);
+    	super(locationString, name, symbol, description, computingType, parameters);
     	
     	this.elements = elements;
     	this.rowTypes = rowTypes;
@@ -113,32 +122,53 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	this.notifier = new Notifier();
     	this.renderNotifier = new Notifier();
     	
-    	// adding at least one classical reg (if classical circuitboard)
-    	// or adding at least one quantum reg (if quantum circuitboard>
-    	// if the circuit board is changed from quantum to classical, 
-    	// then all quantum rows are removed
+    	if(computingType == oldComputingType)
+    		return;
+    	
+
+		Project p = AppStatus.get().getFocusedProject();
     	if(computingType == GateComputingType.CLASSICAL) {
-    		int rows = elements.get(0).size();
-    		int amtClassical = rowTypes.countTypeAmtFrom(RowType.CLASSICAL, 0, rows);
-    		if(amtClassical <= 0) {
-    			Action addRows = addRowsAction(0, 5, RowType.CLASSICAL);
-    			addRows.apply();
-    		}
-    		rows = elements.get(0).size();
-    		LinkedList<Pair<Integer, Integer>> ranges = rowTypes.getRangesOfType(RowType.QUANTUM);
-    		Iterator<Pair<Integer, Integer>> rangeIterator = ranges.descendingIterator();
-    		while(rangeIterator.hasNext()) {
-    			Pair<Integer, Integer> range = rangeIterator.next();
-    			Action removeRows = removeRowsAction(range.first(), range.second());
-    			removeRows.apply();
-    		}
+    		Action action = removeGatesOnPredicate((rawData)->{
+    			SolderedGate sg = rawData.getSolderedGate();
+    			if(sg.isIdentity())
+    				return false;
+    			GateModel gm = p.getGateModel(sg.getGateModelLocationString());
+    			if(gm == null)
+    				return true;
+    			if(gm.isClassical())
+    				return false;
+    			return true;
+    		});
+    		action.apply();
+    		rowTypes.mergeTypesToTarget(RowType.CLASSICAL, RowType.CLASSICAL_AND_QUANTUM, RowType.QUANTUM);
+    	} else if(computingType == GateComputingType.QUANTUM) {
+    		Action action = removeGatesOnPredicate((rawData)->{
+    			SolderedGate sg = rawData.getSolderedGate();
+    			if(sg.isIdentity())
+    				return false;
+    			GateModel gm = p.getGateModel(sg.getGateModelLocationString());
+    			if(gm == null)
+    				return true;
+    			if(gm.isQuantum())
+    				return false;
+    			return true;
+    		});
+    		action.apply();
+    		rowTypes.mergeTypesToTarget(RowType.QUANTUM, RowType.CLASSICAL, RowType.CLASSICAL_AND_QUANTUM);
     	} else {
-    		int rows = elements.get(0).size();
-    		int amtQuantum = rowTypes.countTypeAmtFrom(RowType.QUANTUM, 0, rows);
-    		if(amtQuantum <= 0) {
-    			Action addRows = addRowsAction(0, 5, RowType.QUANTUM);
-    			addRows.apply();
-    		}
+    		Action action = removeGatesOnPredicate((rawData)->{
+    			SolderedGate sg = rawData.getSolderedGate();
+    			if(sg.isIdentity())
+    				return false;
+    			GateModel gm = p.getGateModel(sg.getGateModelLocationString());
+    			if(gm == null)
+    				return true;
+    			if(gm.isQuantum() && gm.isClassical())
+    				return false;
+    			return true;
+    		});
+    		action.apply();
+    		rowTypes.mergeTypesToTarget(RowType.CLASSICAL_AND_QUANTUM, RowType.CLASSICAL, RowType.QUANTUM);
     	}
     }
     
@@ -158,12 +188,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		this.elements = new LinkedList<>();
 		this.rowTypes = new RowTypeList();
 		
-		RowType rowsToAdd;
-		if(computingType == GateComputingType.CLASSICAL)
-			rowsToAdd = RowType.CLASSICAL;
-		else
-			rowsToAdd = RowType.QUANTUM;
-		
+		RowType rowsToAdd = RowType.getRowType(computingType);
 		
 		LinkedList<SolderedPin> column;
 		for(int c = 0; c < columns; c++) {
@@ -266,10 +291,8 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 
 	@Override
 	public int getNumberOfRegisters() {
-		if(getComputingType().isQuantum)
-			return rowTypes.countTypeAmtFrom(RowType.QUANTUM, 0, rowTypes.size());
-		else
-			return rowTypes.countTypeAmtFrom(RowType.CLASSICAL, 0, rowTypes.size());
+		RowType boardRowType = RowType.getRowType(getComputingType());
+		return rowTypes.countTypeAmtFrom(boardRowType, 0, rowTypes.size());
 	}
 	
 	public RowTypeList getCopyOfRowTypeList() {
@@ -299,7 +322,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			temp.addLast(tempColumn);
 		}
 		
-		return new CircuitBoardModel(locationString, name, symbol, description, computingType, parameters, temp, gateModelsUsed.deepCopy(), rowTypes.deepCopy());
+		return new CircuitBoardModel(locationString, name, symbol, description, computingType, getComputingType(), parameters, temp, gateModelsUsed.deepCopy(), rowTypes.deepCopy());
 	}
 	
 	
@@ -353,20 +376,20 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     }
     
     public synchronized void placeGate(String gateModelLocationString, int column, int[] localToGlobalRegs, String ... parameters) throws DefinitionEvaluatorException {
+    	if(column < 0 || column > getColumns())
+			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
+    	
     	Project p = AppStatus.get().getFocusedProject();
     	GateModel gm = p.getGateModel(gateModelLocationString);
     	if(gm == null)
     		throw new IllegalArgumentException("Gate: \"" + gateModelLocationString + "\"does not exist");
     	
-    	GateComputingType computingType = gm.getComputingType();
-    	
-    	if(column < 0 || column > getColumns())
-			throw new IllegalArgumentException("Column should be greater than 0 and less than circuitboard column size");
-    	
     	int arbitraryGlobalReg = localToGlobalRegs[0];
     	if(arbitraryGlobalReg < 0 || arbitraryGlobalReg > getRows())
 			throw new IllegalArgumentException("Gate register should be greater than 0 and less than circuitboard row size");
+
     	
+    	GateComputingType computingType = gm.getComputingType();
     	RowType rowType = rowTypes.getTypeAtRow(arbitraryGlobalReg);
     	RowType chosenType;
     	if(rowType == RowType.SPACE) {
@@ -375,10 +398,16 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     		if(!computingType.isQuantum())
     			throw new IllegalArgumentException("Gate that is not a quantum operation is placed on quantum registers");
     		chosenType = RowType.QUANTUM;
-    	} else {
+    	} else if (rowType == RowType.CLASSICAL){
     		if(!computingType.isClassical())
     			throw new IllegalArgumentException("Gate that is not a classical operation is placed on classical registers");
     		chosenType = RowType.CLASSICAL;
+    	} else if (rowType == RowType.CLASSICAL_AND_QUANTUM) {
+    		if(!computingType.isClassical() || !computingType.isQuantum())
+    			throw new IllegalArgumentException("Gate that is not both a classical operation and quantum operation is placed on hybrid quantum/classical registers");
+    		chosenType = RowType.CLASSICAL_AND_QUANTUM;
+    	} else {
+    		throw new IllegalArgumentException("Gate placement on this row type is not implemented yet");
     	}
     	
     	for(int reg : localToGlobalRegs) {
@@ -469,7 +498,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	
     	if(sp instanceof SolderedControlPin) {
 	    	notifier.sendChange(this, "removeControl", rowControl, columnControl);
-	    	Action action = removeControlPinAction(rowControl, columnControl);
+	    	Action action = removeControlAction(rowControl, columnControl);
 	    	doAction(action);
 	    	renderNotifier.sendChange(this, "removeControl", rowControl, columnControl);
     	}
@@ -490,6 +519,8 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			throw new IllegalArgumentException("Input link can not be placed on an empty row");
     	if(rowType == RowType.QUANTUM)
 			throw new IllegalArgumentException("Input link can not be placed on an quantum register");
+    	if(rowType == RowType.CLASSICAL_AND_QUANTUM)
+			throw new IllegalArgumentException("Input link can not be placed on an hybrid classical/quantum register");
     	rowType = rowTypes.getTypeAtRow(rowSpace);
     	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
     	SolderedGate sg = sp.getSolderedGate();
@@ -540,6 +571,8 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			throw new IllegalArgumentException("Output link can not be placed on an empty row");
     	if(rowType == RowType.QUANTUM) // link placed on quantum row
 			throw new IllegalArgumentException("Output link can not be placed on an quantum register");
+    	if(rowType == RowType.CLASSICAL_AND_QUANTUM)
+			throw new IllegalArgumentException("Output link can not be placed on an hybrid classical/quantum register");
 		rowType = rowTypes.getTypeAtRow(rowSpace);
     	SolderedPin sp = getSolderedPinAt(rowSpace, columnSpace);
 		SolderedGate sg = sp.getSolderedGate();
@@ -609,16 +642,19 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			throw new IllegalArgumentException("Row should be greater than 0 and less than circuitboard row size");
     	if(rowStartInclusize >= rowEndExclusive)
     		throw new IllegalArgumentException("Row range should be greater than 0");
+    	
     	GateComputingType computingType = getComputingType();
-    	RowType rowType = computingType == GateComputingType.CLASSICAL? RowType.CLASSICAL : RowType.QUANTUM;
+    	RowType rowType = RowType.getRowType(getComputingType());
     	int typeAmtInRange = rowTypes.countTypeAmtFrom(rowType, rowStartInclusize, rowEndExclusive);
     	int totalAmt = rowTypes.countTypeAmtFrom(rowType, 0, getRows());
     	
     	if(totalAmt - typeAmtInRange <= 0) {
     		if (computingType == GateComputingType.CLASSICAL)
     			throw new IllegalArgumentException("There should be at least one classical register");
-    		else 
+    		else if(computingType == GateComputingType.QUANTUM) 
     			throw new IllegalArgumentException("There should be at least one quantum register");
+    		else 
+    			throw new IllegalArgumentException("There should be at least one hybrid quantum/classical register");
     	}
     		
     	notifier.sendChange(this, "removeRows", rowStartInclusize, rowEndExclusive);
@@ -650,9 +686,15 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	if(amt < 1)
     		throw new IllegalArgumentException("The amt of rows to add must be greater than 0");
     	GateComputingType computingType = getComputingType();
-    	if(computingType == GateComputingType.CLASSICAL && rowType == RowType.QUANTUM)
+    	if (computingType == GateComputingType.CLASSICAL_AND_QUANTUM) {
+    		if(rowType == RowType.CLASSICAL)
+        		throw new IllegalArgumentException("Cannot add classical registers to a hybrid classical/quantum circuitboard");
+    		if(rowType == RowType.QUANTUM)
+        		throw new IllegalArgumentException("Cannot add quantum registers to a hybrid classical/quantum circuitboard");
+    	} else if(computingType == GateComputingType.CLASSICAL && rowType == RowType.QUANTUM) {
     		throw new IllegalArgumentException("Cannot add quantum registers to a classical circuitboard");
-    	
+    	}
+    		
     	notifier.sendChange(this, "addRows", rowToAdd, amt, rowType);
     	Action action = addRowsAction(rowToAdd, amt, rowType);
     	doAction(action);
@@ -694,12 +736,28 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
 //  ---------------------------------------------------------------------------
     
+    private Action removeGatesOnPredicate(Predicate<RawExportableGateData> predicate) {
+    	Action action = new MultipleAction() {
+			@Override
+			public void initActionQueue(LinkedList<Action> actions) {
+				for(RawExportableGateData rawData : getInstance()) {
+					if(predicate.test(rawData)) {
+						Action removeEntireGateAction = removeEntireGateAction(rawData.getGateRowBodyStart(), rawData.getColumn());
+						actions.add(removeEntireGateAction);
+					}
+				}
+			}
+		};
+		return action;
+    }
+    
+    
     private Action removeLinksAndControlsAction(int row, int column, boolean removeControl, boolean removeInputLink, boolean removeOutputLink) {
     	Action action = new MultipleAction() {
     		@Override
     		public void initActionQueue(LinkedList<Action> actions) {
     			if(removeControl) {
-    				Action removeControl = removeControlPinAction(row, column);
+    				Action removeControl = removeControlAction(row, column);
     				actions.add(removeControl);
     			}
     			if(removeInputLink) {
@@ -998,14 +1056,14 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     					iterator.previous();
     					while(iterator.hasPrevious()) {
     						sp = iterator.previous();
-    						if(sp.getSolderedGate() == sg)
+    						if(sp.isNotEmptySpace())
     							break;
     						iterator.set(mkIdent());
     					}
     				} else {
     					while(iterator.hasNext()) {
     						sp = iterator.next();
-    						if(sp.getSolderedGate() == sg)
+    						if(sp.isNotEmptySpace())
     							break;
     						iterator.set(mkIdent());
     					}
@@ -1120,14 +1178,14 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     					iterator.previous();
     					while(iterator.hasPrevious()) {
     						sp = iterator.previous();
-    						if(sp.getSolderedGate() == sg)
+    						if(sp.isNotEmptySpace())
     							break;
     						iterator.set(mkIdent());
     					}
     				} else {
     					while(iterator.hasNext()) {
     						sp = iterator.next();
-    						if(sp.getSolderedGate() == sg)
+    						if(sp.isNotEmptySpace())
     							break;
     						iterator.set(mkIdent());
     					}
@@ -1307,7 +1365,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			
 			private void addActions(LinkedList<Action> actions, Queue<Integer> controls, Queue<Integer> inputLinks, Queue<Integer> outputLinks) {
 				for(int i : controls) {
-    				Action removeControl = removeControlPinAction(i, column);
+    				Action removeControl = removeControlAction(i, column);
 					actions.offerLast(removeControl);
     			}
     			for(int i : inputLinks) {
@@ -1337,7 +1395,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     				if(sp instanceof SpacePin) {
     					SpacePin spacePin = (SpacePin) sp;
     					if(spacePin instanceof SolderedControlPin) {
-        					Action removeControl = removeControlPinAction(i, columnSpace);
+        					Action removeControl = removeControlAction(i, columnSpace);
         					actions.offerLast(removeControl);
         				}
     					if(spacePin.isInputLinked()) {
@@ -1405,7 +1463,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     	return action;
     }
     
-    private Action removeControlPinAction(int rowControl, int columnControl) {
+    private Action removeControlAction(int rowControl, int columnControl) {
     	Action action = new Action() {
     		final int rowGateBody;
     		final boolean controlStatus;
@@ -1598,48 +1656,6 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
     
     private CircuitBoardModel getInstance() {
     	return this;
-    }
-    
-    
-    
-    
-    
-    private int[] getLocalToGlobalRegsFromGate(int rowBody, int columnBody) {
-    	Hashtable<Integer, Integer> localToGlobal = new Hashtable<>();
-    	ListIterator<SolderedPin> iterator = getRowIterator(rowBody, columnBody);
-    	SolderedPin sp = iterator.next();
-    	SolderedGate sg = sp.getSolderedGate();
-    	iterator.previous();
-    	
-    	while(iterator.hasNext()) {
-    		SolderedPin next = iterator.next();
-    		if(next.getSolderedGate() != sg)
-    			break;
-    		if(!next.isWithinBody())
-    			break;
-    		if(next instanceof SolderedRegister) { 
-    			SolderedRegister soldReg = (SolderedRegister) next;
-    			localToGlobal.put(soldReg.getSolderedGatePinNumber(), iterator.previousIndex());
-    		}
-    	}
-    	iterator = getRowIterator(rowBody, columnBody);
-    	while(iterator.hasPrevious()) {
-    		SolderedPin previous = iterator.previous();
-    		if(previous.getSolderedGate() != sg)
-    			break;
-    		if(!previous.isWithinBody())
-    			break;
-    		if(previous instanceof SolderedRegister) { 
-    			SolderedRegister soldReg = (SolderedRegister) previous;
-    			localToGlobal.put(soldReg.getSolderedGatePinNumber(), iterator.nextIndex());
-    		}
-    	}
-    	
-    	int[] regs = new int[localToGlobal.size()];
-    	for(int i = 0; i < regs.length; i++)
-    		regs[i] = localToGlobal.get(i);
-    	
-    	return regs;
     }
     
     private Hashtable<Integer, Integer> getGlobalToLocalRegsFromGate(int rowBody, int columnBody) {
@@ -1889,10 +1905,12 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			int noneStartAmt = countTypeAmtFrom(RowType.SPACE, 0, index);
 			int classicalStartAmt = countTypeAmtFrom(RowType.CLASSICAL, 0, index);
 			int quantumStartAmt = countTypeAmtFrom(RowType.QUANTUM, 0, index);
+			int classicalOrQuantumStartAmt = countTypeAmtFrom(RowType.CLASSICAL_AND_QUANTUM, 0, index);
 			
 			int spaceAddedAmt = 0;
 			int classicalAddedAmt = 0;
 			int quantumAddedAmt = 0;
+			int classicalOrQuantumAddedAmt = 0;
 			
 			ListIterator<RowType> addIterator = elements.listIterator();
 			ListIterator<RowTypeElement> listIterator = rowTypes.listIterator(index);
@@ -1908,6 +1926,9 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 					break;
 				case QUANTUM:
 					reg = quantumStartAmt + quantumAddedAmt++;
+					break;
+				case CLASSICAL_AND_QUANTUM:
+					reg = classicalOrQuantumStartAmt + classicalOrQuantumAddedAmt++;
 					break;
 				default:
 					break;
@@ -1925,6 +1946,9 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 					break;
 				case QUANTUM:
 					rowTypeElement.reg += quantumAddedAmt;
+					break;
+				case CLASSICAL_AND_QUANTUM:
+					rowTypeElement.reg += classicalOrQuantumAddedAmt;
 					break;
 				default:
 					break;
@@ -1966,6 +1990,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			int spaceAmt = countTypeAmtFrom(RowType.SPACE, startIndexInclusive, endIndexExclusize);
 			int classicalAmt = countTypeAmtFrom(RowType.CLASSICAL, startIndexInclusive, endIndexExclusize);
 			int quantumAmt = countTypeAmtFrom(RowType.QUANTUM, startIndexInclusive, endIndexExclusize);
+			int classicalOrQuantumAmt = countTypeAmtFrom(RowType.CLASSICAL_AND_QUANTUM, startIndexInclusive, endIndexExclusize);
 			
 
 			ListIterator<RowTypeElement> iterator = rowTypes.listIterator(endIndexExclusize); 
@@ -1981,6 +2006,9 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 				case QUANTUM:
 					elem.reg -= quantumAmt;
 					break;
+				case CLASSICAL_AND_QUANTUM:
+					elem.reg -= classicalOrQuantumAmt;
+					break;
 				default:
 					break;
 				}
@@ -1993,6 +2021,23 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 				iterator.remove();
 			}
 			
+		}
+		
+		private void mergeTypesToTarget(RowType target, RowType ... rowTypesToBeMerged) {
+			int currentReg = 0;
+			for(RowTypeElement element : rowTypes) {
+				if(element.type == target) {
+					element.reg = currentReg++;
+				} else {
+					for(RowType type : rowTypesToBeMerged) {
+						if(type == element.type) {
+							element.type = target;
+							element.reg = currentReg++;
+							break;
+						}
+					}
+				}
+			}
 		}
 		
 		public RowType getTypeAtRow(int row) {
@@ -2090,6 +2135,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		private LinkedList<RawExportRegister> underneathQuantumIdentityGates;
 		private Hashtable<Integer, RawExportRegister> registers;
 		private boolean classicalReg = false;
+		private boolean quantumReg = false;
 		
 		
 		public ExportableGateIterator(int index) {
@@ -2142,7 +2188,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 				decrementRow();
 			
 			return new RawExportableGateData(current, quantumControls, classicalControls, outputLinks, inputLinks,
-				underneathQuantumIdentityGates, registers, classicalReg, gateRowSpaceStart, getRow(), 
+				underneathQuantumIdentityGates, registers, classicalReg, quantumReg, gateRowSpaceStart, getRow(), 
 				gateRowBodyStart, gateRowBodyEnd, getColumn());
 		}
 		
@@ -2165,6 +2211,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			return columns.previousIndex();
 		}
 		
+		@SuppressWarnings("incomplete-switch")
 		private void addPinData() {
 			int r = getRow();
 			int globalReg = currentRowType.reg;
@@ -2172,7 +2219,18 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			
 			if(currentPin instanceof SolderedRegister) {
 				SolderedRegister registerPin = (SolderedRegister) currentPin;
-				classicalReg = type == RowType.CLASSICAL;
+				switch(type) {
+				case CLASSICAL:
+					classicalReg = true;
+					break;
+				case QUANTUM:
+					quantumReg = true;
+					break;
+				case CLASSICAL_AND_QUANTUM:
+					classicalReg = true;
+					quantumReg = true;
+					break;
+				}
 				RawExportRegister exportRegister = new RawExportRegister(globalReg, r);
 				registers.put(registerPin.getSolderedGatePinNumber(), exportRegister);
 				if(gateRowBodyStart == -1)
@@ -2199,7 +2257,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 						quantumControls.offerLast(exportRegister);
 				} else {
 					RawExportRegister exportRegister = new RawExportRegister(globalReg, r);
-					if(type == RowType.QUANTUM)
+					if(type != RowType.SPACE && type != RowType.CLASSICAL)
 						underneathQuantumIdentityGates.offerLast(exportRegister);
 				}
 				

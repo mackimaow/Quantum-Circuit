@@ -10,7 +10,7 @@ public abstract class GateModel implements Serializable {
 	public static enum GateComputingType {
 		CLASSICAL(true, false, "Classical"),
 		QUANTUM(false, true, "Quantum"),
-		CLASSICAL_OR_QUANTUM(true, true, "Classical or Quantum");
+		CLASSICAL_AND_QUANTUM(true, true, "Classical and Quantum");
 		
 		final boolean isClassical, isQuantum;
 		final String name;
@@ -48,14 +48,7 @@ public abstract class GateModel implements Serializable {
 	private final String[] parameters;
 	
 	public GateModel (String location, String name, String symbol, String description, GateComputingType gateComputingType, String ... parameters) {
-		if(!isPreset())
-			PresetGateType.checkLocationString(location);
-		
-		if(location == null) {
-			throw new ImproperNameSchemeException("Location must be defined");
-		} else if (!location.trim().endsWith("." + getExtString())) {
-			throw new ImproperNameSchemeException("Location extension must be " + "." + getExtString());
-		}
+		checkLocationString(location, isPreset(), getExtString());
 		
 		this.location = location.trim();
 		this.name = name.trim();
@@ -78,6 +71,17 @@ public abstract class GateModel implements Serializable {
 		}
 	}
 	
+	public static void checkLocationString(String location, boolean isPreset, String extString) {
+		if(!isPreset)
+			PresetGateType.checkLocationString(location);
+		
+		if(location == null) {
+			throw new ImproperNameSchemeException("Location must be defined");
+		} else if (!location.trim().endsWith("." + extString)) {
+			throw new ImproperNameSchemeException("Location extension must be " + "." + extString);
+		}
+	}
+	
 	public abstract int getNumberOfRegisters();
 	public abstract String getExtString();
 	public abstract boolean isPreset();
@@ -97,7 +101,7 @@ public abstract class GateModel implements Serializable {
 	}
 	
 	public boolean isQuantum() {
-		return gateComputingType.isQuantum();
+		return gateComputingType.isQuantum;
 	}
 	
 	public String getLocationString() {
@@ -121,7 +125,7 @@ public abstract class GateModel implements Serializable {
 	}
 	
 	@SuppressWarnings("serial")
-	public class ImproperNameSchemeException extends RuntimeException {
+	public static class ImproperNameSchemeException extends RuntimeException {
 		private ImproperNameSchemeException (String message) {
 			super(message);
 		}

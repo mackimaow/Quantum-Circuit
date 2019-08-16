@@ -64,7 +64,7 @@ public class CircuitBoardToPNGWizard extends Wizard<Pair<BufferedImage, File>> {
 		@Override
 		public void setStartingFieldData(PaneFieldDataList controlData) {
 			controlData.add(circuitBoardNameTextField, "");
-			controlData.add(sizeTextField, "");
+			controlData.add(sizeTextField, "1");
 			controlData.add(locationTextField, "");
 		}
 		
@@ -100,6 +100,11 @@ public class CircuitBoardToPNGWizard extends Wizard<Pair<BufferedImage, File>> {
 			BufferedImage bimg = GateRenderer.getCircuitBoardImage(cbm, size);
 			fileChooserTools.writeProject(bimg, f);
 			return new Pair<>(bimg, f);
+		}
+
+		@Override
+		public boolean hasFinish() {
+			return true;
 		}
 	}
 }

@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
+import appFX.appUI.utils.CustomSWTGraphics;
+import appFX.appUI.utils.RenderPalette;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.exportGates.Control;
@@ -59,14 +61,16 @@ public class GateRenderer {
 				GateRenderer.renderQubitRegs(graphics, CustomSWTGraphics.RENDER_PALETTE, gridData, rowTypes, false);
 			}
 		});
-		int width  = (int) Math.round((GRID_SIZE + gridData.getWidth()) * zoom);
+
+		double qubitRegWidth = compiledQubitRegsGraphics.getFocusData().getElement().getWidth();
+		int width  = (int) Math.round((qubitRegWidth + gridData.getWidth()) * zoom);
 		int height = (int) Math.round(gridData.getHeight() * zoom);
 		
 		BufferedImage bimg = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
 		CustomSWTGraphics customGraphics = new CustomSWTGraphics((Graphics2D) bimg.getGraphics());
 		Graphics.graphicsDraw(0,  0, zoom, compiledQubitRegsGraphics, customGraphics);
-		Graphics.graphicsDraw(GRID_SIZE,  0, zoom, compiledQubitLineGraphics, customGraphics);
-		Graphics.graphicsDraw(GRID_SIZE,  0, zoom, compiledGateGraphics, customGraphics);
+		Graphics.graphicsDraw(qubitRegWidth,  0, zoom, compiledQubitLineGraphics, customGraphics);
+		Graphics.graphicsDraw(qubitRegWidth,  0, zoom, compiledGateGraphics, customGraphics);
 		
 		return bimg;
 	}
@@ -557,13 +561,16 @@ public class GateRenderer {
 					graphics.drawLine(0, 2, Graphics.FOCUS_WIDTH, 0, true);
 				} else if(rowTypeElement.getType() == RowType.QUANTUM) {
 					graphics.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
+				} else if(rowTypeElement.getType() == RowType.CLASSICAL_AND_QUANTUM) {
+					graphics.drawLine(0, -3, Graphics.FOCUS_WIDTH, 0, true);
+					graphics.drawLine(0, 3, Graphics.FOCUS_WIDTH, 0, true);
+					graphics.drawLine(0, 0, Graphics.FOCUS_WIDTH, 0, true);
 				}
 			} graphics.escapeFocus();
 		}
 	}
 	
 	public static <ImageType, FontType, ColorType> void renderQubitRegs(Graphics<ImageType, FontType, ColorType> graphics, RenderPalette<ImageType, FontType, ColorType> palette, FocusData gridData, RowTypeList rowTypeList, boolean renderBackColor) {
-		graphics.setBoundsManaged(false);
 		graphics.setFont(palette.getDefault(), 15);
 		
 
@@ -576,11 +583,17 @@ public class GateRenderer {
 					graphics.setColor(palette.getColor(1d, 1d, 1d, .75d));
 					graphics.fillRect(0, 0, Graphics.FOCUS_WIDTH, Graphics.FOCUS_HEIGHT);
 					graphics.setColor(palette.getBlack());
-					if(rowTypeElement.getType() == RowType.CLASSICAL) {
-						graphics.drawLatex("\\(b_{" + rowTypeElement.getReg() + "}\\)", 0, 0);
-					} else if (rowTypeElement.getType() == RowType.QUANTUM) {
-						graphics.drawLatex("\\(\\vert\\Psi_{" + rowTypeElement.getReg() + "}\\rangle\\)", 0, 0);
-					}
+
+					graphics.setFocus(new RimBound(5, 5, true, true), new RimBound(0, 0, true, true)); {
+						RowType type = rowTypeElement.getType();
+						if(type == RowType.CLASSICAL) {
+							graphics.drawLatex("\\(b_{" + rowTypeElement.getReg() + "}\\)", 0, 0);
+						} else if (type == RowType.QUANTUM) {
+							graphics.drawLatex("\\(\\vert\\Psi_{" + rowTypeElement.getReg() + "}\\rangle\\)", 0, 0);
+						} else if(type == RowType.CLASSICAL_AND_QUANTUM) {
+							graphics.drawLatex("\\(b_{" + rowTypeElement.getReg() + "} \\text{ / } \\vert\\Psi_{" + rowTypeElement.getReg() + "}\\rangle\\)", 0, 0);
+						}
+					} graphics.escapeFocus();
 				} graphics.escapeFocus();
 			}
 		} else {
@@ -589,11 +602,16 @@ public class GateRenderer {
 				RowTypeElement rowTypeElement = iterator.next();
 				setFocusQubitRegister(graphics, gridData, r); {
 					graphics.setLayout(Graphics.CENTER_ALIGN, Graphics.CENTER_ALIGN);
-					if(rowTypeElement.getType() == RowType.CLASSICAL) {
-						graphics.drawLatex("\\(b_{" + rowTypeElement.getReg() + "}\\)", 0, 0);
-					} else if (rowTypeElement.getType() == RowType.QUANTUM) {
-						graphics.drawLatex("\\(\\vert\\Psi_{" + rowTypeElement.getReg() + "}\\rangle\\)", 0, 0);
-					}
+					graphics.setFocus(new RimBound(5, 5, true, true), new RimBound(0, 0, true, true)); {
+						RowType type = rowTypeElement.getType();
+						if(type == RowType.CLASSICAL) {
+							graphics.drawLatex("\\(b_{" + rowTypeElement.getReg() + "}\\)", 0, 0);
+						} else if (type == RowType.QUANTUM) {
+							graphics.drawLatex("\\(\\vert\\Psi_{" + rowTypeElement.getReg() + "}\\rangle\\)", 0, 0);
+						} else if(type == RowType.CLASSICAL_AND_QUANTUM) {
+							graphics.drawLatex("\\(b_{" + rowTypeElement.getReg() + "} \\text{ / } \\vert\\Psi_{" + rowTypeElement.getReg() + "}\\rangle\\)", 0, 0);
+						}
+					} graphics.escapeFocus();
 				} graphics.escapeFocus();
 			}
 		}
@@ -608,10 +626,10 @@ public class GateRenderer {
 	}
 	
 	private static <ImageType, FontType, ColorType> void setFocusQubitRegister(Graphics<ImageType, FontType, ColorType> graphics, FocusData gridData, int row) {
-		graphics.setLayout(Graphics.LEFT_ALIGN, Graphics.TOP_ALIGN);
 		double topMargin = row == 0? 0d : gridData.getCummulativeHeight(row - 1);
 		double height = gridData.getRowHeightAt(row);
-		graphics.setFocus(new RimBound(0, 0, false, false), new RimBound(topMargin, 0, false, false), GateRenderer.GRID_SIZE, height);
+		graphics.setLayout(Graphics.LEFT_ALIGN, Graphics.TOP_ALIGN);
+		graphics.setFocus(new RimBound(0, 0, true, true), new RimBound(topMargin, 0, false, false), GRID_SIZE, height);
 	}
 	
 	private static interface GateBodyRender {

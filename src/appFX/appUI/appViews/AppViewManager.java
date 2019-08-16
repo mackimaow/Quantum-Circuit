@@ -15,7 +15,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
+import utils.Notifier.ReceivedEvent;
 
 public class AppViewManager implements ReceivedEvent {
 	private TabPane leftTabPane, centerTabPane, rightTabPane, bottomTabPane;

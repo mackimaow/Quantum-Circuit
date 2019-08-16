@@ -9,33 +9,32 @@ import appFX.appUI.appViews.circuitBoardView.renderer.CircuitBoardRenderer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.NotificationRenderLayer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.ToolActionRenderLayer;
 import appFX.appUI.appViews.gateChooser.AbstractGateChooserView;
+import appFX.appUI.utils.GateIcon;
 import appFX.appUI.utils.LatexNode;
-import appFX.appUI.utils.SolderableIcon;
 import appFX.framework.AppCommand;
 import appFX.framework.AppStatus;
 import appFX.framework.Project;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.GateModel;
-import appFX.framework.gateModels.GateModel.GateComputingType;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import utils.customCollections.eventTracableCollections.Notifier.ReceivedEvent;
+import utils.Notifier.ReceivedEvent;
 import utils.customCollections.immutableLists.ImmutableArray;
 
 public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListener, AppViewOnSelectedListener {
 	
 	@FXML private ScrollPane description;
-	@FXML private TextField fileLocation, name, symbol, gateType;
-	@FXML private HBox parameters;
+	@FXML private TextField fileLocation, name, gateType;
+	@FXML private HBox parameters, symbol;
 	@FXML private CheckBox grid;
 	@FXML private BorderPane circuitBoardIcon;
 	@FXML private Pane contentPane;
@@ -119,14 +118,13 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		name.setText(circuitBoard.getName());
 		name.setEditable(false);
 		
-		symbol.setText(circuitBoard.getSymbol());
-		symbol.setEditable(false);
+		symbol.getChildren().add(new LatexNode(circuitBoard.getSymbol(), 20));
 		
 		gateType.setText(circuitBoard.getComputingType().toString());
 		gateType.setEditable(false);
 		
-		Node solderableIcon = SolderableIcon.mkIcon(circuitBoard);
-		circuitBoardIcon.setLeft(solderableIcon);
+		ImageView imageView = GateIcon.gateModelToIconNode(circuitBoard);
+		circuitBoardIcon.setCenter(imageView);
 		
 		
 		description.setContent(new LatexNode(circuitBoard.getDescription()));
@@ -228,7 +226,7 @@ public class CircuitBoardView extends AppView implements AppViewOnOpenCloseListe
 		rl.calculateDrawErrorBounds(rowStart, rowEnd, column, renderer.getGridData(), renderer.getRowTypeList());
 		double moveX = column + .5d;
 		double moveY = rowStart + (rowEnd - rowStart) / 2d + .5d;
-		renderer.scrollToGrid(moveY, moveX);
+		renderer.scrollToGrid(moveY, moveX, 1d);
 	}
 	
 	@Override

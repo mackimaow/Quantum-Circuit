@@ -1,4 +1,4 @@
-package utils.customCollections.eventTracableCollections;
+package utils.customCollections;
 
 import java.util.Collection;
 import java.util.Hashtable;

@@ -1,10 +1,10 @@
 package appFX.appUI.appViews.circuitBoardView.editingTools;
 
 import appFX.appUI.appViews.circuitBoardView.CircuitBoardView;
-import appFX.appUI.appViews.circuitBoardView.renderer.CustomFXGraphics;
 import appFX.appUI.appViews.circuitBoardView.renderer.GateRenderer;
 import appFX.appUI.appViews.circuitBoardView.renderer.renderLayers.RenderLayer;
 import appFX.appUI.utils.AppAlerts;
+import appFX.appUI.utils.CustomFXGraphics;
 import appFX.framework.AppStatus;
 import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.PresetGateType;

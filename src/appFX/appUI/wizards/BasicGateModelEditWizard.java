@@ -3,8 +3,6 @@ package appFX.appUI.wizards;
 import java.util.HashSet;
 import java.util.Iterator;
 
-import com.sun.javafx.css.Combinator;
-
 import appFX.appUI.utils.AppAlerts;
 import appFX.appUI.utils.LatexNode;
 import appFX.appUI.utils.RearrangableListPaneWrapper;
@@ -23,8 +21,6 @@ import appFX.framework.gateModels.ClassicalGateDefinition;
 import appFX.framework.gateModels.GateDefinition;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.GateModel.GateComputingType;
-import appFX.framework.gateModels.GateModel.NameTakenException;
-import appFX.framework.gateModels.PresetGateType;
 import appFX.framework.gateModels.QuantumGateDefinition;
 import appFX.framework.gateModels.QuantumGateDefinition.QuantumGateType;
 import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
@@ -171,7 +167,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			String nameString = "";
 			String symbolString = "";
 			String descriptionString = "";
-			String[] args = {""};
+			String[] args = {};
 			GateComputingType computingTypeValue = GateComputingType.QUANTUM;
 			QuantumGateType modelTypeValue = QuantumGateType.UNIVERSAL;
 			
@@ -205,14 +201,15 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 
 		@Override
 		public boolean checkNext() {
-			boolean isPreset = false;
+			String fileNameErrorMsg = null;
 			try {
-				PresetGateType.checkLocationString(fileLocation.getText());
-			} catch (NameTakenException e) {
-				isPreset = true;
+				GateModel.checkLocationString(fileLocation.getText(), false, BasicGateModel.GATE_MODEL_EXTENSION);
+			} catch (Exception e) {
+				fileNameErrorMsg = e.getMessage();
 			}
 			
-			if(checkTextFieldError(getStage(), fileLocation, isPreset, "Cannot used the specified file location", "The file location chosen is exclusive to a Preset Gate")) return false;
+			if(checkTextFieldError(getStage(), fileLocation, fileNameErrorMsg != null, "Cannot used the specified file location", fileNameErrorMsg)) return false;
+			
 			
 			if(checkTextFieldError(getStage(), name, name.getText() == null, "Unfilled prompts", "Name must be defined")) return false;
 			if(checkTextFieldError(getStage(), name, name.getText().matches("\\s+"), "Inproper name scheme", "Name should not be empty spaces")) return false;
@@ -266,6 +263,11 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 		private void addParameter(String name) {
 			parameterSelection.addElementToEnd(name);
 		}
+
+		@Override
+		public boolean hasNext() {
+			return true;
+		}
 		
 	}
 	
@@ -283,6 +285,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			this.labelText = labelText;
 			this.elementLabelFormatString = elementTextFormatString;
 			this.buttonText = buttonText;
+			this.definition = definition;
 		}
 		
 		@FXML private void buttonPress(ActionEvent ae) {
@@ -297,7 +300,7 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 				elements = new String[userInput.size()];
 				userInput.toArray(elements);
 			} else {
-				elements = new String[]{""};
+				elements = new String[]{};
 			}
 			fieldDataList.add(multiListSelection, elements);
 		}
@@ -361,6 +364,16 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 		@Override
 		public GateModel getFinish() {
 			return newGm;
+		}
+
+		@Override
+		public boolean hasFinish() {
+			return true;
+		}
+
+		@Override
+		public boolean hasPrevious() {
+			return true;
 		}
 	}
 	
@@ -465,6 +478,18 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 			
 			return addGateModelToProject(getStage(), referenceGm, newGm, editAsNewModel);
 		}
+
+		@Override
+		public boolean hasNext() {
+			GateComputingType computingType = first.computingType.getValue();
+			return computingType.isQuantum();
+		}
+		
+		@Override
+		public boolean hasFinish() {
+			GateComputingType computingType = first.computingType.getValue();
+			return !computingType.isQuantum();
+		}
 		
 	}
 	
@@ -533,6 +558,16 @@ public class BasicGateModelEditWizard extends Wizard<BasicGateModel> {
 		public GateModel getFinish() {
 			addGateModelToProject(getStage(), referenceGm, newGm, editAsNewModel);
 			return newGm;
+		}
+
+		@Override
+		public boolean hasFinish() {
+			return true;
+		}
+
+		@Override
+		public boolean hasPrevious() {
+			return true;
 		}
 	}
 	

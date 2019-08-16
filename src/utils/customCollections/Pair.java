@@ -12,6 +12,8 @@ package utils.customCollections;
  * @param <E>
  */
 public class Pair <T, E> extends Single<T> {
+	private static final long serialVersionUID = 2858627615085362472L;
+	
 	private E second;
 	
 	public Pair(T first, E second) {

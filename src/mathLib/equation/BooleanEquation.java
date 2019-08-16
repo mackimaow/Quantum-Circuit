@@ -12,24 +12,43 @@ import mathLib.equation.BooleanEquationParser.BitLeaf;
 import mathLib.equation.BooleanEquationParser.BoolLeaf;
 import mathLib.equation.BooleanEquationParser.BooleanEquationParseException;
 import mathLib.equation.BooleanEquationParser.BooleanEquationRunnable;
+import utils.customCollections.Single;
 
-public class BooleanEquation implements Serializable, BooleanEquationRunnable {
+public class BooleanEquation implements Serializable {
 	private static final long serialVersionUID = -4303957002057417418L;
 	private static final InputBitIndexListener DO_NOTHING = (e)->{};
 	
 	private final ParseTree tree;
-	private String latexString;
-	private int outputBit = 0;
-	private final InputBitIndexListener inputBitIndexListener;
+	private final String latexString;
+	private final int outputBit;
 	
 	public BooleanEquation(String booleanExpression) throws BooleanEquationParseException, LexemeNotRecognizedException, LexicalAnaylizerIOException {
 		this(booleanExpression, DO_NOTHING);
 	}
 	
 	public BooleanEquation(String booleanExpression, InputBitIndexListener inputBitIndexListener) throws BooleanEquationParseException, LexemeNotRecognizedException, LexicalAnaylizerIOException {
-		this.inputBitIndexListener = inputBitIndexListener;
+		Single<String> latexString = new Single<>();
+		Single<Integer> outputBit = new Single<>();
+		
 		BooleanEquationParser expressionParser = new BooleanEquationParser(booleanExpression);
-		tree = expressionParser.parse(this);
+		tree = expressionParser.parse(new BooleanEquationRunnable() {
+			@Override
+			public void setOutputBitIndex(int bitIndex) {
+				outputBit.setFirst(bitIndex);
+			}
+			
+			@Override
+			public void getLatex(String latex) {
+				latexString.setFirst(latex);
+			}
+			
+			@Override
+			public void addInputBitIndex(int bitIndex) {
+				inputBitIndexListener.addInputIndex(bitIndex);
+			}
+		});
+		this.outputBit = outputBit.first();
+		this.latexString = latexString.first();
 	}
 	
 	public int getOutputBitIndex() {
@@ -38,21 +57,6 @@ public class BooleanEquation implements Serializable, BooleanEquationRunnable {
 	
 	public String getLatexString() {
 		return latexString;
-	}
-	
-	@Override
-	public void setOutputBitIndex(int bitIndex) {
-		outputBit = bitIndex;
-	}
-	
-	@Override
-	public void addInputBitIndex(int bitIndex) {
-		inputBitIndexListener.addInputIndex(bitIndex);
-	}
-
-	@Override
-	public void getLatex(String latex) {
-		latexString = latex;
 	}
 	
 	public boolean compute(CalculateBitListener bitListener) {
@@ -93,11 +97,11 @@ public class BooleanEquation implements Serializable, BooleanEquationRunnable {
 		}
 	}
 	
-	public static interface InputBitIndexListener {
+	public static interface InputBitIndexListener extends Serializable {
 		public void addInputIndex(int inputIndex);
 	}
 	
-	public static interface CalculateBitListener {
+	public static interface CalculateBitListener extends Serializable {
 		public boolean getClassicalBitValue(int inputIndex);
 	}
 }

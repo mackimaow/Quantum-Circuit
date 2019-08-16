@@ -1,6 +1,10 @@
 package utils.customCollections;
 
-public class Single<T> {
+import java.io.Serializable;
+
+public class Single<T> implements Serializable {
+	private static final long serialVersionUID = 6365695730648120660L;
+	
 	private T first;
 	
 	public Single(T first) {
