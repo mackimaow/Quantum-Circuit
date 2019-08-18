@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
@@ -93,10 +94,12 @@ public class Executor {
             if (debugShow) { System.out.println("executeInternal(): buildColumnMatrix: " + columnIndex++); }
             
             Matrix<Complex> columnMatrix = buildColumnMatrix(column, colHeight);
-            
-            //System.out.println("exectureInternal(): columnMatrix = ");
-            //System.out.println(columnMatrix.toString());
-            
+
+            if (debugShow) {
+            	System.out.println("executeInternal(): added column with dimension " + columnMatrix.getRows());
+            	//System.out.println("exectureInternal(): columnMatrix = ");
+            	//System.out.println(columnMatrix.toString());
+            }
             columns.add(columnMatrix);
         } //Columns built
         
@@ -150,9 +153,9 @@ public class Executor {
        // ASSUMPTION I: NO OVERLAPPING CIRCUIT COMPONENTS
        //  perhaps place swap gates to ensure this automatically?
 	   // CTT: ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
-	   // CTT: ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
+	   // CTT: [REMOVED] ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
 	   // CTT: ASSUMPTION IV: CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
-	   // CTT: ASSUMPTION V: CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
+	   // CTT: [REMOVED] ASSUMPTION V: CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
 	   
 	   if (debugShow) { System.out.println("buildColumnMatrix(): colheight = " + colheight); }
 	   
@@ -174,11 +177,12 @@ public class Executor {
            if (debugShow) { System.out.println("Current colmat = "); System.out.println(colmat.toString()); } 
 
        	   int minControlIndex = -1;	// where is the first control register (if any).
+       	   int maxControlIndex = -1;	// where is the last control register (if any).
        	   int minRegIndex = -1; 		// where is the first register for the gate.
        	   int maxRegIndex = -1;		// where is the last register for the gate.
        	   int span = -1;				// the number of registers involved in the (controlled or not) gate.
        	   int startIndex = -1;			// where is first register for the (controlled or not) gate.
-       	   								//   this is the minimum of minControlIndex and minRegIndex.
+       	   int finalIndex = -1;			// where is the last register for the (controlled or not) gate.
        	   
     	   // determine the registers that the gate depends on (by Assumption I, this is disjoint from neighboring gates)
        	   int numInputs = eg.getGateRegister().length;
@@ -187,29 +191,43 @@ public class Executor {
     	   
            // check if gate is controlled    	   
            if (eg.getQuantumControls().length > 0) {
-       
-        	   // base case value for truthAdjuster: constant 1
-           	   Matrix<Complex> truthAdjuster = Matrix.identity(Complex.ZERO(), 1);
         	   
         	   // CTT: truthAdjuster is created to reduce to *STANDARD* controls (FALSE-based).
         	   int prevIndex, currIndex;
         	   Control[] myControls = eg.getQuantumControls();
         	   int numControls = myControls.length;
-        	   minControlIndex = colheight;	// artificial max
+        	   minControlIndex = colheight;	// artificial high
+        	   maxControlIndex = -1; 		// artificial low
         	   
         	   if (debugShow) { System.out.print("Controls=["); }
-        	   // CTT: Assume control registers are sorted but not contiguous.
+        	   // CTT: Assume control registers are not sorted and not contiguous.
+        	   // CTT: So we just sort the controls ourselves.
+        	   ArrayList<Integer> intControls = new ArrayList<>();
+        	   for (int j=0; j<numControls; j++) {
+        		   intControls.add(myControls[j].getRegister());
+        	   }
+        	   Collections.sort(intControls);
+        	   System.out.println("intControls{" + intControls.toString() + "}");
+
+        	   // CTT: Perform swaps to bring Controls below the Gate.
+        	   
+        	   
+        	   // CTT: Create reductions to standard Control (False based).
+        	   // CTT: base case value for truthAdjuster: 1x1 matrix [1]
+           	   Matrix<Complex> truthAdjuster = Matrix.identity(Complex.ZERO(), 1);
+        	   minControlIndex = intControls.get(0);
+        	   maxControlIndex = intControls.get(intControls.size()-1);
         	   prevIndex = -1;
         	   for (int j=0; j<numControls; j++) {
-        		   currIndex = myControls[j].getRegister();
-        		   if (debugShow) { System.out.print(currIndex + ":"); }
+        		   currIndex = intControls.get(j);
         		   // fill gaps between prevIndex and currIndex with identities
-        		   /*if (prevIndex > -1) {
-        			   for (int k=prevIndex; k<currIndex; k++) {
-        				   System.out.println("STRETCHING TRUTH ADJUSTER");
+        		   if (prevIndex > -1) {
+        			   for (int k=prevIndex+1; k<currIndex; k++) {
+        				   System.out.print("[FILL]");
         				   truthAdjuster = truthAdjuster.kronecker(PauliI);
         			   }
-        		   }*/
+        		   }
+        		   if (debugShow) { System.out.print(currIndex + ":"); }
         		   if (myControls[j].getControlStatus()) {
         			   truthAdjuster = truthAdjuster.kronecker(PauliX);
         			   if (debugShow) { System.out.print("T"); }
@@ -218,23 +236,26 @@ public class Executor {
         			   truthAdjuster = truthAdjuster.kronecker(PauliI);
         			   if (debugShow) { System.out.print("F"); }
         		   }
-        		   if (currIndex < minControlIndex) { 
-        			   // CTT: useful only if myControls are not sorted.
-        			   minControlIndex = currIndex;
-        		   }
         		   if (debugShow) { System.out.print("|"); }
         		   prevIndex = currIndex;
         	   }
         	   if (debugShow) { System.out.println("]"); }
         	   
-        	   truthAdjuster = truthAdjuster.kronecker(Matrix.identity(Complex.ZERO(), 1<<numInputs));
+        	   int spanControls = 1 + (maxControlIndex - minControlIndex);
+        	   int spanInputs = 1 + (maxRegIndex - minRegIndex);
+        	   if (debugShow) { System.out.println("spanControls[" + spanControls + "] spanInputs[" + spanInputs + "]"); }
+        	   
+        	   truthAdjuster = truthAdjuster.kronecker(Matrix.identity(Complex.ZERO(), 1<<spanInputs));
         	   if (debugShow) { System.out.println("truthAdjuster = "); System.out.println(truthAdjuster.toString()); }
         	   
         	   // CTT: Compute nonstandard controlled gate (FALSE based).
         	   // CTT: This is a direct sum of identity (of appropriate size) and colmat (or reversed).
         	   if (debugShow) { System.out.print("numControls[" + numControls); System.out.println("] numInputs[" + numInputs + "]"); }
         	   
-        	   Matrix<Complex> directSum = Matrix.identity(Complex.ZERO(), 1<<(numControls+numInputs));
+        	   // CTT: The following assumes that (False-based) Controls are at the Top!
+        	   // CTT: Need to perform swaps and unswaps to reduce to standard form.
+        	   
+        	   Matrix<Complex> directSum = Matrix.identity(Complex.ZERO(), 1<<(spanControls+spanInputs));
         	   directSum = directSum.setSlice(0, colmat.getRows()-1, 0, colmat.getColumns()-1, colmat);
         	   colmat = directSum;
         	   
@@ -245,20 +266,23 @@ public class Executor {
         	   
         	   //if (debugShow) { System.out.println("truthAdjusted colmat = "); System.out.println(colmat.toString()); }
         	   
-        	   startIndex = minControlIndex;
-        	   span = 1 + maxRegIndex - minControlIndex;
+        	   startIndex = (minControlIndex < minRegIndex) ? minControlIndex : minRegIndex;
+        	   finalIndex = (maxControlIndex > maxRegIndex) ? maxControlIndex : maxRegIndex;
+
            }
            else { // CTT: case of uncontrolled gate          
         	   startIndex = minRegIndex;
-        	   span = 1 + maxRegIndex - minRegIndex;
+        	   finalIndex = maxRegIndex;
            }
+    	   span = 1 + finalIndex - startIndex;
            
            if (debugShow) {
         	   System.out.print("span[" + span);
         	   System.out.print("] minRegIndex[" + minRegIndex);
         	   System.out.print("] maxRegIndex[" + maxRegIndex);
         	   System.out.print("] minControlIndex[" + minControlIndex);
-        	   System.out.println("] range{" + Arrays.toString(eg.getGateRegister()) + "}");
+        	   System.out.print("] maxControlIndex[" + maxControlIndex);
+        	   System.out.println("] gateRegisters{" + Arrays.toString(eg.getGateRegister()) + "}");
            }
            
            if (i < startIndex) { // need to pad by tensoring with identities
@@ -273,8 +297,8 @@ public class Executor {
            // advance index to first register used by the gate
            i = startIndex;
            
-
-           // CTT: No shuffling supported for now.
+           /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           // CTT: No shuffling of input gate registers supported for now!
            //Shuffle eg to be contiguous and in order, then pad with identity
            /*
            So if there is a gate with registers
@@ -300,6 +324,7 @@ public class Executor {
                System.out.println(adjustedColmat);
                // DEBUG suppress for now: colmat = adjustedColmat;
            }
+           /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
            
            
            if(mat == null) {
@@ -320,9 +345,65 @@ public class Executor {
        
        if (debugShow) { System.out.println("buildColumnMatrix(): return = "); System.out.println(mat.toString()); }
        
-       return swapBuffer.mult(mat).mult(swapBuffer.transpose());
+       // CTT: not using swapBuffer for now.
+       //return swapBuffer.mult(mat).mult(swapBuffer.transpose());
+       return mat;
+   }
+
+   
+   /**
+    * swapAdjacentPair -- create a matrix that represents the swap of qubits index and index+1 (adjacent qubits)
+    * @param index: index of the first qubit to be swapped
+    * @param size: the total number of qubits
+    * @return
+    */
+   public Matrix<Complex> swapAdjacentPair(int index, int size) {
+	   assert (size >= 2 && index < size && index >= 0);
+	   
+	   Matrix<Complex> twoQubitSwap = Matrix.identity(Complex.ZERO(), 4);
+	   twoQubitSwap.r(Complex.ZERO(),1,1);
+	   twoQubitSwap.r(Complex.ONE(),1,2);
+	   twoQubitSwap.r(Complex.ONE(),2,1);
+	   twoQubitSwap.r(Complex.ZERO(),2,2);
+	   
+	   Matrix<Complex> PauliI = Matrix.identity(Complex.ZERO(), 2);
+	   Matrix<Complex> swapMe = Matrix.identity(Complex.ZERO(), 1);
+	   
+	   for (int j=0; j<index; j++) {
+		   swapMe = swapMe.kronecker(PauliI);
+	   }
+	   swapMe = swapMe.kronecker(twoQubitSwap);
+	   for (int j=index+2; j<size; j++) {
+		   swapMe = swapMe.kronecker(PauliI);
+	   }
+
+	   return swapMe;
    }
    
+   /**
+    * swapAnyPair -- create a matrix that represents the swap of qubits index1 and index2
+    * @param index1: index of the first qubit to be swapped
+    * @param index2: index of the second qubit to be swapped
+    * @param size: the total number of qubits
+    * @return
+    */
+   public Matrix<Complex> swapAnyPair(int index1, int index2, int size) {
+	   assert (index2 >= 1 + index1);
+
+	   if (index2 == 1+index1) {
+		   return swapAdjacentPair(index1, size);
+	   }
+	   else { // 1 + index1 < index2
+		   Matrix<Complex> swapMe = swapAdjacentPair(index1, size);
+		   for (int j=index1+1; j<index2; j++) {
+			   swapMe = swapMe.mult(swapAdjacentPair(j, size));
+		   }
+		   for (int j=index2-1; j >= index1; j--) {
+			   swapMe = swapMe.mult(swapAdjacentPair(j, size));
+		   }
+		   return swapMe;
+	   }
+   }   
 
    private static int getMaxElement(int[] arr) {
 	   if(arr.length==0) {
@@ -371,8 +452,6 @@ public class Executor {
         }
         return buffer;
     }
-
-
 
 
     private static Matrix<Complex> farSwap(int p1, int p2, int columnHeight) {
