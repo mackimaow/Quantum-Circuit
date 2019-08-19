@@ -154,8 +154,8 @@ public class Executor {
        //  perhaps place swap gates to ensure this automatically?
 	   // CTT: ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
 	   // CTT: [REMOVED] ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
-	   // CTT: ASSUMPTION IV: CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
-	   // CTT: [REMOVED] ASSUMPTION V: CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
+	   // CTT: [REMOVED] ASSUMPTION IV:  CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
+	   // CTT: [REMOVED] ASSUMPTION V:   CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
 	   
 	   if (debugShow) { System.out.println("buildColumnMatrix(): colheight = " + colheight); }
 	   
@@ -186,16 +186,18 @@ public class Executor {
        	   
     	   // determine the registers that the gate depends on (by Assumption I, this is disjoint from neighboring gates)
        	   int numInputs = eg.getGateRegister().length;
+       	   int spanInputs;				// number of registers (used or not) between the first and last gate registers.
     	   minRegIndex = getMinElement(eg.getGateRegister());
-    	   maxRegIndex = getMaxElement(eg.getGateRegister());           
+    	   maxRegIndex = getMaxElement(eg.getGateRegister());
+    	   spanInputs = 1 + (maxRegIndex - minRegIndex);
     	   
            // check if gate is controlled    	   
            if (eg.getQuantumControls().length > 0) {
         	   
-        	   // CTT: truthAdjuster is created to reduce to *STANDARD* controls (FALSE-based).
-        	   int prevIndex, currIndex;
         	   Control[] myControls = eg.getQuantumControls();
+        	   int prevIndex, currIndex;
         	   int numControls = myControls.length;
+        	   
         	   minControlIndex = colheight;	// artificial high
         	   maxControlIndex = -1; 		// artificial low
         	   
@@ -207,20 +209,63 @@ public class Executor {
         		   intControls.add(myControls[j].getRegister());
         	   }
         	   Collections.sort(intControls);
-        	   System.out.println("intControls{" + intControls.toString() + "}");
-
-        	   // CTT: Perform swaps to bring Controls below the Gate.
-        	   
+        	   System.out.println("intControls{" + intControls.toString() + "}");        	   
         	   
         	   // CTT: Create reductions to standard Control (False based).
+        	   // CTT: truthAdjuster is created to reduce to *STANDARD* controls (FALSE-based).
         	   // CTT: base case value for truthAdjuster: 1x1 matrix [1]
            	   Matrix<Complex> truthAdjuster = Matrix.identity(Complex.ZERO(), 1);
         	   minControlIndex = intControls.get(0);
         	   maxControlIndex = intControls.get(intControls.size()-1);
+
+        	   // CTT: calculate the number of wires in the span of the controls and inputs.
+        	   startIndex = (minControlIndex < minRegIndex) ? minControlIndex : minRegIndex;
+        	   finalIndex = (maxControlIndex > maxRegIndex) ? maxControlIndex : maxRegIndex;
+        	   span = 1 + (finalIndex - startIndex);
+        	   
+        	   // CTT: Perform swaps to bring Controls below the Gate to above it (if any).
+        	   Matrix<Complex> swapToNormal = Matrix.identity(Complex.ZERO(), 1<<span);
+        	   if (maxControlIndex > maxRegIndex) {
+        		   
+            	   int displacement = maxControlIndex - maxRegIndex;
+        		   
+        		   // CTT: swap all control registers up to the positions of the gate registers.
+        		   // CTT: maxRegIndex+1 => minRegIndex, maxRegIndex+2 => minRegIndex+1, etc.
+        		   int swapDistance = 1 + maxRegIndex - minRegIndex;	// number of spots to move during swap migration.
+        		   for (int j=maxRegIndex; j<maxControlIndex; j++) {
+        			   for (int k=j, times=0; times < swapDistance; k--, times++) {
+        				   swapToNormal = swapToNormal.mult(swapAdjacentPair(k, span));
+        			   }
+        		   }
+        		   if (debugShow) { System.out.println("swapToNormal:"); System.out.println(swapToNormal.toString()); }
+        		   
+        		   // CTT: reset values of control registers which are moved up.
+        		   for (int j=0; j < numControls; j++) {
+        			   if (intControls.get(j) > maxRegIndex) {
+        				   intControls.set(j, intControls.get(j) - swapDistance);
+        			   }
+        		   }
+            	   System.out.println("[UPDATED]intControls{{" + intControls.toString() + "}}"); 
+            	   // CTT: Beware that the gate registers are displaced as well now.
+            	   minRegIndex = minRegIndex + displacement;
+            	   maxRegIndex = maxRegIndex + displacement;
+        	   
+            	   // CTT: redo the index computations.
+            	   minControlIndex = intControls.get(0);
+            	   maxControlIndex = intControls.get(intControls.size()-1);
+
+            	   startIndex = (minControlIndex < minRegIndex) ? minControlIndex : minRegIndex;
+            	   finalIndex = (maxControlIndex > maxRegIndex) ? maxControlIndex : maxRegIndex;
+            	   span = 1 + (finalIndex - startIndex);
+        	   }
+    	   
+        	   // CTT: This next block assumes the controls are (already) at the top.
         	   prevIndex = -1;
+        	   currIndex = -1;
         	   for (int j=0; j<numControls; j++) {
-        		   currIndex = intControls.get(j);
-        		   // fill gaps between prevIndex and currIndex with identities
+        		   currIndex = intControls.get(j); // these indices are the shifted ones (after swapToNormal) 
+        		   
+        		   // fill gaps between prevIndex and currIndex with identities (this handles the non-contiguous cases).
         		   if (prevIndex > -1) {
         			   for (int k=prevIndex+1; k<currIndex; k++) {
         				   System.out.print("[FILL]");
@@ -239,36 +284,44 @@ public class Executor {
         		   if (debugShow) { System.out.print("|"); }
         		   prevIndex = currIndex;
         	   }
+        	   for (int k=currIndex+1; k<minRegIndex; k++) {
+        		   truthAdjuster = truthAdjuster.kronecker(PauliI);
+        	   }
         	   if (debugShow) { System.out.println("]"); }
         	   
-        	   int spanControls = 1 + (maxControlIndex - minControlIndex);
-        	   int spanInputs = 1 + (maxRegIndex - minRegIndex);
-        	   if (debugShow) { System.out.println("spanControls[" + spanControls + "] spanInputs[" + spanInputs + "]"); }
+        	   // CTT: There might be a gap between maxControlIndex and minRegIndex.
+        	   //int spanControls = 1 + (maxControlIndex - minControlIndex);
+        	   // BUG ALERT: minRegIndex and/or minControlIndex are off.
+        	   if (debugShow) { System.out.println("[minRegIndex:" + minRegIndex + "|minControlIndex:" + minControlIndex + "]"); }
+        	   int spanControls = minRegIndex - minControlIndex;	// to account for the gap
         	   
         	   truthAdjuster = truthAdjuster.kronecker(Matrix.identity(Complex.ZERO(), 1<<spanInputs));
         	   if (debugShow) { System.out.println("truthAdjuster = "); System.out.println(truthAdjuster.toString()); }
         	   
         	   // CTT: Compute nonstandard controlled gate (FALSE based).
         	   // CTT: This is a direct sum of identity (of appropriate size) and colmat (or reversed).
-        	   if (debugShow) { System.out.print("numControls[" + numControls); System.out.println("] numInputs[" + numInputs + "]"); }
+        	   
+        	   if (debugShow) { 
+        		   System.out.println("spanControls[" + spanControls + "] spanInputs[" + spanInputs + "]"); 
+        		   System.out.println("numControls[" + numControls + "] numInputs[" + numInputs + "]"); 
+        	   }
         	   
         	   // CTT: The following assumes that (False-based) Controls are at the Top!
         	   // CTT: Need to perform swaps and unswaps to reduce to standard form.
         	   
-        	   Matrix<Complex> directSum = Matrix.identity(Complex.ZERO(), 1<<(spanControls+spanInputs));
-        	   directSum = directSum.setSlice(0, colmat.getRows()-1, 0, colmat.getColumns()-1, colmat);
-        	   colmat = directSum;
+        	   // CTT: build the normal form Controlled gate.
+        	   Matrix<Complex> normalControlGate = Matrix.identity(Complex.ZERO(), 1<<(spanControls+spanInputs));
+        	   normalControlGate = normalControlGate.setSlice(0, colmat.getRows()-1, 0, colmat.getColumns()-1, colmat);
         	   
-        	   //if (debugShow) { System.out.println("colmat = "); System.out.println(colmat.toString()); }
+        	   if (debugShow) { System.out.println("normalControlGate:"); System.out.println(normalControlGate.toString()); }
         	   
-        	   // conjugate with truthAdjuster to account for Controls on FALSE.
-        	   colmat = truthAdjuster.mult(colmat.mult(truthAdjuster));
+        	   // CTT: let colmat now include the controlled registers.
+        	   // CTT: use conjugation by truthAdjuster to reduce to normal form where Controls are on FALSE.
+        	   colmat = truthAdjuster.mult(normalControlGate.mult(truthAdjuster));
         	   
-        	   //if (debugShow) { System.out.println("truthAdjusted colmat = "); System.out.println(colmat.toString()); }
+        	   // CTT: account for the swaps that bring the controls from below the gate to above the gate (and the undo operations).
+        	   colmat = swapToNormal.mult(colmat).mult(swapToNormal.transpose());
         	   
-        	   startIndex = (minControlIndex < minRegIndex) ? minControlIndex : minRegIndex;
-        	   finalIndex = (maxControlIndex > maxRegIndex) ? maxControlIndex : maxRegIndex;
-
            }
            else { // CTT: case of uncontrolled gate          
         	   startIndex = minRegIndex;
@@ -357,7 +410,7 @@ public class Executor {
     * @param size: the total number of qubits
     * @return
     */
-   public Matrix<Complex> swapAdjacentPair(int index, int size) {
+   public static Matrix<Complex> swapAdjacentPair(int index, int size) {
 	   assert (size >= 2 && index < size && index >= 0);
 	   
 	   Matrix<Complex> twoQubitSwap = Matrix.identity(Complex.ZERO(), 4);
@@ -387,7 +440,7 @@ public class Executor {
     * @param size: the total number of qubits
     * @return
     */
-   public Matrix<Complex> swapAnyPair(int index1, int index2, int size) {
+   public static Matrix<Complex> swapAnyPair(int index1, int index2, int size) {
 	   assert (index2 >= 1 + index1);
 
 	   if (index2 == 1+index1) {
