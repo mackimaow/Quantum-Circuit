@@ -66,6 +66,8 @@ public class Executor {
             return "";
         }
         
+        //exps = exps.parallel().forEach((x) -> {x.toString();});
+        
         CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitLocationString());
         int colHeight = cb.getNumberOfRegisters();
         //System.out.println("Column height = " + colHeight);
@@ -86,7 +88,8 @@ public class Executor {
             			System.out.println("(WARNING) MIXED-SUPPORT: mixed");
             			return executeMixedState(p);
             		}
-            		i += eg.getGateRegister().length;
+            		i += (eg.getGateRegister().length + eg.getQuantumControls().length);	
+            		// CTT: does this include the controls?
             		column.add(eg);
             	}
             	else break;
@@ -130,6 +133,7 @@ public class Executor {
         return input;
     }
 
+    
     /**
      * Assumes a pure-quantum state and builds the resulting matrix for a column of gates in the circuit
      * @param column An ArrayList of exportables representing a column in the circuit
