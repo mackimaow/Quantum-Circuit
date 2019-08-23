@@ -66,11 +66,11 @@ public class Executor {
             return "";
         }
         
-        //exps = exps.parallel().forEach((x) -> {x.toString();});
         
         CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitLocationString());
         int colHeight = cb.getNumberOfRegisters();
-        //System.out.println("Column height = " + colHeight);
+        
+        if (debugShow) { System.out.println("Column height = " + colHeight); }
         
         int columnIndex = 0;
         ArrayList<Matrix<Complex>> columns = new ArrayList<>();
@@ -88,8 +88,11 @@ public class Executor {
             			System.out.println("(WARNING) MIXED-SUPPORT: mixed");
             			return executeMixedState(p);
             		}
-            		i += (eg.getGateRegister().length + eg.getQuantumControls().length);	
-            		// CTT: does this include the controls?
+            		// CTT: The following is an *INCOMPLETE* patch. The span has to be used.
+            		int minRegIndex = getMinElement(eg.getGateRegister());
+            		int maxRegIndex = getMaxElement(eg.getGateRegister());
+            		int spanInputs = 1 + maxRegIndex - minRegIndex;
+            		i += (spanInputs + eg.getQuantumControls().length);
             		column.add(eg);
             	}
             	else break;
@@ -122,6 +125,7 @@ public class Executor {
         return finalOutput.toString();
     }
 
+    
     static Matrix<Complex> getInVector(int numregs) {
         Matrix<Complex> input = new Matrix<Complex>(Complex.ZERO(),1<<numregs,1);
         input.r(Complex.ONE(),0,0);
@@ -131,6 +135,88 @@ public class Executor {
         System.out.println("Input vector: ");
         System.out.println(input);
         return input;
+    }
+    
+
+    /**
+     * buildSwapMatrix: handles the permutation of the input registers for custom gate.
+     * @param inputRegisters - the indices of the global registers wired into the custom gate.
+     * @return - a matrix which performs the appropriate swap (that aligns the global registers to the input registers).
+     */
+    static Matrix<Complex> buildSwapMatrix(int[] inputRegisters) {
+    	boolean debugShow = true;
+    	
+    	int minIndex = getMinElement(inputRegisters);
+    	int maxIndex = getMaxElement(inputRegisters);
+    	int span = 1 + maxIndex - minIndex;
+
+    	Matrix<Complex> swapMat = Matrix.identity(Complex.ZERO(), 1<<span);
+    	
+    	// compute permutation of the input registers and the unused registers in the span.
+    	ArrayList<Integer> encodedPermutation = new ArrayList<>();
+    	for (int j=0; j<span; j++) {
+    		encodedPermutation.add(j);
+    	}
+    	for (int j=inputRegisters.length-1; j >= 0; j--) {
+    		int currIndex = inputRegisters[j];
+    		int position = encodedPermutation.indexOf(currIndex);
+    		encodedPermutation.remove(Integer.valueOf(position));
+    		encodedPermutation.add(0, currIndex);
+    	}
+    	
+    	// build the cycle decomposition for the permutation.
+    	ArrayList<Integer> standardPermutation = new ArrayList<>();
+    	for (int j=0; j<span; j++) { // build identity permutation
+    		int position = encodedPermutation.indexOf(j);
+    		standardPermutation.add(Integer.valueOf(position));
+    	}
+    	
+    	if (debugShow) {
+    		System.out.println("inputRegisters=[" + Arrays.toString(inputRegisters) + "]");
+    		System.out.println("encodedPermutation=[" + encodedPermutation.toString() + "]");
+    		System.out.println("standardPermutation=[" + standardPermutation.toString() + "]");
+    	}
+    	
+    	boolean[] visited = new boolean[span];	// values initialized to false?
+    	
+    	boolean done = false;
+    	int startIndex = -1, nextIndex;
+    	int loopIndex = -1;
+    	while (!done) {
+    		// find an unvisited index (not efficient)
+    		for (loopIndex=0; loopIndex<span; loopIndex++) {
+    			if (visited[loopIndex] == false) {
+    				startIndex = loopIndex;
+    				visited[loopIndex] = true;
+    				break;
+    			}
+    		}
+    		if (loopIndex >= span) {
+    			done = true;
+    			break;
+    		}
+    		
+    		// build a new cycle
+    		ArrayList<Integer> cycle = new ArrayList<>();
+			cycle.add(startIndex);		// start the cycle with this element
+			nextIndex = standardPermutation.get(startIndex);	// get next element
+			while (nextIndex != startIndex) { 
+				visited[nextIndex] = true;	// mark element visited
+    			cycle.add(nextIndex);		// add element to cycle
+    			nextIndex = standardPermutation.get(nextIndex);	// get next element
+    		}
+			
+			if (debugShow) { System.out.println("cycle=[" + cycle.toString() + "]"); }
+			
+			// build matrix from cycle
+			int firstIndex = cycle.get(0);
+			for (int j=1; j<cycle.size(); j++) {
+				swapMat = swapMat.mult(swapAnyPair(firstIndex, cycle.get(j), span));
+			}
+			
+    	}
+    	
+    	return swapMat;
     }
 
     
@@ -142,7 +228,8 @@ public class Executor {
      */
    static Matrix<Complex> buildColumnMatrix(ArrayList<ExportedGate> column, int colheight) {
 	   
-	   boolean debugShow = true;
+	   boolean debugShow = false;
+	   boolean moDebugShow = true;
 	   
 	   // CTT: constant identity 2x2
 	   Matrix<Complex> PauliI = Matrix.identity(Complex.ZERO(), 2);
@@ -156,10 +243,10 @@ public class Executor {
 	   
        // ASSUMPTION I: NO OVERLAPPING CIRCUIT COMPONENTS
        //  perhaps place swap gates to ensure this automatically?
-	   // CTT: ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
-	   // CTT: [REMOVED] ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
-	   // CTT: [REMOVED] ASSUMPTION IV:  CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
-	   // CTT: [REMOVED] ASSUMPTION V:   CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
+	   // ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
+	   // [REMOVED] ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
+	   // [REMOVED] ASSUMPTION IV:  CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
+	   // [REMOVED] ASSUMPTION V:   CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
 	   
 	   if (debugShow) { System.out.println("buildColumnMatrix(): colheight = " + colheight); }
 	   
@@ -177,6 +264,7 @@ public class Executor {
     	   
            ExportedGate eg = column.get(itr);	// get current quantum gate
            colmat = eg.getInputMatrixes()[0];	// get its matrix
+                      
            
            if (debugShow) { System.out.println("Current colmat = "); System.out.println(colmat.toString()); } 
 
@@ -194,6 +282,22 @@ public class Executor {
     	   minRegIndex = getMinElement(eg.getGateRegister());
     	   maxRegIndex = getMaxElement(eg.getGateRegister());
     	   spanInputs = 1 + (maxRegIndex - minRegIndex);
+
+    	   if (!eg.isPresetGate()) {
+    		   // pad the gate with identities (if there are in-between unused registers)
+    		   int extraInputs = spanInputs - eg.getGateRegister().length;
+    		   if (moDebugShow) { System.out.println("extraInputs=" + extraInputs); }
+    		   for (int j=0; j<extraInputs; j++) {
+    			   colmat = colmat.kronecker(PauliI);
+    		   }
+    		   if (moDebugShow) { System.out.print("padded-colmat"); System.out.println(colmat.toString()); }
+
+    		   // handle the permutation on the input registers (global to local).
+    		   Matrix<Complex> swapInputs = buildSwapMatrix(eg.getGateRegister());
+
+    		   // conjugate colmat with permutation matrix of the inputs
+    		   colmat = swapInputs.mult(colmat).mult(swapInputs);
+    	   }
     	   
            // check if gate is controlled    	   
            if (eg.getQuantumControls().length > 0) {
@@ -206,8 +310,8 @@ public class Executor {
         	   maxControlIndex = -1; 		// artificial low
         	   
         	   if (debugShow) { System.out.print("Controls=["); }
-        	   // CTT: Assume control registers are not sorted and not contiguous.
-        	   // CTT: So we just sort the controls ourselves.
+        	   // Assume control registers are not sorted and not contiguous.
+        	   // So we just sort the controls ourselves.
         	   ArrayList<Integer> intControls = new ArrayList<>();
         	   for (int j=0; j<numControls; j++) {
         		   intControls.add(myControls[j].getRegister());
@@ -215,26 +319,26 @@ public class Executor {
         	   Collections.sort(intControls);
         	   System.out.println("intControls{" + intControls.toString() + "}");        	   
         	   
-        	   // CTT: Create reductions to standard Control (False based).
-        	   // CTT: truthAdjuster is created to reduce to *STANDARD* controls (FALSE-based).
-        	   // CTT: base case value for truthAdjuster: 1x1 matrix [1]
+        	   // Create reductions to standard Control (False based).
+        	   // truthAdjuster is created to reduce to *STANDARD* controls (FALSE-based).
+        	   // base case value for truthAdjuster: 1x1 matrix [1]
            	   Matrix<Complex> truthAdjuster = Matrix.identity(Complex.ZERO(), 1);
         	   minControlIndex = intControls.get(0);
         	   maxControlIndex = intControls.get(intControls.size()-1);
 
-        	   // CTT: calculate the number of wires in the span of the controls and inputs.
+        	   // calculate the number of wires in the span of the controls and inputs.
         	   startIndex = (minControlIndex < minRegIndex) ? minControlIndex : minRegIndex;
         	   finalIndex = (maxControlIndex > maxRegIndex) ? maxControlIndex : maxRegIndex;
         	   span = 1 + (finalIndex - startIndex);
         	   
-        	   // CTT: Perform swaps to bring Controls below the Gate to above it (if any).
+        	   // Perform swaps to bring Controls below the Gate to above it (if any).
         	   Matrix<Complex> swapToNormal = Matrix.identity(Complex.ZERO(), 1<<span);
         	   if (maxControlIndex > maxRegIndex) {
         		   
             	   int displacement = maxControlIndex - maxRegIndex;
         		   
-        		   // CTT: swap all control registers up to the positions of the gate registers.
-        		   // CTT: maxRegIndex+1 => minRegIndex, maxRegIndex+2 => minRegIndex+1, etc.
+        		   // swap all control registers up to the positions of the gate registers.
+        		   // maxRegIndex+1 => minRegIndex, maxRegIndex+2 => minRegIndex+1, etc.
         		   int swapDistance = 1 + maxRegIndex - minRegIndex;	// number of spots to move during swap migration.
         		   for (int j=maxRegIndex; j<maxControlIndex; j++) {
         			   for (int k=j, times=0; times < swapDistance; k--, times++) {
@@ -243,18 +347,18 @@ public class Executor {
         		   }
         		   if (debugShow) { System.out.println("swapToNormal:"); System.out.println(swapToNormal.toString()); }
         		   
-        		   // CTT: reset values of control registers which are moved up.
+        		   // reset values of control registers which are moved up.
         		   for (int j=0; j < numControls; j++) {
         			   if (intControls.get(j) > maxRegIndex) {
         				   intControls.set(j, intControls.get(j) - swapDistance);
         			   }
         		   }
             	   System.out.println("[UPDATED]intControls{{" + intControls.toString() + "}}"); 
-            	   // CTT: Beware that the gate registers are displaced as well now.
+            	   // Beware that the gate registers are displaced as well now.
             	   minRegIndex = minRegIndex + displacement;
             	   maxRegIndex = maxRegIndex + displacement;
         	   
-            	   // CTT: redo the index computations.
+            	   // (paranoia) redo the index computations.
             	   minControlIndex = intControls.get(0);
             	   maxControlIndex = intControls.get(intControls.size()-1);
 
@@ -263,7 +367,7 @@ public class Executor {
             	   span = 1 + (finalIndex - startIndex);
         	   }
     	   
-        	   // CTT: This next block assumes the controls are (already) at the top.
+        	   // This next block assumes the controls are (already) at the top.
         	   prevIndex = -1;
         	   currIndex = -1;
         	   for (int j=0; j<numControls; j++) {
@@ -293,25 +397,23 @@ public class Executor {
         	   }
         	   if (debugShow) { System.out.println("]"); }
         	   
-        	   // CTT: There might be a gap between maxControlIndex and minRegIndex.
-        	   //int spanControls = 1 + (maxControlIndex - minControlIndex);
-        	   // BUG ALERT: minRegIndex and/or minControlIndex are off.
+        	   // There might be a gap between maxControlIndex and minRegIndex.
         	   if (debugShow) { System.out.println("[minRegIndex:" + minRegIndex + "|minControlIndex:" + minControlIndex + "]"); }
         	   int spanControls = minRegIndex - minControlIndex;	// to account for the gap
         	   
         	   truthAdjuster = truthAdjuster.kronecker(Matrix.identity(Complex.ZERO(), 1<<spanInputs));
         	   if (debugShow) { System.out.println("truthAdjuster = "); System.out.println(truthAdjuster.toString()); }
         	   
-        	   // CTT: Compute nonstandard controlled gate (FALSE based).
-        	   // CTT: This is a direct sum of identity (of appropriate size) and colmat (or reversed).
+        	   // Compute nonstandard controlled gate (FALSE based).
+        	   // This is a direct sum of identity (of appropriate size) and colmat (or reversed).
         	   
         	   if (debugShow) { 
         		   System.out.println("spanControls[" + spanControls + "] spanInputs[" + spanInputs + "]"); 
         		   System.out.println("numControls[" + numControls + "] numInputs[" + numInputs + "]"); 
         	   }
         	   
-        	   // CTT: The following assumes that (False-based) Controls are at the Top!
-        	   // CTT: Need to perform swaps and unswaps to reduce to standard form.
+        	   // The following assumes that (False-based) Controls are at the top.
+        	   // Need also to perform swaps and unswaps to reduce to standard form.
         	   
         	   // CTT: build the normal form Controlled gate.
         	   Matrix<Complex> normalControlGate = Matrix.identity(Complex.ZERO(), 1<<(spanControls+spanInputs));
@@ -319,8 +421,8 @@ public class Executor {
         	   
         	   if (debugShow) { System.out.println("normalControlGate:"); System.out.println(normalControlGate.toString()); }
         	   
-        	   // CTT: let colmat now include the controlled registers.
-        	   // CTT: use conjugation by truthAdjuster to reduce to normal form where Controls are on FALSE.
+        	   // let colmat now include the controlled registers.
+        	   // use conjugation by truthAdjuster to reduce to normal form where Controls are on FALSE.
         	   colmat = truthAdjuster.mult(normalControlGate.mult(truthAdjuster));
         	   
         	   // CTT: account for the swaps that bring the controls from below the gate to above the gate (and the undo operations).
@@ -392,10 +494,10 @@ public class Executor {
                mat = mat.kronecker(colmat);
            }
            
-           // CTT: advance to the start of the next possible gate.
+           // advance to the start of the next possible gate.
            i += span;
            
-           // CTT: unclear
+           
            // The following code seems redundant as itr is increment in the FOR loop.
            // itr += span-eg.getGateRegister().length;
        }
