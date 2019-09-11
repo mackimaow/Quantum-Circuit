@@ -48,7 +48,6 @@ public class Executor {
     }
 
 
-
     /**
      * Executes the current project without relying on any external dependencies such as the QVM or a python install.
      * @param p The project to execute
@@ -60,12 +59,11 @@ public class Executor {
         Stream<ExportedGate> exps = null;
         try {
             exps = GateManager.exportGates(p);
-            System.out.println("Gate stream created = " + exps);
+            if (debugShow) { System.out.println("Gate stream created = " + exps); }
         } catch (GateManager.ExportException e) {
         	e.showExportErrorSource();
             return "";
-        }
-        
+        }        
         
         CircuitBoardModel cb = (CircuitBoardModel) p.getGateModel(p.getTopLevelCircuitLocationString());
         int colHeight = cb.getNumberOfRegisters();
@@ -78,17 +76,13 @@ public class Executor {
             ArrayList<ExportedGate> column = new ArrayList<>();
             int i = 0;
             while (i < colHeight) {
-                /*if(!itr.hasNext()) {
-                	System.out.println("itr has no next");
-                	break addCols;
-                }*/
             	if (itr.hasNext()) {
             		ExportedGate eg = itr.next();
             		if(eg.getQuantumGateType().equals(QuantumGateType.KRAUS_OPERATORS)) {
             			System.out.println("(WARNING) MIXED-SUPPORT: mixed");
             			return executeMixedState(p);
             		}
-            		// CTT: The following is an *INCOMPLETE* patch. The span has to be used.
+            		// The following is an *INCOMPLETE* patch. The span of Controls has to be used.
             		int minRegIndex = getMinElement(eg.getGateRegister());
             		int maxRegIndex = getMaxElement(eg.getGateRegister());
             		int spanInputs = 1 + maxRegIndex - minRegIndex;
@@ -152,13 +146,19 @@ public class Executor {
 
     	Matrix<Complex> swapMat = Matrix.identity(Complex.ZERO(), 1<<span);
     	
+    	// scale down the indices of the input registers (so indices are zero based)
+    	int [] transformedInputRegisters = new int[inputRegisters.length];
+    	for (int j=0; j<inputRegisters.length; j++) {
+    		transformedInputRegisters[j] = inputRegisters[j] - minIndex;
+    	}
+    	
     	// compute permutation of the input registers and the unused registers in the span.
     	ArrayList<Integer> encodedPermutation = new ArrayList<>();
     	for (int j=0; j<span; j++) {
     		encodedPermutation.add(j);
     	}
     	for (int j=inputRegisters.length-1; j >= 0; j--) {
-    		int currIndex = inputRegisters[j];
+    		int currIndex = transformedInputRegisters[j];
     		int position = encodedPermutation.indexOf(currIndex);
     		encodedPermutation.remove(Integer.valueOf(position));
     		encodedPermutation.add(0, currIndex);
@@ -177,13 +177,13 @@ public class Executor {
     		System.out.println("standardPermutation=[" + standardPermutation.toString() + "]");
     	}
     	
-    	boolean[] visited = new boolean[span];	// values initialized to false?
+    	boolean[] visited = new boolean[span];	// values initialized to false by Java!?
     	
     	boolean done = false;
     	int startIndex = -1, nextIndex;
     	int loopIndex = -1;
     	while (!done) {
-    		// find an unvisited index (not efficient)
+    		// find an unvisited index (inefficient)
     		for (loopIndex=0; loopIndex<span; loopIndex++) {
     			if (visited[loopIndex] == false) {
     				startIndex = loopIndex;
@@ -243,7 +243,7 @@ public class Executor {
 	   
        // ASSUMPTION I: NO OVERLAPPING CIRCUIT COMPONENTS
        //  perhaps place swap gates to ensure this automatically?
-	   // ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
+	   // [REMOVED] ASSUMPTION II: GATE INPUT REGISTERS ARE NOT PERMUTED (SHUFFLED)
 	   // [REMOVED] ASSUMPTION III: CONTROL REGISTERS APPEAR CONTIGUOUSLY
 	   // [REMOVED] ASSUMPTION IV:  CONTROL REGISTERS APPEAR IMMEDIATELY BEFORE THE GATE (STANDARD FORM)
 	   // [REMOVED] ASSUMPTION V:   CONTROL REGISTERS APPEAR IN SORTED ASCENDING ORDER.
@@ -263,8 +263,7 @@ public class Executor {
     	   }
     	   
            ExportedGate eg = column.get(itr);	// get current quantum gate
-           colmat = eg.getInputMatrixes()[0];	// get its matrix
-                      
+           colmat = eg.getInputMatrixes()[0];	// get its matrix  
            
            if (debugShow) { System.out.println("Current colmat = "); System.out.println(colmat.toString()); } 
 
@@ -283,7 +282,8 @@ public class Executor {
     	   maxRegIndex = getMaxElement(eg.getGateRegister());
     	   spanInputs = 1 + (maxRegIndex - minRegIndex);
 
-    	   if (!eg.isPresetGate()) {
+    	   //if (!eg.isPresetGate()) 
+    	   {
     		   // pad the gate with identities (if there are in-between unused registers)
     		   int extraInputs = spanInputs - eg.getGateRegister().length;
     		   if (moDebugShow) { System.out.println("extraInputs=" + extraInputs); }
