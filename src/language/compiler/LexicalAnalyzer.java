@@ -28,14 +28,14 @@ public class LexicalAnalyzer {
 	 * @param regexTokenPair a list of regexes with their assocaited accepting Tokens
 	 */
 	@SafeVarargs
-	public LexicalAnalyzer (Pair<String, Token> ... regexTokenPair) {
-		if(regexTokenPair.length == 0)
-			throw new IllegalArgumentException("Must specify at least one Token & Regex Pair");
+	public LexicalAnalyzer (Token ... tokens) {
+		if(tokens.length == 0)
+			throw new IllegalArgumentException("Must specify at least one Token");
 		
 		NFA nfa = NFA.acceptNone();
 		
-		for(Pair<String, Token> pair : regexTokenPair)
-			nfa.union(RegularExpression.regexToNFA(pair.first(), pair.second()));
+		for(Token token : tokens)
+			nfa.union(RegularExpression.regexToNFA(token));
 		
 		dfa = nfa.convertToDFA();
 	}

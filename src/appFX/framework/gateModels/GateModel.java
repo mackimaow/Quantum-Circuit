@@ -85,6 +85,7 @@ public abstract class GateModel implements Serializable {
 	public abstract int getNumberOfRegisters();
 	public abstract String getExtString();
 	public abstract boolean isPreset();
+	public abstract boolean isCircuitBoard();
 	public abstract GateModel shallowCopyToNewName(String location, String name, String symbol, String description, GateComputingType gateComputingType, String ... parameters);
 	
 	public GateModel shallowCopyToNewName(String location, String name, String symbol, String description) {

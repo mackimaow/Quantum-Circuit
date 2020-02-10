@@ -4,13 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import appFX.framework.exportGates.*;
+import appFX.framework.exportGates.Control;
 import appFX.framework.exportGates.ExportedGate;
 import appFX.framework.exportGates.GateManager;
 import appFX.framework.gateModels.CircuitBoardModel;
@@ -83,8 +83,8 @@ public class Executor {
             			return executeMixedState(p);
             		}
             		// The following is an *INCOMPLETE* patch. The span of Controls has to be used.
-            		int minRegIndex = getMinElement(eg.getGateRegister());
-            		int maxRegIndex = getMaxElement(eg.getGateRegister());
+            		int minRegIndex = getMinElement(eg.getGateRegisters());
+            		int maxRegIndex = getMaxElement(eg.getGateRegisters());
             		int spanInputs = 1 + maxRegIndex - minRegIndex;
             		i += (spanInputs + eg.getQuantumControls().length);
             		column.add(eg);
@@ -276,16 +276,16 @@ public class Executor {
        	   int finalIndex = -1;			// where is the last register for the (controlled or not) gate.
        	   
     	   // determine the registers that the gate depends on (by Assumption I, this is disjoint from neighboring gates)
-       	   int numInputs = eg.getGateRegister().length;
+       	   int numInputs = eg.getGateRegisters().length;
        	   int spanInputs;				// number of registers (used or not) between the first and last gate registers.
-    	   minRegIndex = getMinElement(eg.getGateRegister());
-    	   maxRegIndex = getMaxElement(eg.getGateRegister());
+    	   minRegIndex = getMinElement(eg.getGateRegisters());
+    	   maxRegIndex = getMaxElement(eg.getGateRegisters());
     	   spanInputs = 1 + (maxRegIndex - minRegIndex);
 
     	   //if (!eg.isPresetGate()) 
     	   {
     		   // pad the gate with identities (if there are in-between unused registers)
-    		   int extraInputs = spanInputs - eg.getGateRegister().length;
+    		   int extraInputs = spanInputs - eg.getGateRegisters().length;
     		   if (moDebugShow) { System.out.println("extraInputs=" + extraInputs); }
     		   for (int j=0; j<extraInputs; j++) {
     			   colmat = colmat.kronecker(PauliI);
@@ -293,7 +293,7 @@ public class Executor {
     		   if (moDebugShow) { System.out.print("padded-colmat"); System.out.println(colmat.toString()); }
 
     		   // handle the permutation on the input registers (global to local).
-    		   Matrix<Complex> swapInputs = buildSwapMatrix(eg.getGateRegister());
+    		   Matrix<Complex> swapInputs = buildSwapMatrix(eg.getGateRegisters());
 
     		   // conjugate colmat with permutation matrix of the inputs
     		   colmat = swapInputs.mult(colmat).mult(swapInputs);
@@ -441,7 +441,7 @@ public class Executor {
         	   System.out.print("] maxRegIndex[" + maxRegIndex);
         	   System.out.print("] minControlIndex[" + minControlIndex);
         	   System.out.print("] maxControlIndex[" + maxControlIndex);
-        	   System.out.println("] gateRegisters{" + Arrays.toString(eg.getGateRegister()) + "}");
+        	   System.out.println("] gateRegisters{" + Arrays.toString(eg.getGateRegisters()) + "}");
            }
            
            if (i < startIndex) { // need to pad by tensoring with identities
@@ -473,12 +473,12 @@ public class Executor {
            With a swap buffer
             */
            boolean allowShuffle = false;
-           if (allowShuffle && eg.getGateRegister().length != 1) { 
+           if (allowShuffle && eg.getGateRegisters().length != 1) { 
         	   /* CTT: is this checking for strictly greater than 1 or just not 1? */
                // DEBUG suppress for now: swapBuffer = swapBuffer.mult(getSwapMat(eg.getGateRegister(),colheight));
                System.out.println("buildColumnMatrix: swapBuffer is of size " + swapBuffer.getRows());
                System.out.println(swapBuffer);
-               Matrix<Complex> adjustedColmat = colmat.kronecker(Matrix.identity(Complex.ZERO(),1<<(span-eg.getGateRegister().length)));
+               Matrix<Complex> adjustedColmat = colmat.kronecker(Matrix.identity(Complex.ZERO(),1<<(span-eg.getGateRegisters().length)));
                System.out.println("buildColumnMatrix: Adjusted colmat is of size " + adjustedColmat.getRows());
                System.out.println(adjustedColmat);
                // DEBUG suppress for now: colmat = adjustedColmat;
@@ -709,7 +709,7 @@ public class Executor {
             int columnSpaceTakenUp = 0;
             while (columnSpaceTakenUp < colHeight) {
                 ExportedGate eg = itr.next();
-                int span = 1 + getMaxElement(eg.getGateRegister()) - getMinElement(eg.getGateRegister());
+                int span = 1 + getMaxElement(eg.getGateRegisters()) - getMinElement(eg.getGateRegisters());
                 columnSpaceTakenUp += span;
                 currentColumn.add(eg);
             }
@@ -824,9 +824,9 @@ public class Executor {
     private static ArrayList<ExportedGate> removeIdentityUnderGates(ArrayList<ExportedGate> gates) {
         ArrayList<Integer> regsCovered = new ArrayList<>();
         for(ExportedGate g : gates) {
-            if(g.getGateRegister().length > 1) {
-                for(int i = 0; i < g.getGateRegister().length; ++i) {
-                    regsCovered.add(g.getGateRegister()[i]);
+            if(g.getGateRegisters().length > 1) {
+                for(int i = 0; i < g.getGateRegisters().length; ++i) {
+                    regsCovered.add(g.getGateRegisters()[i]);
                 }
             }
         }
@@ -834,7 +834,7 @@ public class Executor {
         for(ExportedGate g : gates) {
             boolean redundant = false;
             for(Integer i : regsCovered) {
-                if(g.getGateModel().getName().equalsIgnoreCase("Identity") && (g.getGateRegister()[0]==i)) {
+                if(g.getGateModel().getName().equalsIgnoreCase("Identity") && (g.getGateRegisters()[0]==i)) {
                     redundant = true;
                     break;
                 }

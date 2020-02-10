@@ -16,6 +16,7 @@ import appFX.appUI.wizards.BasicGateModelEditWizard;
 import appFX.appUI.wizards.CircuitBoardPropertiesEditWizard;
 import appFX.appUI.wizards.CircuitBoardToPNGWizard;
 import appFX.appUI.wizards.Wizard;
+import appFX.framework.exportGates.Control;
 import appFX.framework.exportGates.ExportedGate;
 import appFX.framework.exportGates.GateManager;
 import appFX.framework.exportGates.GateManager.ExportException;
@@ -261,7 +262,7 @@ public enum AppCommand {
 	}),
 	RUN_QASM((commandResponse, parameters)-> {
 		getConsole().println("Running QASM", Color.BLUE);
-		getConsole().println("QASM Run is Not Supported Yet", Color.RED);
+		getConsole().println("QASM run is Not Supported Yet", Color.RED);
 		return null;
 	}),
 	RUN_SIMULATION((commandResponse, parameters)-> {
@@ -623,9 +624,12 @@ public enum AppCommand {
 			});
 			exportedGates.forEach((gate) -> {
 				System.out.println("New Gate");
-				int[] registers = gate.getGateRegister();
+				int[] registers = gate.getGateRegisters();
 				for(int i = 0; i < registers.length; i++)
 					System.out.print(registers[i] + " ");
+				Control[] controls = gate.getQuantumControls();
+				for(int i = 0; i < controls.length; i++)
+					System.out.print(controls[i].getControlStatus() + " ");
 				System.out.println("");
 			});
 			exportedGates.close();

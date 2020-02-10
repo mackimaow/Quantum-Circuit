@@ -55,7 +55,7 @@ public class Translator {
          case UNIVERSAL:
             if(eg.isPresetGate()) {
                PresetGateType pgt = eg.getPresetGateType();
-               int[] regs = eg.getGateRegister();
+               int[] regs = eg.getGateRegisters();
                String code = "";
                switch(pgt) {
                   case IDENTITY:
@@ -115,8 +115,8 @@ public class Translator {
             String gateName = eg.getGateModel().getName();
             if(definedGates.contains(gateName)) {
                String toReturn = gateName;
-               for(int i = 0; i < eg.getGateRegister().length; ++i) {
-                  toReturn += " " + eg.getGateRegister()[i];
+               for(int i = 0; i < eg.getGateRegisters().length; ++i) {
+                  toReturn += " " + eg.getGateRegisters()[i];
                }
                return toReturn;
             }
@@ -125,7 +125,7 @@ public class Translator {
             return defGate(eg) + genGateCode(eg);
          case POVM:
             System.out.println("POVM");
-            return "MEASURE " + eg.getGateRegister()[0];
+            return "MEASURE " + eg.getGateRegisters()[0];
          case HAMILTONIAN:
             break;
       }

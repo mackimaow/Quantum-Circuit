@@ -64,27 +64,45 @@ public class ParseTree implements Serializable {
 	 * @author Massimiliano Cutugno
 	 *
 	 */
-	public static class ParseBranch extends ParseNode {
+	public static class ParseBranch extends ParseNode implements Iterable<ParseNode> {
 		private static final long serialVersionUID = -2410167347419376090L;
 		
 		
-		LinkedList<ParseNode> children = new LinkedList<>();
+		final LinkedList<ParseNode> children;
 		
 		public ParseBranch(NonTerminal nonTerminal) {
+			this(nonTerminal,  new LinkedList<>());
+		}
+		
+		public ParseBranch(NonTerminal nonTerminal, LinkedList<ParseNode> children) {
 			super(nonTerminal);
+			this.children = children;
 		}
 		
 		public void addChild(ParseNode node) {
 			children.offerLast(node);
 		}
 		
+		public ParseNode getChild(int index) {
+			return children.get(index);
+		}
+		
 		public LinkedList<ParseNode> getChildren () {
 			return children;
+		}
+		
+		public int getSize() {
+			return children.size();
 		}
 
 		@Override
 		public boolean isLeaf() {
 			return false;
+		}
+
+		@Override
+		public Iterator<ParseNode> iterator() {
+			return children.iterator();
 		}
 	}
 	

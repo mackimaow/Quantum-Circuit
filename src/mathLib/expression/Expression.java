@@ -269,22 +269,22 @@ public class Expression implements Serializable {
 	// params -> expr , params | expr
 	
 	public static class ExpressionParser {
-		public static final Token NAME 		= new Token();  // used for variable and function names
-		public static final Token NUM		= new Token();	// any positive real decimal or integer
-		public static final Token OBRA 		= new Token();	// [
-		public static final Token CBRA 		= new Token();	// ]
-		public static final Token OPAR 		= new Token();	// (
-		public static final Token CPAR 		= new Token();	// )
-		public static final Token COM 		= new Token();	// ,
-		public static final Token SCOM 		= new Token();	// ;
-		public static final Token ADD 		= new Token();	// +
-		public static final Token SUB_NEG 	= new Token();	// -
-		public static final Token MULT 		= new Token();	// *
-		public static final Token EXP 		= new Token();	// ^
-		public static final Token DIV 		= new Token();	// /
-		public static final Token SPACE 	= new Token();	// any white spce character
-		public static final Token TENSOR	= new Token();	// tensor product (x)
-		public static final Token XOR		= new Token();	// addtion modulo 2 or exclusive OR (+)
+		public static final Token NAME 		= new Token("\\\\?[a-zA-Z_]\\w*");  		// used for variable and function names
+		public static final Token NUM		= new Token("\\d+(\\.\\d*)?|\\d*\\.\\d+");	// any positive real decimal or integer
+		public static final Token OBRA 		= new Token("\\[");							// [
+		public static final Token CBRA 		= new Token("\\]");							// ]
+		public static final Token OPAR 		= new Token("\\(");							// (
+		public static final Token CPAR 		= new Token("\\)");							// )
+		public static final Token COM 		= new Token(",");							// ,
+		public static final Token SCOM 		= new Token(";");							// ;
+		public static final Token ADD 		= new Token("\\+");							// +
+		public static final Token SUB_NEG 	= new Token("-");							// -
+		public static final Token MULT 		= new Token("\\*");							// *
+		public static final Token EXP 		= new Token("^");							// ^
+		public static final Token DIV 		= new Token("/");							// /
+		public static final Token SPACE 	= new Token("\\s+");						// any white space character
+		public static final Token TENSOR	= new Token("\\(x\\)");						// tensor product (x)
+		public static final Token XOR		= new Token("\\(\\+\\)");					// addition modulo 2 or exclusive OR (+)
 		public static final NonTerminal EXPR 			= new NonTerminal("expr");			
 		public static final NonTerminal TERM 			= new NonTerminal("term"); 
 		public static final NonTerminal POW 			= new NonTerminal("pow");
@@ -292,23 +292,7 @@ public class Expression implements Serializable {
 		public static final NonTerminal MATRIX_PARAMS 	= new NonTerminal("matrixParams");
 		public static final NonTerminal PARAM 			= new NonTerminal("param");
 		
-		private static final LexicalAnalyzer EXPRESSION_LEXER = new LexicalAnalyzer(
-					new Pair<String, Token>("\\\\?[a-zA-Z_]\\w*",	NAME),
-					new Pair<String, Token>("\\d+(\\.\\d*)?|\\d*\\.\\d+", 	NUM),
-					new Pair<String, Token>("\\[", 				OBRA),
-					new Pair<String, Token>("\\]", 				CBRA),
-					new Pair<String, Token>("\\(", 				OPAR),
-					new Pair<String, Token>("\\)", 				CPAR),
-					new Pair<String, Token>(";", 				SCOM),
-					new Pair<String, Token>(",", 				COM),
-					new Pair<String, Token>("\\+", 				ADD),
-					new Pair<String, Token>("-", 				SUB_NEG),
-					new Pair<String, Token>("\\*", 				MULT),
-					new Pair<String, Token>("^", 				EXP),
-					new Pair<String, Token>("/", 				DIV),
-					new Pair<String, Token>("\\(x\\)", 			TENSOR),
-					new Pair<String, Token>("\\(\\+\\)", 			XOR),
-					new Pair<String, Token>("\\s+", 			SPACE));
+		private static final LexicalAnalyzer EXPRESSION_LEXER = new LexicalAnalyzer(NAME, NUM, OBRA, CBRA, OPAR, CPAR, SCOM, COM, ADD, SUB_NEG, MULT, EXP, DIV, TENSOR, XOR, SPACE);
 		
 		private Iterator<Pair<Token, String>> iterator;
 		
@@ -427,7 +411,7 @@ public class Expression implements Serializable {
 				pb.addChild(matrixParams());
 				match(CBRA);
 				addTokenToBranch(pb);
-			}else if(lookAhead == NUM) {
+			} else if(lookAhead == NUM) {
 				pb.addChild(getLeafFromToken());
 			} else if(lookAhead == NAME) {
 				addTokenToBranch(pb);

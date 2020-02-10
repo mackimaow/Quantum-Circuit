@@ -16,7 +16,7 @@ import mathLib.Matrix;
 
 public class ExportedGate {	
 	private final GateModel gateModel;
-	private final Hashtable<String, Complex> argParamMap;
+	private final Hashtable<String, Complex> paramArgMap;
 	private final int[] gateRegisters;
 	private final Control[] quantumControls;
 	private final Control[] classicalControls;
@@ -41,7 +41,7 @@ public class ExportedGate {
 		this.quantumControls = quantumControls;
 		this.isClassical = isClassical;
 		this.matrixes = matrixes;
-		this.argParamMap = argParamMap;
+		this.paramArgMap = argParamMap;
 	}
 	
 	public boolean isClassical() {
@@ -56,19 +56,19 @@ public class ExportedGate {
 		return gateModel;
 	}
 	
-	public Complex getParameter (String parameter) {
-		return argParamMap.get(parameter);
+	public Complex getArgument (String parameterName) {
+		return paramArgMap.get(parameterName);
 	}
 	
 	public Set<String> getArgumentSet() {
-		return argParamMap.keySet();
+		return paramArgMap.keySet();
 	}
 	
-	public Collection<Complex> getParameters() {
-		return argParamMap.values();
+	public Collection<Complex> getArguments() {
+		return paramArgMap.values();
 	}
 	
-	public int[] getGateRegister() {
+	public int[] getGateRegisters() {
 		return gateRegisters;
 	}
 	

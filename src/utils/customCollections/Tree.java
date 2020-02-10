@@ -23,6 +23,10 @@ public class Tree<T> implements Collection<T> {
 		return element;
 	}
 	
+	public void setElement(T element) {
+		this.element = element;
+	}
+	
 	public Tree<T> getParent() {
 		return parent;
 	}

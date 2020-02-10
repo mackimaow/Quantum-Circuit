@@ -11,18 +11,18 @@ import language.compiler.Token;
 import utils.customCollections.Pair;
 
 public class BooleanEquationParser {
-	public static final Token SPACE = new Token();
-	public static final Token BIT = new Token();
-	public static final Token INTEGER = new Token();
-	public static final Token SET = new Token();
-	public static final Token NOT = new Token();
-	public static final Token AND = new Token();
-	public static final Token OR = new Token();
-	public static final Token XOR = new Token();
-	public static final Token OPAR = new Token();
-	public static final Token CPAR = new Token();
-	public static final Token OBRA = new Token();
-	public static final Token CBRA = new Token();
+	public static final Token SPACE = new Token("\\s+");
+	public static final Token BIT = new Token("b");
+	public static final Token INTEGER = new Token("[0-9]+");
+	public static final Token SET = new Token("=|<-");
+	public static final Token NOT = new Token("([nN][oO][tT])|\\!|~");
+	public static final Token AND = new Token("([aA][nN][dD])|\\*|\\&");
+	public static final Token OR = new Token("[oO][rR]|\\+|\\|");
+	public static final Token XOR = new Token("[xX][oO][rR]|\\^|\\(\\+\\)");
+	public static final Token OPAR = new Token("\\(");
+	public static final Token CPAR = new Token("\\)");
+	public static final Token OBRA = new Token("\\[");
+	public static final Token CBRA = new Token("\\]");
 	
 
 	public static final NonTerminal SET_NT = new NonTerminal("set");
@@ -33,19 +33,7 @@ public class BooleanEquationParser {
 	public static final NonTerminal BIT_NT	= new NonTerminal("bit");
 	public static final NonTerminal BOOL_NT	= new NonTerminal("bool");
 	
-	private static final LexicalAnalyzer EXPRESSION_LEXER = new LexicalAnalyzer(
-			new Pair<String, Token>("\\s+",			SPACE),
-			new Pair<String, Token>("b", 			BIT),
-			new Pair<String, Token>("[0-9]+", 		INTEGER),
-			new Pair<String, Token>("=|<-", 			SET),
-			new Pair<String, Token>("([nN][oO][tT])|\\!|~", NOT),
-			new Pair<String, Token>("([aA][nN][dD])|\\*|\\&", AND),
-			new Pair<String, Token>("[oO][rR]|\\+|\\|", 	OR),
-			new Pair<String, Token>("[xX][oO][rR]|\\^|\\(\\+\\)", XOR),
-			new Pair<String, Token>("\\(", 			OPAR),
-			new Pair<String, Token>("\\)", 			CPAR),
-			new Pair<String, Token>("\\[", 			OBRA),
-			new Pair<String, Token>("\\]", 			CBRA));
+	private static final LexicalAnalyzer EXPRESSION_LEXER = new LexicalAnalyzer(SPACE, BIT, INTEGER, SET, NOT, AND, OR, XOR, OPAR, CPAR, OBRA, CBRA);
 	
 	private static final BooleanEquationRunnable DO_NOTHING = new BooleanEquationRunnable() {
 		@Override public void setOutputBitIndex(int bitIndex) {}

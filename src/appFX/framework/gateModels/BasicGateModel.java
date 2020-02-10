@@ -2,7 +2,7 @@ package appFX.framework.gateModels;
 
 import appFX.framework.utils.InputDefinitions.DefinitionEvaluatorException;
 
-public class BasicGateModel extends GateModel {
+public class BasicGateModel extends SingleGateModel {
 	private static final long serialVersionUID = -3974442774420594973L;
 	
 	public static final String GATE_MODEL_EXTENSION =  "gm";

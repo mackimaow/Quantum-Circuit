@@ -295,6 +295,10 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		return rowTypes.countTypeAmtFrom(boardRowType, 0, rowTypes.size());
 	}
 	
+	public boolean isCircuitBoard() {
+		return true;
+	}
+	
 	public RowTypeList getCopyOfRowTypeList() {
 		return rowTypes.deepCopy();
 	}

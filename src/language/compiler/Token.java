@@ -8,5 +8,11 @@ import language.compiler.ProductionSymbol.Terminal;
  *
  */
 public class Token extends Terminal{
-	public static final Token NONE = new Token();
+	public static final Token NONE = new Token("");
+	
+	public final String regex;
+	
+	public Token(String regex) {
+		this.regex = regex;
+	}
 }

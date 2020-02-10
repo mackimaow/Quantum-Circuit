@@ -1,19 +1,17 @@
 package testLib;
 
-import java.util.List;
-
-import javax.swing.JPanel;
-
-import language.compiler.LexicalAnalyzer.LexemeNotRecognizedException;
-import language.compiler.LexicalAnalyzer.LexicalAnaylizerIOException;
-import mathLib.equation.BooleanEquation;
-import mathLib.equation.BooleanEquationParser.BooleanEquationParseException;
-
-@SuppressWarnings("serial")
-public class Test extends JPanel {
+public class Test {
 	
-	public static void main(String[] args) throws LexemeNotRecognizedException, LexicalAnaylizerIOException, BooleanEquationParseException {
-		BooleanEquation equ = new BooleanEquation("b[0] = b[0] b[1]");
+	public static void main(String[] args) {
+		Object[] test = new Test[1];
+		test[0] = new Test();
+		Test[] test2 = (Test[]) test;
+		System.out.println(test2[0]);
 	}
 
+	@Override
+	public String toString() {
+		return "yo";
+	}
+	
 }

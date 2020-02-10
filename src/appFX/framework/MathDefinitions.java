@@ -50,7 +50,7 @@ public class MathDefinitions {
 	
 	
 	public static void addConcreteDefinitions () {
-		// Concrete Definitons
+		// Concrete Definitions
 		GLOBAL_DEFINITIONS.addVariable(new ConcreteVariable("i", Complex.I()));
 		GLOBAL_DEFINITIONS.addVariable(new ConcreteVariable("e", Complex.e()));
 		GLOBAL_DEFINITIONS.addVariable(new ConcreteVariable("pi", "\\pi", Complex.pi()));

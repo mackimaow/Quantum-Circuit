@@ -50,8 +50,8 @@ public final class RegularExpression {
 	 * @param accepting the accepting token associated with the accepting state of the returned {@link NFA}
 	 * @return the equivalent {@link NFA} of this regex
 	 */
-	public static NFA regexToNFA (String regex, Token accepting) {
-		return RegexParser.parse(regex, accepting);
+	public static NFA regexToNFA (Token accepting) {
+		return RegexParser.parse(accepting);
 	}
 	
 	
@@ -62,7 +62,7 @@ public final class RegularExpression {
 	 * @return whether or not the given string is accepted by the regular expression
 	 */
 	public static boolean matchesRegex(String string, String regex) {
-		NFA nfa = regexToNFA(regex, Token.NONE);
+		NFA nfa = regexToNFA(new Token(regex));
 		DFA dfa = nfa.convertToDFA();
 		return dfa.accepts(string);
 	}
@@ -94,22 +94,20 @@ public final class RegularExpression {
 	// one pass parser to compile regex expression into NFA
 	private static final class RegexParser {
 		private int index = 0;
-		private final String regex;
 		private char lookAhead;
 		private final Token accepting;
 		private int exprRecur = 0;
 		
-		private static NFA parse(String regex, Token accepting) {
-			RegexParser p = new RegexParser(regex, accepting);
-			return p.runAndReturnSematics();
+		private static NFA parse(Token accepting) {
+			RegexParser p = new RegexParser(accepting);
+			return p.runAndReturnNFA();
 		}
 		
-		private RegexParser (String regex, Token accepting) {
-			this.regex = regex;
+		private RegexParser (Token accepting) {
 			this.accepting = accepting;
 		}
 		
-		private NFA runAndReturnSematics() {
+		private NFA runAndReturnNFA() {
 			NFA nfa = NFA.acceptStart(accepting);
 			
 			
@@ -337,9 +335,9 @@ public final class RegularExpression {
 		
 		
 		private boolean getNext () {
-			if(index == regex.length())
+			if(index == accepting.regex.length())
 				return false;
-			lookAhead = regex.charAt(index++);
+			lookAhead = accepting.regex.charAt(index++);
 			return true;
 		}
 		
@@ -358,9 +356,9 @@ public final class RegularExpression {
 		
 		
 		private Character peak() {
-			if(index == regex.length())
+			if(index == accepting.regex.length())
 				return null;
-			return regex.charAt(index);	
+			return accepting.regex.charAt(index);	
 		}
 		
 		
@@ -401,7 +399,7 @@ public final class RegularExpression {
 		public class RegexParseException extends RuntimeException {
 			public RegexParseException () {
 				super ("Could not parse regex, error ocurred at index " + 
-						index + " in \"" + regex + "\"");
+						index + " in \"" + accepting.regex + "\"");
 			}
 		}
 		

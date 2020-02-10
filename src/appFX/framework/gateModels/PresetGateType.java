@@ -16,7 +16,6 @@ public enum PresetGateType {
 	
 	
 	HADAMARD ("Hadamard", "H", 
-			null, 
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			"1/sqrt(2) * [1,  1; "
 			+ 			" 1, -1] ")),
@@ -32,7 +31,6 @@ public enum PresetGateType {
 			
 			
 	PAULI_Y ("Pauli_y", "Y", 
-			null,
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			" [0, -i; "
 			+ "i,  0] ")),
@@ -40,7 +38,6 @@ public enum PresetGateType {
 	
 	
 	PAULI_Z ("Pauli_z", "Z", 
-			null,
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			  "[1,  0; "
 			+ " 0, -1] ")),
@@ -48,7 +45,6 @@ public enum PresetGateType {
 	
 	
 	PHASE ("Phase", "S", 
-			null,
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			  "[1, 0; "
 			+ " 0, i] ")),
@@ -56,7 +52,6 @@ public enum PresetGateType {
 	
 	
 	PI_ON_8 ("Pi_over_8", "T",
-			null,
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			  "[1, 0; "
 			+ " 0, (1+i) / sqrt(2)] ")),
@@ -98,7 +93,6 @@ public enum PresetGateType {
 	
 	
 	PHASE_SHIFT ("Phase_Shift", "R", new String[]{"\\theta"} ,
-			null,
 			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
 			 "[1, 0; "
 			+ "0, exp(i * \\theta)] ")),
@@ -106,8 +100,7 @@ public enum PresetGateType {
 	
 	
 	
-	MEASUREMENT ("Measurement", "M", 
-			null,
+	MEASUREMENT ("Measurement", "M",
 			new QuantumGateDefinition(QuantumGateType.KRAUS_OPERATORS,
 			 "[1, 0; "
 			+ "0, 0] ",
@@ -117,13 +110,11 @@ public enum PresetGateType {
 	
 	
 	CLASSICAL_SET_0 ("Set_0", "0", 
-			new ClassicalGateDefinition("b[0] = 0"),
-			null),
+			new ClassicalGateDefinition("b[0] = 0")),
 	
 	
 	CLASSICAL_SET_1 ("Set_1", "1", 
-			new ClassicalGateDefinition("b[0] = 1"),
-			null), 
+			new ClassicalGateDefinition("b[0] = 1")), 
 	
 	
 	
@@ -158,6 +149,22 @@ public enum PresetGateType {
 	
 	
 	private final BasicGateModel gateModel;
+	
+	private PresetGateType(String name, String symbol, QuantumGateDefinition quantumGateDefinition) {
+		this(name, symbol, new String[0], null, quantumGateDefinition);
+	}
+	
+	private PresetGateType(String name, String symbol, ClassicalGateDefinition classicalGateDefinition) {
+		this(name, symbol, new String[0], classicalGateDefinition, null);
+	}
+	
+	private PresetGateType(String name, String symbol, String[] parameters, ClassicalGateDefinition classicalGateDefinition) {
+		this(name, symbol, parameters, classicalGateDefinition, null);
+	}
+	
+	private PresetGateType(String name, String symbol, String[] parameters, QuantumGateDefinition quantumGateDefinition) {
+		this(name, symbol, parameters, null, quantumGateDefinition);
+	}
 	
 	private PresetGateType(String name, String symbol, ClassicalGateDefinition classicalGateDefinition, QuantumGateDefinition quantumGateDefinition) {
 		this(name, symbol, new String[0], classicalGateDefinition, quantumGateDefinition);

@@ -301,7 +301,7 @@ public class NFA implements Cloneable{
 			throw new IllegalArgumentException("The argument must not be less than 0");
 		
 		if(numTimes == 0) {
-			NFA nfa = acceptStart(getAnyToken());
+			NFA nfa = acceptStart(getArbitraryAcceptingToken());
 			this.startState = nfa.startState;
 			this.inputAlphaBet = nfa.inputAlphaBet;
 			this.transitions = nfa.transitions;
@@ -642,7 +642,7 @@ public class NFA implements Cloneable{
 	 * @return Grabs any accepting token associated with this {@link NFA}. If none
 	 * exist, then a {@code DFA.NONE} will be returned;
 	 */
-	public Token getAnyToken() {
+	public Token getArbitraryAcceptingToken() {
 		Collection<Token> tokens = acceptingStates.values();
 		if(!tokens.isEmpty())
 			return tokens.iterator().next();
