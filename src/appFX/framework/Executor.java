@@ -160,7 +160,7 @@ public class Executor {
     	for (int j=inputRegisters.length-1; j >= 0; j--) {
     		int currIndex = transformedInputRegisters[j];
     		int position = encodedPermutation.indexOf(currIndex);
-    		encodedPermutation.remove(Integer.valueOf(position));
+    		encodedPermutation.remove(position);
     		encodedPermutation.add(0, currIndex);
     	}
     	
@@ -168,7 +168,7 @@ public class Executor {
     	ArrayList<Integer> standardPermutation = new ArrayList<>();
     	for (int j=0; j<span; j++) { // build identity permutation
     		int position = encodedPermutation.indexOf(j);
-    		standardPermutation.add(Integer.valueOf(position));
+    		standardPermutation.add(position);
     	}
     	
     	if (debugShow) {
@@ -846,4 +846,5 @@ public class Executor {
         return newGates;
     }
 
+    
 }

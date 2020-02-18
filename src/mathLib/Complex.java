@@ -142,7 +142,11 @@ public class Complex extends MathValue {
     
     @Override
     public String toString(){
-        if(b >= 0)
+    	if(b == 0) {
+            return Double.toString(a);
+    	} else if (a == 0) {
+            return b +"i";
+    	} else if(b >= 0)
             return a+"+"+b+"i";
         else{
             return a+"-"+(-b)+"i";

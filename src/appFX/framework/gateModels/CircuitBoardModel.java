@@ -553,7 +553,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		OutputLinkType type = OutputLinkType.CLASSICAL_LINK;
 		if(sp instanceof SpacePin && sp.getSolderedGate() == sg) {
 			SpacePin spacePin = (SpacePin) sp;
-			outputReg = spacePin.getInputReg();
+			outputReg = spacePin.getOutputReg();
 			type = spacePin.getOutputLinkType();
 		}
 		
