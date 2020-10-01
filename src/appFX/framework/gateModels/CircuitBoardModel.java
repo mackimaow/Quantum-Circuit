@@ -292,7 +292,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 	@Override
 	public int getNumberOfRegisters() {
 		RowType boardRowType = RowType.getRowType(getComputingType());
-		return rowTypes.countTypeAmtFrom(boardRowType, 0, rowTypes.size());
+		return rowTypes.countTypeAmt(boardRowType);
 	}
 	
 	public boolean isCircuitBoard() {
@@ -2050,6 +2050,10 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 		
 		public int getRegAtRow(int row) {
 			return rowTypes.get(row).reg;
+		}
+		
+		public int countTypeAmt(RowType rowType) {
+			return countTypeAmtFrom(rowType, 0, size());
 		}
 		
 		public int countTypeAmtFrom(RowType type, int indexStartInclusize, int indexEndExclusive) {

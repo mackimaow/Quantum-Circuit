@@ -20,4 +20,15 @@ public class Control {
 		return controlStatus;
 	}
 	
+	@Override
+	public String toString() {
+		if(controlStatus == CONTROL_TRUE) {
+			return "T" + register;
+		} else if (controlStatus == CONTROL_FALSE) {
+			return "F" + register;
+		} else {
+			throw new RuntimeException("[Error] Control status is NULL");
+		}
+	}
+	
 }

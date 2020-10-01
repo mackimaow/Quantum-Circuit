@@ -152,8 +152,8 @@ public class RawExportableGateData {
 		public final int globalReg;
 		public final int row;
 		
-		public RawExportRegister(int globaleReg, int row) {
-			this.globalReg = globaleReg;
+		public RawExportRegister(int globalReg, int row) {
+			this.globalReg = globalReg;
 			this.row = row;
 		}
 	}
@@ -161,8 +161,8 @@ public class RawExportableGateData {
 	public static class RawExportControl extends RawExportRegister {
 		public final boolean controlStatus;
 		
-		public RawExportControl(int globaleReg, int row, boolean controlStatus) {
-			super(globaleReg, row);
+		public RawExportControl(int globalReg, int row, boolean controlStatus) {
+			super(globalReg, row);
 			this.controlStatus = controlStatus;
 		}
 	}
@@ -170,8 +170,8 @@ public class RawExportableGateData {
 	public static class RawExportLink extends RawExportRegister {
 		public final int localReg;
 		
-		public RawExportLink(int globaleReg, int row, int inputReg) {
-			super(globaleReg, row);
+		public RawExportLink(int globalReg, int row, int inputReg) {
+			super(globalReg, row);
 			this.localReg = inputReg;
 		}
 	}
@@ -179,8 +179,8 @@ public class RawExportableGateData {
 	public static class RawExportOutputLink extends RawExportLink {
 		public final OutputLinkType linkType;
 		
-		public RawExportOutputLink(int globaleReg, int row, int outputReg, OutputLinkType linkType) {
-			super(globaleReg, row, outputReg);
+		public RawExportOutputLink(int globalReg, int row, int outputReg, OutputLinkType linkType) {
+			super(globalReg, row, outputReg);
 			this.linkType = linkType;
 		}
 	}

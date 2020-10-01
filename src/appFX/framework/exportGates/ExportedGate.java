@@ -1,5 +1,6 @@
 package appFX.framework.exportGates;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Set;
@@ -104,5 +105,27 @@ public class ExportedGate {
 	public Matrix<Complex>[] getInputMatrixes() {
 		return matrixes;
 	}
+	
+	@Override
+	public String toString() {
+		String separator = "-------------";
+		String gateTypeString = "["  + getGateModel().getName() + "]";
+		String regsString = "Regs: " + Arrays.toString(getGateRegisters());
+		String qcsString = "QCs: " + Arrays.toString(getQuantumControls());
+		String ccsString = "CCs: " + Arrays.toString(getClassicalControls());
+		
+		String output = "";
+		for (String s : new String[]{
+				separator,
+				gateTypeString,
+				regsString,
+				qcsString,
+				ccsString,
+				separator
+				})
+			output += s + '\n';
+		return output;
+	}
+	
 	
 }

@@ -58,7 +58,7 @@ public class Executor {
     	
         Stream<ExportedGate> exps = null;
         try {
-            exps = GateManager.exportGates(p);
+            exps = GateManager.exportGatesRecursively(p);
             if (debugShow) { System.out.println("Gate stream created = " + exps); }
         } catch (GateManager.ExportException e) {
         	e.showExportErrorSource();
@@ -692,7 +692,7 @@ public class Executor {
         //Let's construct the gate stream
         Stream<ExportedGate> gateStream = null;
         try {
-            gateStream = GateManager.exportGates(p);
+            gateStream = GateManager.exportGatesRecursively(p);
         } catch (GateManager.ExportException e) {
             e.showExportErrorSource();
             return "";

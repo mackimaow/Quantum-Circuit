@@ -97,7 +97,20 @@ public enum PresetGateType {
 			 "[1, 0; "
 			+ "0, exp(i * \\theta)] ")),
 	
+	ROTATE_X ("Rotate_X", "Rx", new String[]{"\\theta"} ,
+			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
+			 "[cos(\\theta / 2), - i * sin(\\theta / 2); "
+			+ "- i * sin(\\theta / 2), cos(\\theta / 2)] ")),
 	
+	ROTATE_Y ("Rotate_Y", "Ry", new String[]{"\\theta"} ,
+			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
+			 "[cos(\\theta / 2), - sin(\\theta / 2); "
+			+ "sin(\\theta / 2), cos(\\theta / 2)] ")),
+	
+	ROTATE_Z ("Rotate_Z", "Rz", new String[]{"\\theta"} ,
+			new QuantumGateDefinition(QuantumGateType.UNIVERSAL,
+			 "[exp(-i * \\theta / 2), 0; "
+			+ "0, exp( i * \\theta / 2)] ")),
 	
 	
 	MEASUREMENT ("Measurement", "M",

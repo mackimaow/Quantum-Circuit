@@ -2,6 +2,7 @@ package appFX.framework.gateModels;
 
 import java.io.Serializable;
 
+import appFX.framework.gateModels.PresetGateType.PresetGateModel;
 import utils.customCollections.immutableLists.ImmutableArray;
 
 public abstract class GateModel implements Serializable {
@@ -119,6 +120,14 @@ public abstract class GateModel implements Serializable {
 	
 	public String getDescription() {
 		return description;
+	}
+	
+	public boolean isIdentity() {
+		if (isPreset()) {
+			PresetGateModel model = (PresetGateModel) this;
+			return model.getPresetGateType() == PresetGateType.IDENTITY;
+		}
+		return false;
 	}
 	
 	public GateComputingType getComputingType() {

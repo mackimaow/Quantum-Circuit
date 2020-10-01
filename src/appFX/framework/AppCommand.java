@@ -26,6 +26,7 @@ import appFX.framework.gateModels.CircuitBoardModel.RowType;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.GateModel.GateComputingType;
 import appFX.framework.gateModels.PresetGateType;
+import appFX.framework.simulator.quickSim.QuickSim;
 import appFX.framework.solderedGates.SolderedControlPin;
 import appFX.framework.solderedGates.SolderedGate;
 import appFX.framework.solderedGates.SolderedPin;
@@ -252,7 +253,16 @@ public enum AppCommand {
 	}),
 	
 	
+
 	
+	QUICK_SIM ((commandResponse, parameters) -> {
+		try {
+			QuickSim.simulate(getCurrentProject());
+		} catch (ExportException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}),
 	
 	RUN_QUIL((commandResponse, parameters)-> {
 		getConsole().println("Running QUIL", Color.BLUE);
@@ -270,9 +280,11 @@ public enum AppCommand {
 		String output = Executor.executeInternal(getCurrentProject());
 		getConsole().println(output);
 		System.out.println(output);
+//		AppCommand.doAction(commandResponse, AppCommand.QUICK_SIM, parameters);
+		
+		
 		return null;
 	}),
-	
 	
 	
 	
@@ -613,7 +625,7 @@ public enum AppCommand {
 	TEST_SIMULATION((commandResponse, parameters)-> {
 		Project currentProject = getCurrentProject();
 		try {
-			Stream<ExportedGate> exportedGates = GateManager.exportGates(currentProject);
+			Stream<ExportedGate> exportedGates = GateManager.exportGatesRecursively(currentProject);
 			exportedGates = exportedGates.filter((gate) -> {
 				if(gate.isPresetGate()) {
 					PresetGateType type = gate.getPresetGateType();

@@ -28,7 +28,7 @@ public class Translator {
    public static String exportToQUIL(Project p) {
       Stream<ExportedGate> exps = null;
       try {
-         exps = GateManager.exportGates(p);
+         exps = GateManager.exportGatesRecursively(p);
       } catch (GateManager.ExportException e) {
          e.showExportErrorSource();
          return "";
