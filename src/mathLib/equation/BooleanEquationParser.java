@@ -147,7 +147,7 @@ public class BooleanEquationParser {
 			ParseBranch negate = new ParseBranch(NOT_NT);
 			negate.addChild(center);
 			latexString += "} ";
-			return center;
+			return negate;
 		} else if(token == OPAR) {
 			if(!outerIsNot)
 				latexString += " ( ";

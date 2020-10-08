@@ -25,8 +25,9 @@ import appFX.framework.gateModels.CircuitBoardModel;
 import appFX.framework.gateModels.CircuitBoardModel.RowType;
 import appFX.framework.gateModels.GateModel;
 import appFX.framework.gateModels.GateModel.GateComputingType;
+import appFX.framework.simulator.Simulator;
+import appFX.framework.simulator.State;
 import appFX.framework.gateModels.PresetGateType;
-import appFX.framework.simulator.quickSim.QuickSim;
 import appFX.framework.solderedGates.SolderedControlPin;
 import appFX.framework.solderedGates.SolderedGate;
 import appFX.framework.solderedGates.SolderedPin;
@@ -257,9 +258,13 @@ public enum AppCommand {
 	
 	QUICK_SIM ((commandResponse, parameters) -> {
 		try {
-			QuickSim.simulate(getCurrentProject());
+			getConsole().println("Running Simulation", Color.BLUE);
+			State[] states = Simulator.simulate(getCurrentProject());
+			for (State state : states)
+				if (state.size() != 0)
+					getConsole().println(state.toString(), Color.BLACK);
 		} catch (ExportException e) {
-			e.printStackTrace();
+			e.showExportErrorSource();
 		}
 		return null;
 	}),
@@ -276,11 +281,11 @@ public enum AppCommand {
 		return null;
 	}),
 	RUN_SIMULATION((commandResponse, parameters)-> {
-		getConsole().println("Running Simulation", Color.BLUE);
-		String output = Executor.executeInternal(getCurrentProject());
-		getConsole().println(output);
-		System.out.println(output);
-//		AppCommand.doAction(commandResponse, AppCommand.QUICK_SIM, parameters);
+//		getConsole().println("Running Simulation", Color.BLUE);
+//		String output = Executor.executeInternal(getCurrentProject());
+//		getConsole().println(output);
+//		System.out.println(output);
+		AppCommand.doAction(commandResponse, AppCommand.QUICK_SIM, parameters);
 		
 		
 		return null;

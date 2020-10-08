@@ -1,6 +1,8 @@
 package mathLib.equation;
 
 import java.io.Serializable;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import language.compiler.LexicalAnalyzer.LexemeNotRecognizedException;
 import language.compiler.LexicalAnalyzer.LexicalAnaylizerIOException;
@@ -13,6 +15,7 @@ import mathLib.equation.BooleanEquationParser.BoolLeaf;
 import mathLib.equation.BooleanEquationParser.BooleanEquationParseException;
 import mathLib.equation.BooleanEquationParser.BooleanEquationRunnable;
 import utils.customCollections.Single;
+import utils.customMaps.IndexMap;
 
 public class BooleanEquation implements Serializable {
 	private static final long serialVersionUID = -4303957002057417418L;
@@ -59,36 +62,45 @@ public class BooleanEquation implements Serializable {
 		return latexString;
 	}
 	
-	public boolean compute(CalculateBitListener bitListener) {
+	public boolean compute(final Function<Integer, Boolean> bitFetch, final BiConsumer<Integer, Boolean> bitSet, IndexMap indexMap) {
 		ParseBranch root = (ParseBranch) tree.getRoot();
-		ParseNode expression = root.getChildren().get(1);
-		return compute(expression, bitListener);
+		return compute(root, bitFetch, bitSet, indexMap);
 	}
 	
-	private static boolean compute(ParseNode node, CalculateBitListener bitListener) {
+	private static boolean compute(ParseNode node, final Function<Integer, Boolean> bitFetch, 
+			final BiConsumer<Integer, Boolean> bitSet,
+			final IndexMap indexMap) {
 		ProductionSymbol sym =  node.getProductionSymbol();
 		if(sym == BooleanEquationParser.NOT_NT ) {
 			ParseBranch branch = (ParseBranch) node;
-			return !compute(branch.getChildren().get(0), bitListener);
+			return !compute(branch.getChildren().get(0), bitFetch, bitSet, indexMap);
 		} else if( sym == BooleanEquationParser.AND_NT ) {
 			ParseBranch branch = (ParseBranch) node;
-			boolean first = compute(branch.getChildren().get(0), bitListener);
-			boolean second = compute(branch.getChildren().get(1), bitListener);
+			boolean first = compute(branch.getChildren().get(0), bitFetch, bitSet, indexMap);
+			boolean second = compute(branch.getChildren().get(1), bitFetch, bitSet, indexMap);
 			return first && second;
 		} else if(sym == BooleanEquationParser.OR_NT  ) {
 			ParseBranch branch = (ParseBranch) node;
-			boolean first = compute(branch.getChildren().get(0), bitListener);
-			boolean second = compute(branch.getChildren().get(1), bitListener);
+			boolean first = compute(branch.getChildren().get(0), bitFetch, bitSet, indexMap);
+			boolean second = compute(branch.getChildren().get(1), bitFetch, bitSet, indexMap);
 			return first || second;
 		} else if(sym == BooleanEquationParser.XOR_NT ) {
 			ParseBranch branch = (ParseBranch) node;
-			boolean first = compute(branch.getChildren().get(0), bitListener);
-			boolean second = compute(branch.getChildren().get(1), bitListener);
+			boolean first = compute(branch.getChildren().get(0), bitFetch, bitSet, indexMap);
+			boolean second = compute(branch.getChildren().get(1), bitFetch, bitSet, indexMap);
 			return first ^ second;
 		} else if(sym == BooleanEquationParser.BIT_NT ) {
 			BitLeaf bitLeaf = (BitLeaf) node;
-			int bitIndex = bitLeaf.getBitInt();
-			return bitListener.getClassicalBitValue(bitIndex);
+			int index = indexMap.get(bitLeaf.getBitInt());
+			return bitFetch.apply(index);
+		} else if (sym == BooleanEquationParser.SET_NT) {
+			ParseBranch branch = (ParseBranch) node;
+			BitLeaf first = (BitLeaf) branch.getChildren().get(0);
+			ParseNode expression = branch.getChildren().get(1);
+			boolean value = compute(expression, bitFetch, bitSet, indexMap);
+			int index = indexMap.get(first.getBitInt());
+			bitSet.accept(index, value);
+			return value;
 		} else if(sym == BooleanEquationParser.BOOL_NT) {
 			BoolLeaf leaf = (BoolLeaf) node;
 			return leaf.getValue();
@@ -99,9 +111,5 @@ public class BooleanEquation implements Serializable {
 	
 	public static interface InputBitIndexListener extends Serializable {
 		public void addInputIndex(int inputIndex);
-	}
-	
-	public static interface CalculateBitListener extends Serializable {
-		public boolean getClassicalBitValue(int inputIndex);
 	}
 }

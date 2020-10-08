@@ -2174,6 +2174,7 @@ public class CircuitBoardModel extends GateModel implements  Iterable<RawExporta
 			underneathQuantumIdentityGates = new LinkedList<>();
 			registers = new Hashtable<>();
 			classicalReg = false;
+			quantumReg = false;
 			
 			gateRowBodyStart = -1;
 			gateRowBodyEnd = -1;

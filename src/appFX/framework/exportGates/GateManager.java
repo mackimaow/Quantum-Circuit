@@ -29,6 +29,7 @@ import appFX.framework.utils.InputDefinitions.MatrixObject;
 import appFX.framework.utils.InputDefinitions.ScalarObject;
 import javafx.scene.control.Alert.AlertType;
 import javafx.stage.Window;
+import math.expression.MathScope;
 import mathLib.Complex;
 import mathLib.Matrix;
 import mathLib.expression.Expression.EvaluateExpressionException;
@@ -77,6 +78,7 @@ public class GateManager {
 		public Control[] getQuantumControls();
 		public Control[] getClassicalControls();
 		public boolean isIdentity();
+		public MathSet getMathSet();
 	}
 	
 	
@@ -96,6 +98,10 @@ public class GateManager {
 		@Override
 		public ExportedGate exportIfNotCircuitBoard() {
 			return toExportedGate(n);
+		}
+		
+		public GateModel getGateModel() {
+			return n.gm;
 		}
 
 		@Override
@@ -157,6 +163,19 @@ public class GateManager {
 		@Override
 		public boolean isIdentity() {
 			return n.gm.isIdentity();
+		}
+		
+		@Override
+		public MathSet getMathSet() {
+			return n.mathSet;
+		}
+		
+		public LinkedList<RawExportOutputLink> getOutputLinks() {
+			RawExportableGateData rawData = n.rawData;
+			if (rawData == null)
+				return new LinkedList<RawExportOutputLink>();
+			else
+				return rawData.getOutputLinks();
 		}
 		
 		@Override
@@ -291,6 +310,11 @@ public class GateManager {
 			return false;
 		}
 		
+		@Override
+		public MathSet getMathSet() {
+			return tree.mathSet;
+		}
+		
 		public LinkedList<RawExportLink> getInputLinks() {
 			RawExportableGateData rawData = tree.rawData;
 			if (rawData == null)
@@ -362,7 +386,7 @@ public class GateManager {
 			try {
 				MathObject mo = definitions.get(i);
 				if(mo.hasArguments())
-					matrixes[i] = (Matrix<Complex>) ((ArgObject) mo).getDefinition().compute(leaf.runtimeVariables);
+					matrixes[i] = (Matrix<Complex>) ((ArgObject) mo).getDefinition().compute(leaf.mathSet);
 				else
 					matrixes[i] = (Matrix<Complex>) ((MatrixObject) mo).getMatrix();
 			} catch (EvaluateExpressionException e) {
@@ -507,7 +531,8 @@ public class GateManager {
 		ExportTree base = scanCB(p, cb, GateComputingType.QUANTUM, true, runtimeVariables, null);
 		Queue<ExportNode> nodes = new Queue<ExportNode>();
 		nodes.add(base);
-		ExportTree root = new ExportTree("root", GateComputingType.QUANTUM, true, base.numPrimaryRegs, base.numSecondaryRegs, nodes, null);
+		ExportTree root = new ExportTree("root", GateComputingType.QUANTUM, true, base.numPrimaryRegs, 
+				base.numSecondaryRegs, nodes, runtimeVariables, null);
 		return root;
 	}
 	
@@ -518,11 +543,15 @@ public class GateManager {
 	
 	
 	
-	private static ExportTree scanCB (Project p, CircuitBoardModel cb, GateComputingType computingType, boolean placedOnPrimary, MathSet runtimeVariables, RawExportableGateData data) throws ExportException {
+	private static ExportTree scanCB (Project p, CircuitBoardModel cb, GateComputingType computingType, 
+			boolean placedOnPrimary, MathSet runtimeVariables, RawExportableGateData data) throws ExportException {
 		
 		Queue<ExportNode> nodes = new Queue<>();
 		
 		for(RawExportableGateData rawData : cb) {
+			if (!rawData.isClassical() && !rawData.isQuantum())
+				continue;
+			
 			SolderedGate sg = rawData.getSolderedGate();
 			GateModel gm = p.getGateModel(sg.getGateModelLocationString());
 			
@@ -626,7 +655,7 @@ public class GateManager {
 			break;
 		}
 		
-		return new ExportTree(cb.getName(), computingType, placedOnPrimary, primaryRegs, secondayRegs, nodes, data);
+		return new ExportTree(cb.getName(), computingType, placedOnPrimary, primaryRegs, secondayRegs, nodes, runtimeVariables, data);
 	}
 	
 	
@@ -663,6 +692,38 @@ public class GateManager {
 	
 	
 	
+	
+	
+	
+	
+	
+	
+	
+	
+	private abstract static class ExportNode {
+		final RawExportableGateData rawData;
+		final GateComputingType computingType;
+		final boolean placedOnPrimary;
+		final MathSet mathSet;
+		
+		public ExportNode (GateComputingType computingType, boolean placedOnPrimary, MathSet mathScope, RawExportableGateData rawData) {
+			this.computingType = computingType;
+			this.placedOnPrimary = placedOnPrimary;
+			this.mathSet = mathScope;
+			this.rawData = rawData;
+		}
+		
+		public int getCallingColumn() {
+			if (this.rawData == null)
+				return 0;
+			return this.rawData.getColumn();
+		}
+		
+		public abstract String getName();
+	}
+	
+	
+	
 	private static class ExportTree extends ExportNode {
 		
 		final String name;
@@ -671,8 +732,9 @@ public class GateManager {
 		final Queue<ExportNode> exportNodes;
 		
 		
-		public ExportTree(String name, GateComputingType computingType, boolean placedOnPrimary, int numPrimaryRegs, int numSecondaryRegs, Queue<ExportNode> exportStates, RawExportableGateData rawData) {
-			super(computingType, placedOnPrimary, rawData);
+		public ExportTree(String name, GateComputingType computingType, boolean placedOnPrimary,
+				int numPrimaryRegs, int numSecondaryRegs, Queue<ExportNode> exportStates, MathSet mathSet, RawExportableGateData rawData) {
+			super(computingType, placedOnPrimary, mathSet, rawData);
 			this.name = name;
 			this.numPrimaryRegs = numPrimaryRegs;
 			this.numSecondaryRegs = numSecondaryRegs;
@@ -690,41 +752,13 @@ public class GateManager {
 	
 	
 	
-	
-	
-	private abstract static class ExportNode {
-		final RawExportableGateData rawData;
-		final GateComputingType computingType;
-		final boolean placedOnPrimary;
-		
-		public ExportNode (GateComputingType computingType, boolean placedOnPrimary, RawExportableGateData rawData) {
-			this.rawData = rawData;
-			this.computingType = computingType;
-			this.placedOnPrimary = placedOnPrimary;
-		}
-		
-		public int getCallingColumn() {
-			if (this.rawData == null)
-				return 0;
-			return this.rawData.getColumn();
-		}
-		
-		public abstract String getName();
-	}
-	
-	
-	
-	
-	
-	
 	private static class ExportLeaf extends ExportNode {
 		final Hashtable<String, Complex> parameters;
 		final GateModel gm;
-		final MathSet runtimeVariables;
 		
-		private ExportLeaf(GateComputingType computingType, boolean placedOnPrimary, Hashtable<String, Complex> parameters, GateModel gm, MathSet runtimeVariables, RawExportableGateData rawData) {
-			super(computingType, placedOnPrimary, rawData);
-			this.runtimeVariables = runtimeVariables;
+		private ExportLeaf(GateComputingType computingType, boolean placedOnPrimary, Hashtable<String, Complex> parameters, 
+				GateModel gm, MathSet mathSet, RawExportableGateData rawData) {
+			super(computingType, placedOnPrimary, mathSet, rawData);
 			this.parameters = parameters;
 			this.gm = gm;
 		}

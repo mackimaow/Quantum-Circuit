@@ -14,7 +14,7 @@ public class IndexMap extends AbstractMap<Integer, Integer> implements Iterable<
 	
 	private ArrayList<Integer> components;
 	
-	public IndexMap (Iterable<Integer> iterable) {
+	public <T extends Iterable<Integer>> IndexMap (T iterable) {
 		components = new ArrayList<>();
 		iterable.forEach(components::add);
 	}
@@ -23,7 +23,7 @@ public class IndexMap extends AbstractMap<Integer, Integer> implements Iterable<
 	public Set<Entry<Integer, Integer>> entrySet() {
 		int size = size();
 		HashSet<Entry<Integer, Integer>> set = new HashSet<>();
-		for (Object[] z : Zip.mk(components, Range.mk(size)))
+		for (Object[] z : Zip.mk(Range.mk(size), components))
 			set.add(new IndexEntry((int) z[0], (int) z[1]));
 		return set;
 	}
@@ -31,8 +31,8 @@ public class IndexMap extends AbstractMap<Integer, Integer> implements Iterable<
 	public IndexMap map(Map<Integer, Integer> map) {
 		int size = map.size();
 		IndexMap indexMap = new IndexMap(this);
-		for (Object[] z : Zip.mk(Range.mk(size), indexMap))
-			put((int) z[0], map.get((int) z[1]));
+		for (Object[] z : Zip.mk(Range.mk(size), this))
+			indexMap.put((int) z[0], map.get((int) z[1]));
 		return indexMap;
 	}
 	

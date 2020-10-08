@@ -52,7 +52,14 @@ public class Range <T extends Number & Comparable<T>> implements Iterable<T> {
 	
 	@Override
 	public Iterator<T> iterator() {
-		return new RangeIterator();
+		T second = add.apply(incr, incr);
+		int option = second.compareTo(incr);
+		if (option > 0)
+			return new RangeIterator();
+		else if (option < 0)
+			return new InverseRangeIterator();
+		else
+			throw new IllegalArgumentException("Cannot have a non increasing increment to a range.");
 	}
 	
 	private class RangeIterator implements Iterator<T> {
@@ -73,5 +80,34 @@ public class Range <T extends Number & Comparable<T>> implements Iterable<T> {
 			current = add.apply(current, incr);
 			return toReturn;
 		}
+	}
+	
+	private class InverseRangeIterator implements Iterator<T> {
+		private T current;
+		
+		public InverseRangeIterator() {
+			this.current = start;
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return current.compareTo(end) > 0;
+		}
+		
+		@Override
+		public T next() {
+			T toReturn = current;
+			current = add.apply(current, incr);
+			return toReturn;
+		}
+	}
+	
+	public static void main(String[] args) {
+		Range.mk(10).forEach(System.out::print);
+		System.out.println();
+		Range.mk(10, 9).forEach(System.out::print);
+		System.out.println();
+		Range.mk(2, -1, -1).forEach(System.out::print);
+		System.out.println();
 	}
 }
